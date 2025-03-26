@@ -1,0 +1,72 @@
+# Ignore everything by default - delete this line temporarily when working with Cascade
+
+
+# Version control list - always keep these lines
+!/.gitignore
+!/src/
+!/src/**
+!/package.json
+!/README.md
+!/docs/
+!/docs/**
+# Add more project files as needed
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+loggy.yaml
+
+# Environment variables and sensitive files
+.env
+*.pem
+*.key
+*.crt
+
+# Project specific
+TGSip.zip
+*.bak
+*.tmp
+
+# Keep these files
+!requirements.txt
+!README.md
+!bot.py
+!database.py
+!models.py
+!extensions.conf
+!pjsip.conf
+!sip_security.sh
+!memory-bank/
+!.cursorrules

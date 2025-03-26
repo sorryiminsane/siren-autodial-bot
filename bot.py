@@ -88,7 +88,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
         "📞 /call - Make an outbound call\n"
         "📱 /setphone - Register your phone number\n"
         "📲 /setcid - Set outbound caller ID\n"
-        "🌐 /route - Set your route (M/D)\n"
+        "🌐 /route - Set your route (M/R/B)\n"
         "📊 /history - View your call history\n"
         "ℹ️ /help - Show detailed help\n\n"
         "Please select an option from the menu below:"
@@ -236,19 +236,19 @@ async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         keyboard = [
             [
                 InlineKeyboardButton("🌍 Main Route", callback_data="route_main"),
-                InlineKeyboardButton("🛠️ Development Route", callback_data="route_dev")
+                InlineKeyboardButton("🔴 Red Route", callback_data="route_red")
             ],
-            [InlineKeyboardButton("🔄 Alternate Route", callback_data="route_alt")],
+            [InlineKeyboardButton("⚫ Black Route", callback_data="route_black")],
             [InlineKeyboardButton("🔙 Back", callback_data="back_settings")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(
             "🌐 *Route Selection*\n\n"
             "Please select your preferred route:\n\n"
-            "• 🌍 *Main Route* - Production calls\n"
-            "• 🛠️ *Development Route* - Testing\n"
-            "• 🔄 *Alternate Route* - Random selection\n\n"
-            "Your calls will be routed through the selected path.",
+            "• 🌍 *Main Route* - Primary Route\n"
+            "• 🔴 *Red Route* - Secondary Route\n"
+            "• ⚫ *Black Route* - Universal Route\n\n"
+            "Select your route:",
             reply_markup=reply_markup,
             parse_mode='Markdown'
         )
@@ -258,12 +258,12 @@ async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         route = query.data.split("_")[-1]
         route_name = {
             "main": "Main",
-            "dev": "Development",
-            "alt": "Alternate"
+            "red": "Red",
+            "black": "Black"
         }.get(route)
         
         if route_name:
-            route = "M" if route == "main" else "D" if route == "dev" else "A"
+            route = "M" if route == "main" else "R" if route == "red" else "B"
         
         # Confirmation keyboard
         keyboard = [
@@ -287,12 +287,12 @@ async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         route = query.data.split("_")[-1]
         route_name = {
             "M": "Main",
-            "D": "Development",
-            "A": "Alternate"
+            "R": "Red",
+            "B": "Black"
         }.get(route)
         
         if route_name:
-            route = "M" if route == "main" else "D" if route == "dev" else "A"
+            route = "M" if route == "main" else "R" if route == "red" else "B"
         
         with get_db_session() as session:
             agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
@@ -482,11 +482,11 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "🌐 *Set Route*\n\n"
             "Please specify your route:\n"
-            "`/route M`, `/route D`, or `/route A`\n"
-            "`/route Main`, `/route Dev`, or `/route Alt`\n\n"
+            "`/route M`, `/route R`, or `/route B`\n"
+            "`/route Main`, `/route Red`, or `/route Black`\n\n"
             "• M/Main = Main Route\n"
-            "• D/Dev = Development Route\n"
-            "• A/Alt = Alternate Route",
+            "• R/Red = Red Route\n"
+            "• B/Black = Black Route",
             parse_mode='Markdown'
         )
         return
@@ -496,17 +496,17 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Convert input to proper route value
     if route_arg in ['m', 'main']:
         route = 'M'
-    elif route_arg in ['d', 'dev', 'development']:
-        route = 'D'
-    elif route_arg in ['a', 'alt', 'alternate']:
-        route = 'A'
+    elif route_arg in ['r', 'red']:
+        route = 'R'
+    elif route_arg in ['b', 'black']:
+        route = 'B'
     else:
         await update.message.reply_text(
             "❌ Invalid route.\n\n"
             "Please use:\n"
             "• `/route M` or `/route Main` for Main Route\n"
-            "• `/route D` or `/route Dev` for Development Route\n"
-            "• `/route A` or `/route Alt` for Alternate Route",
+            "• `/route R` or `/route Red` for Red Route\n"
+            "• `/route B` or `/route Black` for Black Route",
             parse_mode='Markdown'
         )
         return
@@ -529,8 +529,8 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             route_name = {
                 "M": "Main",
-                "D": "Development",
-                "A": "Alternate"
+                "R": "Red",
+                "B": "Black"
             }.get(route)
             
             await update.message.reply_text(
@@ -784,10 +784,10 @@ async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Determine trunk based on route
             if agent.route == "M":
                 trunk = "main-trunk"
-            elif agent.route == "D":
-                trunk = "dev-trunk"
-            else:  # Alternate route
-                trunk = "alternate-trunk"
+            elif agent.route == "R":
+                trunk = "red-trunk"
+            else:  # Black route
+                trunk = "black-trunk"
             
             # Send initial status
             status_message = await update.message.reply_text(

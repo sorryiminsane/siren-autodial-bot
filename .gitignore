@@ -17,7 +17,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -37,6 +36,11 @@ wheels/
 # Virtual Environment
 venv/
 ENV/
+env/
+tgpy_env/
+
+# Environment variables
+.env
 
 # IDE
 .idea/
@@ -44,15 +48,16 @@ ENV/
 *.swp
 *.swo
 
+# Database
+*.db
+*.sqlite3
+
 # Logs
 *.log
-loggy.yaml
 
-# Environment variables and sensitive files
-.env
-*.pem
-*.key
-*.crt
+# OS
+.DS_Store
+Thumbs.db
 
 # Project specific
 TGSip.zip

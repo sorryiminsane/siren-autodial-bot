@@ -10,6 +10,8 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
     ConversationHandler,
+    MessageHandler,
+    filters,
 )
 from database import init_db, get_session
 from models import Agent
@@ -17,6 +19,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from contextlib import contextmanager
 from panoramisk import Manager
 import asyncio
+from typing import Optional
 
 # Load environment variables
 load_dotenv()
@@ -37,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 # Conversation states
 (MAIN_MENU, SETTINGS, PHONE_SETTINGS, 
- CALL_MENU, AGENT_MANAGEMENT) = range(5)
+ CALL_MENU, AGENT_MANAGEMENT, AUTO_DIAL) = range(6)
 
 def validate_phone_number(number: str) -> bool:
     """Validate phone number in E.164 format."""
@@ -64,6 +67,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     """Show the main menu."""
     keyboard = [
         [InlineKeyboardButton("📞 Make a Call", callback_data="make_call")],
+        [InlineKeyboardButton("🤖 Auto-Dial", callback_data="auto_dial")],
         [InlineKeyboardButton("📱 My Phone Number", callback_data="phone_number")],
         [InlineKeyboardButton("📊 Call History", callback_data="call_history")],
         [InlineKeyboardButton("⚙️ Settings", callback_data="settings")],
@@ -86,6 +90,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
         "*CallerID:* 📲 " + (agent.caller_id or agent.phone_number or 'Not set') + route_display + "\n\n"
         "*Available Commands:*\n"
         "📞 /call - Make an outbound call\n"
+        "🤖 /autodial - Upload numbers for auto-dialing\n"
         "📱 /setphone - Register your phone number\n"
         "📲 /setcid - Set outbound caller ID\n"
         "🌐 /route - Set your route (M/R/B)\n"
@@ -142,7 +147,14 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     query = update.callback_query
     await query.answer()
     
-    if query.data == "make_call":
+    # Add handling for back_main first
+    if query.data == "back_main":
+        with get_db_session() as session:
+            agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
+            await show_main_menu(update, context, agent)
+            return MAIN_MENU
+
+    elif query.data == "make_call":
         await query.message.edit_text(
             "📞 *Make a Call*\n\n"
             "To make a call, use the command:\n"
@@ -156,6 +168,30 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             parse_mode='Markdown'
         )
         return CALL_MENU
+    
+    elif query.data == "auto_dial":
+        with get_db_session() as session:
+            agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
+            if not agent or not agent.is_authorized or not agent.auto_dial:
+                await query.message.edit_text(
+                    "❌ You are not authorized to use the Auto-Dial feature. "
+                    "Please enable it in Settings or contact an administrator.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
+                    parse_mode='Markdown'
+                )
+                return MAIN_MENU
+
+        await query.message.edit_text(
+            "🤖 *Auto-Dial Setup*\n\n"
+            "Please upload your .txt file containing phone numbers.\n\n"
+            "File format requirements:\n"
+            "• One phone number per line\n"
+            "• E.164 format (e.g., +1234567890)\n"
+            "• No empty lines or special characters (other than +)",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
+            parse_mode='Markdown'
+        )
+        return AUTO_DIAL
     
     elif query.data == "phone_number":
         await query.message.edit_text(
@@ -220,6 +256,16 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             parse_mode='Markdown'
         )
         return AGENT_MANAGEMENT
+
+    # If no known callback data is matched, perhaps show main menu again or do nothing
+    # For safety, let's reshow main menu if callback data is unknown within this state
+    else:
+        logger.warning(f"Unhandled callback data in MAIN_MENU: {query.data}")
+        with get_db_session() as session:
+            agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
+            if agent:
+                await show_main_menu(update, context, agent)
+        return MAIN_MENU
 
 async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle settings menu interactions."""
@@ -311,16 +357,46 @@ async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
         return SETTINGS
         
+    elif query.data == "toggle_autodial":
+        with get_db_session() as session:
+            agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
+            if not agent.is_authorized:
+                await query.message.edit_text(
+                    "❌ You are not authorized to use Auto-Dial feature.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back_settings")]]),
+                    parse_mode='Markdown'
+                )
+                return SETTINGS
+            
+            agent.auto_dial = not agent.auto_dial
+            session.commit()
+            status = "enabled" if agent.auto_dial else "disabled"
+            
+            await query.message.edit_text(
+                f"✅ Auto-Dial has been {status}.\n\n"
+                f"Current status: {'🟢 Enabled' if agent.auto_dial else '🔴 Disabled'}",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back_settings")]]),
+                parse_mode='Markdown'
+            )
+            return SETTINGS
+
     elif query.data == "back_settings":
         keyboard = [
             [InlineKeyboardButton("🌐 Select Route", callback_data="select_route")],
+            [InlineKeyboardButton("🤖 Toggle Auto-Dial", callback_data="toggle_autodial")],
             [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        with get_db_session() as session:
+            agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
+            autodial_status = "🟢 Enabled" if agent.auto_dial else "🔴 Disabled"
+        
         await query.message.edit_text(
             "⚙️ *Settings*\n\n"
             "Select an option below:\n\n"
             "• 🌐 *Route Selection* - Choose your call route\n"
+            f"• 🤖 *Auto-Dial* - Currently: {autodial_status}\n"
             "• More settings coming soon\n",
             reply_markup=reply_markup,
             parse_mode='Markdown'
@@ -374,6 +450,31 @@ async def handle_agent_management(update: Update, context: ContextTypes.DEFAULT_
 
 async def set_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's phone number."""
+    user = update.effective_user
+    if not user:
+        await update.message.reply_text("Could not identify user.")
+        return
+
+    # Fetch agent data
+    with get_db_session() as session:
+        agent = session.query(Agent).filter_by(telegram_id=user.id).first()
+        if not agent:
+            # If agent doesn't exist, create one (similar to /start logic)
+            agent = Agent(
+                telegram_id=user.id,
+                username=user.username,
+                is_authorized=user.id == SUPER_ADMIN_ID
+            )
+            session.add(agent)
+            session.commit() # Commit here to get the agent object for use below
+            # We might want to notify the user they've been registered
+            # but for now, just proceed with setting the phone.
+            # Reload agent to ensure it's bound to the session properly after potential creation
+            agent = session.query(Agent).filter_by(telegram_id=user.id).first()
+            if not agent: # Should not happen, but safety check
+                 await update.message.reply_text("Error creating agent record.")
+                 return
+
     if not context.args:
         await update.message.reply_text(
             "📱 *Set Phone Number*\n\n"
@@ -396,53 +497,54 @@ async def set_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    with get_db_session() as session:
-        agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
-        
-        if agent:
-            agent.phone_number = phone_number
-            session.commit()
-            await update.message.reply_text(
-                "✅ Phone number updated successfully!\n\n"
-                f"📱 New number: `{phone_number}`",
-                parse_mode='Markdown'
-            )
-        else:
-            await update.message.reply_text("❌ Error: Agent not found in database.")
+    # No need to fetch agent again, we already have it
+    agent.phone_number = phone_number
+    session.commit()
+    await update.message.reply_text(
+        "✅ Phone number updated successfully!\n\n"
+        f"📱 New number: `{phone_number}`",
+        parse_mode='Markdown'
+    )
 
 async def set_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's outbound caller ID."""
-    if not context.args:
-        await update.message.reply_text(
-            "📲 *Set Outbound CallerID*\n\n"
-            "Please provide a phone number in E.164 format:\n"
-            "`/setcid +1234567890`\n\n"
-            "• Must include country code\n"
-            "• Only numbers and + symbol allowed\n"
-            "• If not set, uses registered phone",
-            parse_mode='Markdown'
-        )
+    user = update.effective_user
+    if not user:
+        await update.message.reply_text("Could not identify user.")
         return
 
-    caller_id = context.args[0]
-    
-    if not validate_phone_number(caller_id):
-        await update.message.reply_text(
-            "❌ Invalid phone number format.\n\n"
-            "Please use E.164 format:\n"
-            "Example: `/setcid +1234567890`",
-            parse_mode='Markdown'
-        )
-        return
-
+    # Fetch agent data
     with get_db_session() as session:
+        agent = session.query(Agent).filter_by(telegram_id=user.id).first()
+        if not agent:
+            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+            return
+
+        if not context.args:
+            await update.message.reply_text(
+                "📲 *Set Outbound CallerID*\n\n"
+                "Please provide a phone number in E.164 format:\n"
+                "`/setcid +1234567890`\n\n"
+                "• Must include country code\n"
+                "• Only numbers and + symbol allowed\n"
+                "• If not set, uses registered phone",
+                parse_mode='Markdown'
+            )
+            return
+
+        caller_id = context.args[0]
+        
+        if not validate_phone_number(caller_id):
+            await update.message.reply_text(
+                "❌ Invalid phone number format.\n\n"
+                "Please use E.164 format:\n"
+                "Example: `/setcid +1234567890`",
+                parse_mode='Markdown'
+            )
+            return
+
+        # Agent already fetched
         try:
-            agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
-            
-            if not agent:
-                await update.message.reply_text("❌ Error: Agent not found in database.")
-                return
-            
             if not agent.is_authorized:
                 await update.message.reply_text("❌ Error: You are not authorized to set a caller ID.")
                 return
@@ -452,7 +554,7 @@ async def set_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # Update caller_id
             agent.caller_id = caller_id
-            session.add(agent)
+            session.add(agent) # Re-add agent for update
             
             # Add to history
             from models import CallerIDHistory
@@ -478,47 +580,53 @@ async def set_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's route."""
-    if not context.args:
-        await update.message.reply_text(
-            "🌐 *Set Route*\n\n"
-            "Please specify your route:\n"
-            "`/route M`, `/route R`, or `/route B`\n"
-            "`/route Main`, `/route Red`, or `/route Black`\n\n"
-            "• M/Main = Main Route\n"
-            "• R/Red = Red Route\n"
-            "• B/Black = Black Route",
-            parse_mode='Markdown'
-        )
+    user = update.effective_user
+    if not user:
+        await update.message.reply_text("Could not identify user.")
         return
 
-    route_arg = context.args[0].lower()
-    
-    # Convert input to proper route value
-    if route_arg in ['m', 'main']:
-        route = 'M'
-    elif route_arg in ['r', 'red']:
-        route = 'R'
-    elif route_arg in ['b', 'black']:
-        route = 'B'
-    else:
-        await update.message.reply_text(
-            "❌ Invalid route.\n\n"
-            "Please use:\n"
-            "• `/route M` or `/route Main` for Main Route\n"
-            "• `/route R` or `/route Red` for Red Route\n"
-            "• `/route B` or `/route Black` for Black Route",
-            parse_mode='Markdown'
-        )
-        return
-
+    # Fetch agent data
     with get_db_session() as session:
+        agent = session.query(Agent).filter_by(telegram_id=user.id).first()
+        if not agent:
+            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+            return
+
+        if not context.args:
+            await update.message.reply_text(
+                "🌐 *Set Route*\n\n"
+                "Please specify your route:\n"
+                "`/route M`, `/route R`, or `/route B`\n"
+                "`/route Main`, `/route Red`, or `/route Black`\n\n"
+                "• M/Main = Main Route\n"
+                "• R/Red = Red Route\n"
+                "• B/Black = Black Route",
+                parse_mode='Markdown'
+            )
+            return
+
+        route_arg = context.args[0].lower()
+        
+        # Convert input to proper route value
+        if route_arg in ['m', 'main']:
+            route = 'M'
+        elif route_arg in ['r', 'red']:
+            route = 'R'
+        elif route_arg in ['b', 'black']:
+            route = 'B'
+        else:
+            await update.message.reply_text(
+                "❌ Invalid route.\n\n"
+                "Please use:\n"
+                "• `/route M` or `/route Main` for Main Route\n"
+                "• `/route R` or `/route Red` for Red Route\n"
+                "• `/route B` or `/route Black` for Black Route",
+                parse_mode='Markdown'
+            )
+            return
+
+        # Agent already fetched
         try:
-            agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
-            
-            if not agent:
-                await update.message.reply_text("❌ Error: Agent not found in database.")
-                return
-            
             if not agent.is_authorized:
                 await update.message.reply_text("❌ Error: You are not authorized to set a route.")
                 return
@@ -727,37 +835,43 @@ async def originate_call(context: ContextTypes.DEFAULT_TYPE, agent_number: str, 
 
 async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Make an outbound call."""
-    if not context.args:
-        await update.message.reply_text(
-            "📞 *Make a Call*\n\n"
-            "Please provide the number to call:\n"
-            "`/call +1234567890`\n\n"
-            "• Must be in E.164 format\n"
-            "• Include country code\n"
-            "• No spaces or special characters",
-            parse_mode='Markdown'
-        )
+    user = update.effective_user
+    if not user:
+        await update.message.reply_text("Could not identify user.")
         return
 
-    target_number = context.args[0]
-    
-    if not validate_phone_number(target_number):
-        await update.message.reply_text(
-            "❌ Invalid phone number format.\n\n"
-            "Please use E.164 format:\n"
-            "Example: `/call +1234567890`",
-            parse_mode='Markdown'
-        )
-        return
-
+    # Fetch agent data
     with get_db_session() as session:
+        agent = session.query(Agent).filter_by(telegram_id=user.id).first()
+        if not agent:
+            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+            return
+
+        if not context.args:
+            await update.message.reply_text(
+                "📞 *Make a Call*\n\n"
+                "Please provide the number to call:\n"
+                "`/call +1234567890`\n\n"
+                "• Must be in E.164 format\n"
+                "• Include country code\n"
+                "• No spaces or special characters",
+                parse_mode='Markdown'
+            )
+            return
+
+        target_number = context.args[0]
+        
+        if not validate_phone_number(target_number):
+            await update.message.reply_text(
+                "❌ Invalid phone number format.\n\n"
+                "Please use E.164 format:\n"
+                "Example: `/call +1234567890`",
+                parse_mode='Markdown'
+            )
+            return
+
+        # Agent already fetched
         try:
-            agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
-            
-            if not agent:
-                await update.message.reply_text("❌ Error: Agent not found in database.")
-                return
-            
             if not agent.is_authorized:
                 await update.message.reply_text("❌ Error: You are not authorized to make calls.")
                 return
@@ -862,6 +976,185 @@ async def post_init(application: Application) -> None:
         logger.error(f"Failed to establish AMI connection: {str(e)}")
         application.bot_data["ami_manager"] = None
 
+async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle interactions within the Auto-Dial state (e.g., Back button)."""
+    query = update.callback_query
+    # Check if query exists before proceeding
+    if not query:
+        logger.warning("handle_auto_dial called without callback query.")
+        return AUTO_DIAL # Stay in state if no query
+        
+    await query.answer()
+    
+    if query.data == "back_main":
+        with get_db_session() as session:
+            agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
+            if agent: # Check if agent exists
+                await show_main_menu(update, context, agent)
+            return MAIN_MENU
+            
+    elif query.data == "start_autodial_campaign":
+        # Placeholder for starting the campaign
+        await query.message.edit_text(
+            "🚀 Starting Auto-Dial Campaign... (Implementation pending)",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
+            parse_mode='Markdown'
+        )
+        # In a real scenario, you'd trigger the dialing process here
+        # Maybe return to MAIN_MENU or stay in AUTO_DIAL with a status update?
+        # For now, let's go back to the main menu after acknowledgement
+        with get_db_session() as session:
+            agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
+            if agent:
+                 await show_main_menu(update, context, agent) # Show main menu after starting
+        return MAIN_MENU
+            
+    # Handle other potential callbacks in this state if needed
+    logger.warning(f"Unhandled callback data in AUTO_DIAL state: {query.data}")
+    return AUTO_DIAL # Stay in the state if callback is unknown
+
+async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Optional[int]:
+    """Handles the /autodial command, prompting for file upload.
+       Returns AUTO_DIAL state if authorized, otherwise None.
+    """
+    user = update.effective_user
+    if not user:
+        # Check if update.message exists before replying
+        if update.message:
+            await update.message.reply_text("Could not identify user.")
+        return None 
+
+    with get_db_session() as session:
+        agent = session.query(Agent).filter_by(telegram_id=user.id).first()
+        if not agent or not agent.is_authorized or not agent.auto_dial:
+             if update.message: # Check if update.message exists
+                await update.message.reply_text(
+                    "❌ You are not authorized to use the Auto-Dial feature. "
+                    "Please enable it in Settings or contact an administrator."
+                )
+             return None 
+
+    if update.message: # Check if update.message exists
+        await update.message.reply_text(
+            "🤖 Please upload the .txt file containing phone numbers.",
+            parse_mode='Markdown'
+        )
+    return AUTO_DIAL
+
+async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handles the uploaded .txt file for auto-dialing."""
+    user = update.effective_user
+    if not user:
+        if update.message: await update.message.reply_text("Could not identify user.")
+        return AUTO_DIAL # Stay in state, prompt again? Or MAIN_MENU? Let's stay for now.
+
+    # Check authorization again
+    with get_db_session() as session:
+        agent = session.query(Agent).filter_by(telegram_id=user.id).first()
+        if not agent or not agent.is_authorized or not agent.auto_dial:
+            if update.message: await update.message.reply_text("❌ You are not authorized to use the Auto-Dial feature.")
+            # Maybe show main menu? Requires getting agent again.
+            if agent:
+                 await show_main_menu(update, context, agent)
+            return MAIN_MENU # Go to main menu if not authorized here
+
+    if not update.message or not update.message.document:
+        if update.message: await update.message.reply_text("Please upload a document.")
+        return AUTO_DIAL
+
+    document = update.message.document
+    if document.mime_type != 'text/plain' or not document.file_name.endswith('.txt'):
+        await update.message.reply_text("❌ Invalid file type. Please upload a .txt file.")
+        return AUTO_DIAL
+
+    try:
+        file = await context.bot.get_file(document.file_id)
+        # Limit download size to prevent abuse (e.g., 1MB)
+        if file.file_size > 1 * 1024 * 1024:
+             await update.message.reply_text("❌ File is too large (max 1MB). Please upload a smaller file.")
+             return AUTO_DIAL
+             
+        file_content_bytes = await file.download_as_bytearray()
+        file_content = file_content_bytes.decode('utf-8')
+        
+        lines = file_content.splitlines()
+        valid_numbers = []
+        invalid_lines = []
+        processed_count = 0
+        line_limit = 10000 # Limit number of lines to process
+
+        for line_num, line in enumerate(lines, 1):
+            if line_num > line_limit:
+                await update.message.reply_text(f"⚠️ Warning: Processing stopped after {line_limit} lines to prevent abuse.")
+                break 
+                
+            original_line = line.strip()
+            if not original_line: 
+                continue
+
+            processed_count += 1
+            normalized = re.sub(r'[()\-\s.]', '', original_line)
+            if len(normalized) == 11 and normalized.startswith('1'):
+                 normalized = '+' + normalized
+            elif len(normalized) == 10:
+                 normalized = '+1' + normalized
+            elif not normalized.startswith('+'): 
+                 # Avoid adding '+' if it looks like international format already but missing '+'
+                 # Basic check: if it contains non-digits other than allowed separators, it's likely invalid
+                 if not re.match(r'^\+?[0-9]+$', normalized):
+                      invalid_lines.append((line_num, original_line))
+                      continue
+                 # Otherwise, assume it might be missing '+' 
+                 # (e.g., 442071234567 -> +442071234567)
+                 # This is heuristic, E.164 validation is better.
+                 # Let's stick to simpler logic: only add +1 for 10 digits, assume + otherwise if needed.
+                 # Reverting the complex logic: If it doesn't start with +, it's only valid
+                 # if we prepended +1 (for 10 digits) or + (for 11 digits starting with 1).
+                 # If it arrived here without starting with +, it means it wasn't US format.
+                 # The validate_phone_number function expects E.164 starting with +
+                 # Let's refine the normalization:
+                 pass # The validation will catch non-E.164
+                 
+            # Re-validate with the specific function
+            if validate_phone_number(normalized):
+                valid_numbers.append(normalized)
+            else:
+                invalid_lines.append((line_num, original_line))
+
+        if not valid_numbers:
+             await update.message.reply_text(
+                f"❌ Processed {processed_count} lines, but found no valid E.164 phone numbers."
+                " Please check the file format and try again."
+            )
+             return AUTO_DIAL
+
+        context.user_data['autodial_numbers'] = valid_numbers
+
+        response_message = f"✅ Successfully processed file '{document.file_name}'.\n\n"
+        response_message += f"• Found {len(valid_numbers)} valid numbers (out of {processed_count} non-empty lines processed).\n"
+        if invalid_lines:
+            response_message += f"• Found {len(invalid_lines)} invalid/unparseable lines:\n"
+            for line_num, line_content in invalid_lines[:5]: 
+                 response_message += f"  - Line {line_num}: '{line_content[:50]}{'...' if len(line_content) > 50 else ''}'\n"
+            if len(invalid_lines) > 5:
+                 response_message += "  - ... and more\n"
+        
+        response_message += "\nReady to start the auto-dial campaign?"
+        
+        keyboard = [
+             [InlineKeyboardButton("🚀 Start Dialing", callback_data="start_autodial_campaign")],
+             [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(response_message, reply_markup=reply_markup)
+        return AUTO_DIAL 
+
+    except Exception as e:
+        logger.error(f"Error processing auto-dial file: {str(e)}")
+        await update.message.reply_text("❌ An error occurred while processing the file. Please try again.")
+        return AUTO_DIAL
+
 def main():
     """Start the bot."""
     # Initialize database
@@ -878,26 +1171,52 @@ def main():
     # Add error handler
     application.add_error_handler(error_handler)
     
-    # Add conversation handler
+    # --- Define Handlers to be separated ---
+    setphone_handler = CommandHandler("setphone", set_phone)
+    setcid_handler = CommandHandler("setcid", set_caller_id)
+    route_handler = CommandHandler("route", set_route)
+    call_handler = CommandHandler("call", call)
+    status_handler = CommandHandler("status", status)
+    autodial_cmd_handler = CommandHandler("autodial", handle_autodial_command)
+
+    # Add conversation handler for menu navigation and multi-step processes
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[
+            CommandHandler("start", start),
+            CommandHandler("autodial", handle_autodial_command) 
+        ],
         states={
-            MAIN_MENU: [CallbackQueryHandler(handle_main_menu)],
+            MAIN_MENU: [
+                CallbackQueryHandler(handle_main_menu),
+                # MessageHandler for document upload should only be in AUTO_DIAL state
+            ],
             SETTINGS: [CallbackQueryHandler(handle_settings)],
-            PHONE_SETTINGS: [CallbackQueryHandler(handle_phone_settings)],
-            CALL_MENU: [CallbackQueryHandler(handle_call_menu)],
+            PHONE_SETTINGS: [CallbackQueryHandler(handle_phone_settings)], 
+            CALL_MENU: [CallbackQueryHandler(handle_call_menu)], 
             AGENT_MANAGEMENT: [CallbackQueryHandler(handle_agent_management)],
+            AUTO_DIAL: [
+                CallbackQueryHandler(handle_auto_dial), 
+                MessageHandler(filters.Document.TEXT, handle_auto_dial_file)
+            ],
         },
         fallbacks=[
-            CommandHandler("start", start),
+            CommandHandler("start", start), 
             CommandHandler("setphone", set_phone),
             CommandHandler("setcid", set_caller_id),
             CommandHandler("route", set_route),
             CommandHandler("call", call),
-            CommandHandler("status", status),
         ],
+        allow_reentry=True
     )
     application.add_handler(conv_handler)
+
+    # --- Add separated command handlers directly (for use outside conversation) ---
+    application.add_handler(setphone_handler)
+    application.add_handler(setcid_handler)
+    application.add_handler(route_handler)
+    application.add_handler(call_handler)
+    application.add_handler(status_handler)
+    # Do NOT add autodial_cmd_handler here, it's an entry point for conv_handler
     
     # Set up post init hook for AMI connection
     application.post_init = post_init

@@ -12,6 +12,7 @@ class Agent(Base):
     route = Column(String(1))  # 'M' for Main or 'D' for Dev
     username = Column(String)
     is_authorized = Column(Boolean, default=False)
+    auto_dial = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

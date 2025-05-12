@@ -9,10 +9,11 @@ class Agent(Base):
     telegram_id = Column(BigInteger, unique=True, nullable=False)
     phone_number = Column(String, unique=True)
     caller_id = Column(String)
-    route = Column(String(1))  # 'M' for Main or 'D' for Dev
+    autodial_caller_id = Column(String)
+    route = Column(String(1))  # 'M', 'R', 'B' for manual calls
+    autodial_trunk = Column(String(3)) # 'one' or 'two' for autodial calls
     username = Column(String)
     is_authorized = Column(Boolean, default=False)
-    auto_dial = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

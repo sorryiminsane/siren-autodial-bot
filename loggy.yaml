@@ -1,611 +1,78 @@
-
-<--- Transmitting SIP response (857 bytes) to UDP:207.244.247.124:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 207.244.247.124:5060;rport=5060;received=207.244.247.124;branch=z9hG4bK218f1a5c
-Call-ID: 1f1f33510e8895c7349d75eb2d0fe7f0@207.244.247.124:5060
-From: "asterisk" <sip:asterisk@207.244.247.124>;tag=as3d519da2
-To: <sip:45.45.217.116>;tag=z9hG4bK218f1a5c
-CSeq: 102 OPTIONS
-Accept: application/sdp, application/pidf+xml, application/dialog-info+xml, application/xpidf+xml, application/cpim-pidf+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, message/sipfrag;version=2.0
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub
-Accept-Encoding: identity
-Accept-Language: en
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Received SIP request (532 bytes) from UDP:167.172.94.8:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 167.172.94.8:5060;branch=z9hG4bK37b3a9ff;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@167.172.94.8>;tag=as6da7afed
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@167.172.94.8:5060>
-Call-ID: 66e7807a3a9e74c9413b1fa92796a455@167.172.94.8:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:35:40 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-<--- Received SIP request (532 bytes) from UDP:167.172.94.8:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 167.172.94.8:5060;branch=z9hG4bK37b3a9ff;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@167.172.94.8>;tag=as6da7afed
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@167.172.94.8:5060>
-Call-ID: 66e7807a3a9e74c9413b1fa92796a455@167.172.94.8:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:35:40 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-[2025-03-26 02:35:40] NOTICE[116105]: res_pjsip/pjsip_distributor.c:676 log_failed_request: Request 'OPTIONS' from '"asterisk" <sip:asterisk@167.172.94.8>' failed for '167.172.94.8:5060' (callid: 66e7807a3a9e74c9413b1fa92796a455@167.172.94.8:5060) - No matching endpoint found
-<--- Transmitting SIP response (516 bytes) to UDP:167.172.94.8:5060 --->
-SIP/2.0 401 Unauthorized
-Via: SIP/2.0/UDP 167.172.94.8:5060;rport=5060;received=167.172.94.8;branch=z9hG4bK37b3a9ff
-Call-ID: 66e7807a3a9e74c9413b1fa92796a455@167.172.94.8:5060
-From: "asterisk" <sip:asterisk@167.172.94.8>;tag=as6da7afed
-To: <sip:45.45.217.116>;tag=z9hG4bK37b3a9ff
-CSeq: 102 OPTIONS
-WWW-Authenticate: Digest realm="asterisk",nonce="1742956540/cdc62da780f8618d071745659e8faa2c",opaque="63511edf74055e60",algorithm=md5,qop="auth"
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP response (516 bytes) to UDP:167.172.94.8:5060 --->
-SIP/2.0 401 Unauthorized
-Via: SIP/2.0/UDP 167.172.94.8:5060;rport=5060;received=167.172.94.8;branch=z9hG4bK37b3a9ff
-Call-ID: 66e7807a3a9e74c9413b1fa92796a455@167.172.94.8:5060
-From: "asterisk" <sip:asterisk@167.172.94.8>;tag=as6da7afed
-To: <sip:45.45.217.116>;tag=z9hG4bK37b3a9ff
-CSeq: 102 OPTIONS
-WWW-Authenticate: Digest realm="asterisk",nonce="1742956540/cdc62da780f8618d071745659e8faa2c",opaque="63511edf74055e60",algorithm=md5,qop="auth"
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP request (446 bytes) to UDP:185.193.89.100:5060 --->
-OPTIONS sip:185.193.89.100:5060 SIP/2.0
-Via: SIP/2.0/UDP 45.45.217.116:5060;rport;branch=z9hG4bKPj66f8f520-f131-4892-b31b-b939c13e2cdf
-From: <sip:route-black@45.45.217.116>;tag=02e6c125-2a9c-48c2-b62f-f3f87afae81b
-To: <sip:185.193.89.100>
-Contact: <sip:route-black@45.45.217.116:5060>
-Call-ID: fbebf01f-4d08-4f66-9568-77a93088b0fa
-CSeq: 12294 OPTIONS
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP request (446 bytes) to UDP:185.193.89.100:5060 --->
-OPTIONS sip:185.193.89.100:5060 SIP/2.0
-Via: SIP/2.0/UDP 45.45.217.116:5060;rport;branch=z9hG4bKPj66f8f520-f131-4892-b31b-b939c13e2cdf
-From: <sip:route-black@45.45.217.116>;tag=02e6c125-2a9c-48c2-b62f-f3f87afae81b
-To: <sip:185.193.89.100>
-Contact: <sip:route-black@45.45.217.116:5060>
-Call-ID: fbebf01f-4d08-4f66-9568-77a93088b0fa
-CSeq: 12294 OPTIONS
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Received SIP response (525 bytes) from UDP:185.193.89.100:5060 --->
-SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 45.45.217.116:5060;branch=z9hG4bKPj66f8f520-f131-4892-b31b-b939c13e2cdf;received=45.45.217.116;rport=5060
-From: <sip:route-black@45.45.217.116>;tag=02e6c125-2a9c-48c2-b62f-f3f87afae81b
-To: <sip:185.193.89.100>;tag=as01893451
-Call-ID: fbebf01f-4d08-4f66-9568-77a93088b0fa
-CSeq: 12294 OPTIONS
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Accept: application/sdp
-Content-Length: 0
-
-
-<--- Received SIP response (525 bytes) from UDP:185.193.89.100:5060 --->
-SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 45.45.217.116:5060;branch=z9hG4bKPj66f8f520-f131-4892-b31b-b939c13e2cdf;received=45.45.217.116;rport=5060
-From: <sip:route-black@45.45.217.116>;tag=02e6c125-2a9c-48c2-b62f-f3f87afae81b
-To: <sip:185.193.89.100>;tag=as01893451
-Call-ID: fbebf01f-4d08-4f66-9568-77a93088b0fa
-CSeq: 12294 OPTIONS
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Accept: application/sdp
-Content-Length: 0
-
-
-<--- Transmitting SIP request (442 bytes) to UDP:172.86.115.172:5060 --->
-OPTIONS sip:172.86.115.172:5060 SIP/2.0
-Via: SIP/2.0/UDP 45.45.217.116:5060;rport;branch=z9hG4bKPj8f4e5211-ec9b-4fbb-88d2-1c7f0f666177
-From: <sip:route-red@45.45.217.116>;tag=3d4206de-25e4-44d9-87eb-47d67acc63bd
-To: <sip:172.86.115.172>
-Contact: <sip:route-red@45.45.217.116:5060>
-Call-ID: 243fb403-eb89-481e-9911-c1dfe732c20f
-CSeq: 28583 OPTIONS
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP request (442 bytes) to UDP:172.86.115.172:5060 --->
-OPTIONS sip:172.86.115.172:5060 SIP/2.0
-Via: SIP/2.0/UDP 45.45.217.116:5060;rport;branch=z9hG4bKPj8f4e5211-ec9b-4fbb-88d2-1c7f0f666177
-From: <sip:route-red@45.45.217.116>;tag=3d4206de-25e4-44d9-87eb-47d67acc63bd
-To: <sip:172.86.115.172>
-Contact: <sip:route-red@45.45.217.116:5060>
-Call-ID: 243fb403-eb89-481e-9911-c1dfe732c20f
-CSeq: 28583 OPTIONS
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Received SIP response (523 bytes) from UDP:172.86.115.172:5060 --->
-SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 45.45.217.116:5060;branch=z9hG4bKPj8f4e5211-ec9b-4fbb-88d2-1c7f0f666177;received=45.45.217.116;rport=5060
-From: <sip:route-red@45.45.217.116>;tag=3d4206de-25e4-44d9-87eb-47d67acc63bd
-To: <sip:172.86.115.172>;tag=as5fb5f9f8
-Call-ID: 243fb403-eb89-481e-9911-c1dfe732c20f
-CSeq: 28583 OPTIONS
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Accept: application/sdp
-Content-Length: 0
-
-
-<--- Received SIP response (523 bytes) from UDP:172.86.115.172:5060 --->
-SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 45.45.217.116:5060;branch=z9hG4bKPj8f4e5211-ec9b-4fbb-88d2-1c7f0f666177;received=45.45.217.116;rport=5060
-From: <sip:route-red@45.45.217.116>;tag=3d4206de-25e4-44d9-87eb-47d67acc63bd
-To: <sip:172.86.115.172>;tag=as5fb5f9f8
-Call-ID: 243fb403-eb89-481e-9911-c1dfe732c20f
-CSeq: 28583 OPTIONS
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Accept: application/sdp
-Content-Length: 0
-
-
-<--- Received SIP request (540 bytes) from UDP:185.193.89.100:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 185.193.89.100:5060;branch=z9hG4bK39b657af;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@185.193.89.100>;tag=as04409e6b
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@185.193.89.100:5060>
-Call-ID: 7b521375095c2668648777a921f69f83@185.193.89.100:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:36:09 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-<--- Received SIP request (540 bytes) from UDP:185.193.89.100:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 185.193.89.100:5060;branch=z9hG4bK39b657af;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@185.193.89.100>;tag=as04409e6b
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@185.193.89.100:5060>
-Call-ID: 7b521375095c2668648777a921f69f83@185.193.89.100:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:36:09 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-<--- Transmitting SIP response (853 bytes) to UDP:185.193.89.100:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 185.193.89.100:5060;rport=5060;received=185.193.89.100;branch=z9hG4bK39b657af
-Call-ID: 7b521375095c2668648777a921f69f83@185.193.89.100:5060
-From: "asterisk" <sip:asterisk@185.193.89.100>;tag=as04409e6b
-To: <sip:45.45.217.116>;tag=z9hG4bK39b657af
-CSeq: 102 OPTIONS
-Accept: application/sdp, application/pidf+xml, application/dialog-info+xml, application/xpidf+xml, application/cpim-pidf+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, message/sipfrag;version=2.0
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub
-Accept-Encoding: identity
-Accept-Language: en
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP response (853 bytes) to UDP:185.193.89.100:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 185.193.89.100:5060;rport=5060;received=185.193.89.100;branch=z9hG4bK39b657af
-Call-ID: 7b521375095c2668648777a921f69f83@185.193.89.100:5060
-From: "asterisk" <sip:asterisk@185.193.89.100>;tag=as04409e6b
-To: <sip:45.45.217.116>;tag=z9hG4bK39b657af
-CSeq: 102 OPTIONS
-Accept: application/sdp, application/pidf+xml, application/dialog-info+xml, application/xpidf+xml, application/cpim-pidf+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, message/sipfrag;version=2.0
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub
-Accept-Encoding: identity
-Accept-Language: en
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP request (454 bytes) to UDP:207.244.247.124:5060 --->
-OPTIONS sip:207.244.247.124:5060 SIP/2.0
-Via: SIP/2.0/UDP 45.45.217.116:5060;rport;branch=z9hG4bKPjbd6280f1-5cc3-4884-a3fe-82442cb4454c
-From: <sip:main-trunk@voip2.lexotration.com>;tag=d523359c-2166-4d4d-a46b-8ff256f769f0
-To: <sip:207.244.247.124>
-Contact: <sip:main-trunk@45.45.217.116:5060>
-Call-ID: f750fc43-956b-4814-8ecf-aaf65d96787f
-CSeq: 64436 OPTIONS
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP request (454 bytes) to UDP:207.244.247.124:5060 --->
-OPTIONS sip:207.244.247.124:5060 SIP/2.0
-Via: SIP/2.0/UDP 45.45.217.116:5060;rport;branch=z9hG4bKPjbd6280f1-5cc3-4884-a3fe-82442cb4454c
-From: <sip:main-trunk@voip2.lexotration.com>;tag=d523359c-2166-4d4d-a46b-8ff256f769f0
-To: <sip:207.244.247.124>
-Contact: <sip:main-trunk@45.45.217.116:5060>
-Call-ID: f750fc43-956b-4814-8ecf-aaf65d96787f
-CSeq: 64436 OPTIONS
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Received SIP response (533 bytes) from UDP:207.244.247.124:5060 --->
-SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 45.45.217.116:5060;branch=z9hG4bKPjbd6280f1-5cc3-4884-a3fe-82442cb4454c;received=45.45.217.116;rport=5060
-From: <sip:main-trunk@voip2.lexotration.com>;tag=d523359c-2166-4d4d-a46b-8ff256f769f0
-To: <sip:207.244.247.124>;tag=as3d836226
-Call-ID: f750fc43-956b-4814-8ecf-aaf65d96787f
-CSeq: 64436 OPTIONS
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Accept: application/sdp
-Content-Length: 0
-
-
-<--- Received SIP response (533 bytes) from UDP:207.244.247.124:5060 --->
-SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 45.45.217.116:5060;branch=z9hG4bKPjbd6280f1-5cc3-4884-a3fe-82442cb4454c;received=45.45.217.116;rport=5060
-From: <sip:main-trunk@voip2.lexotration.com>;tag=d523359c-2166-4d4d-a46b-8ff256f769f0
-To: <sip:207.244.247.124>;tag=as3d836226
-Call-ID: f750fc43-956b-4814-8ecf-aaf65d96787f
-CSeq: 64436 OPTIONS
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Accept: application/sdp
-Content-Length: 0
-
-
-<--- Received SIP request (540 bytes) from UDP:172.86.115.172:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 172.86.115.172:5060;branch=z9hG4bK38b4352c;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@172.86.115.172>;tag=as6ef2051f
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@172.86.115.172:5060>
-Call-ID: 1913caf051f4a9a704790e2f6c2de8b8@172.86.115.172:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:36:15 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-<--- Received SIP request (540 bytes) from UDP:172.86.115.172:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 172.86.115.172:5060;branch=z9hG4bK38b4352c;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@172.86.115.172>;tag=as6ef2051f
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@172.86.115.172:5060>
-Call-ID: 1913caf051f4a9a704790e2f6c2de8b8@172.86.115.172:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:36:15 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-<--- Transmitting SIP response (853 bytes) to UDP:172.86.115.172:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 172.86.115.172:5060;rport=5060;received=172.86.115.172;branch=z9hG4bK38b4352c
-Call-ID: 1913caf051f4a9a704790e2f6c2de8b8@172.86.115.172:5060
-From: "asterisk" <sip:asterisk@172.86.115.172>;tag=as6ef2051f
-To: <sip:45.45.217.116>;tag=z9hG4bK38b4352c
-CSeq: 102 OPTIONS
-Accept: application/sdp, application/pidf+xml, application/dialog-info+xml, application/xpidf+xml, application/cpim-pidf+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, message/sipfrag;version=2.0
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub
-Accept-Encoding: identity
-Accept-Language: en
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP response (853 bytes) to UDP:172.86.115.172:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 172.86.115.172:5060;rport=5060;received=172.86.115.172;branch=z9hG4bK38b4352c
-Call-ID: 1913caf051f4a9a704790e2f6c2de8b8@172.86.115.172:5060
-From: "asterisk" <sip:asterisk@172.86.115.172>;tag=as6ef2051f
-To: <sip:45.45.217.116>;tag=z9hG4bK38b4352c
-CSeq: 102 OPTIONS
-Accept: application/sdp, application/pidf+xml, application/dialog-info+xml, application/xpidf+xml, application/cpim-pidf+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, message/sipfrag;version=2.0
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub
-Accept-Encoding: identity
-Accept-Language: en
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP request (444 bytes) to UDP:172.86.115.172:5060 --->
-OPTIONS sip:172.86.115.172:5060 SIP/2.0
-Via: SIP/2.0/UDP 45.45.217.116:5060;rport;branch=z9hG4bKPj9e2e40ef-8709-4ee9-93fe-e7aac0ba9098
-From: <sip:route-gold@45.45.217.116>;tag=800606e3-4b06-42f6-bf7a-a0880565cb1f
-To: <sip:172.86.115.172>
-Contact: <sip:route-gold@45.45.217.116:5060>
-Call-ID: 0d7fd07e-ee5d-45c6-813a-5bca385fdf7a
-CSeq: 22500 OPTIONS
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP request (444 bytes) to UDP:172.86.115.172:5060 --->
-OPTIONS sip:172.86.115.172:5060 SIP/2.0
-Via: SIP/2.0/UDP 45.45.217.116:5060;rport;branch=z9hG4bKPj9e2e40ef-8709-4ee9-93fe-e7aac0ba9098
-From: <sip:route-gold@45.45.217.116>;tag=800606e3-4b06-42f6-bf7a-a0880565cb1f
-To: <sip:172.86.115.172>
-Contact: <sip:route-gold@45.45.217.116:5060>
-Call-ID: 0d7fd07e-ee5d-45c6-813a-5bca385fdf7a
-CSeq: 22500 OPTIONS
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Received SIP response (524 bytes) from UDP:172.86.115.172:5060 --->
-SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 45.45.217.116:5060;branch=z9hG4bKPj9e2e40ef-8709-4ee9-93fe-e7aac0ba9098;received=45.45.217.116;rport=5060
-From: <sip:route-gold@45.45.217.116>;tag=800606e3-4b06-42f6-bf7a-a0880565cb1f
-To: <sip:172.86.115.172>;tag=as63b34e63
-Call-ID: 0d7fd07e-ee5d-45c6-813a-5bca385fdf7a
-CSeq: 22500 OPTIONS
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Accept: application/sdp
-Content-Length: 0
-
-
-<--- Received SIP response (524 bytes) from UDP:172.86.115.172:5060 --->
-SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 45.45.217.116:5060;branch=z9hG4bKPj9e2e40ef-8709-4ee9-93fe-e7aac0ba9098;received=45.45.217.116;rport=5060
-From: <sip:route-gold@45.45.217.116>;tag=800606e3-4b06-42f6-bf7a-a0880565cb1f
-To: <sip:172.86.115.172>;tag=as63b34e63
-Call-ID: 0d7fd07e-ee5d-45c6-813a-5bca385fdf7a
-CSeq: 22500 OPTIONS
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Accept: application/sdp
-Content-Length: 0
-
-
-<--- Received SIP request (532 bytes) from UDP:51.79.160.73:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 51.79.160.73:5060;branch=z9hG4bK41a7f50f;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@51.79.160.73>;tag=as5d30af1e
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@51.79.160.73:5060>
-Call-ID: 5a47117e56575d054275be3b69d3708a@51.79.160.73:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:36:23 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-<--- Received SIP request (532 bytes) from UDP:51.79.160.73:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 51.79.160.73:5060;branch=z9hG4bK41a7f50f;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@51.79.160.73>;tag=as5d30af1e
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@51.79.160.73:5060>
-Call-ID: 5a47117e56575d054275be3b69d3708a@51.79.160.73:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:36:23 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-[2025-03-26 02:36:23] NOTICE[116105]: res_pjsip/pjsip_distributor.c:676 log_failed_request: Request 'OPTIONS' from '"asterisk" <sip:asterisk@51.79.160.73>' failed for '51.79.160.73:5060' (callid: 5a47117e56575d054275be3b69d3708a@51.79.160.73:5060) - No matching endpoint found
-<--- Transmitting SIP response (516 bytes) to UDP:51.79.160.73:5060 --->
-SIP/2.0 401 Unauthorized
-Via: SIP/2.0/UDP 51.79.160.73:5060;rport=5060;received=51.79.160.73;branch=z9hG4bK41a7f50f
-Call-ID: 5a47117e56575d054275be3b69d3708a@51.79.160.73:5060
-From: "asterisk" <sip:asterisk@51.79.160.73>;tag=as5d30af1e
-To: <sip:45.45.217.116>;tag=z9hG4bK41a7f50f
-CSeq: 102 OPTIONS
-WWW-Authenticate: Digest realm="asterisk",nonce="1742956583/276f6169f62eef82b233f2aa94e83c28",opaque="3edf103c01670e69",algorithm=md5,qop="auth"
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP response (516 bytes) to UDP:51.79.160.73:5060 --->
-SIP/2.0 401 Unauthorized
-Via: SIP/2.0/UDP 51.79.160.73:5060;rport=5060;received=51.79.160.73;branch=z9hG4bK41a7f50f
-Call-ID: 5a47117e56575d054275be3b69d3708a@51.79.160.73:5060
-From: "asterisk" <sip:asterisk@51.79.160.73>;tag=as5d30af1e
-To: <sip:45.45.217.116>;tag=z9hG4bK41a7f50f
-CSeq: 102 OPTIONS
-WWW-Authenticate: Digest realm="asterisk",nonce="1742956583/276f6169f62eef82b233f2aa94e83c28",opaque="3edf103c01670e69",algorithm=md5,qop="auth"
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-KittyKatDeploymentCenter*CLI> pjsip show endpoints
-
- Endpoint:  <Endpoint/CID.....................................>  <State.....>  <Channels.>
-    I/OAuth:  <AuthId/UserName...........................................................>
-        Aor:  <Aor............................................>  <MaxContact>
-      Contact:  <Aor/ContactUri..........................> <Hash....> <Status> <RTT(ms)..>
-  Transport:  <TransportId........>  <Type>  <cos>  <tos>  <BindAddress..................>
-   Identify:  <Identify/Endpoint.........................................................>
-        Match:  <criteria.........................>
-    Channel:  <ChannelId......................................>  <State.....>  <Time.....>
-        Exten: <DialedExten...........>  CLCID: <ConnectedLineCID.......>
-==========================================================================================
-
- Endpoint:  main-trunk                                           Not in use    0 of inf
-        Aor:  main-trunk-aor                                     0
-      Contact:  main-trunk-aor/sip:207.244.247.124:5060    d0dd4642fc Avail        61.326
-  Transport:  transport-udp             udp      0      0  0.0.0.0:5060
-   Identify:  main-trunk-identify/main-trunk
-        Match: 207.244.247.124/32
-
- Endpoint:  outbound                                             Unavailable   0 of inf
-  Transport:  transport-udp             udp      0      0  0.0.0.0:5060
-
- Endpoint:  route-black                                          Not in use    0 of inf
-        Aor:  route-black-aor                                    0
-      Contact:  route-black-aor/sip:185.193.89.100:5060    62e741fcfd Avail       138.183
-  Transport:  transport-udp             udp      0      0  0.0.0.0:5060
-   Identify:  route-black-identify/route-black
-        Match: 185.193.89.100/32
-
- Endpoint:  route-gold                                           Not in use    0 of inf
-        Aor:  route-gold-aor                                     0
-      Contact:  route-gold-aor/sip:172.86.115.172:5060     e715ad74f0 Avail        32.386
-  Transport:  transport-udp             udp      0      0  0.0.0.0:5060
-   Identify:  route-gold-identify/route-gold
-        Match: 172.86.115.172/32
-
- Endpoint:  route-red                                            Not in use    0 of inf
-        Aor:  route-red-aor                                      0
-      Contact:  route-red-aor/sip:172.86.115.172:5060      e715ad74f0 Avail        32.848
-  Transport:  transport-udp             udp      0      0  0.0.0.0:5060
-   Identify:  route-red-identify/route-red
-        Match: 172.86.115.172/32
-
-
-Objects found: 5
-
-<--- Received SIP request (544 bytes) from UDP:207.244.247.124:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 207.244.247.124:5060;branch=z9hG4bK5ae6aea7;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@207.244.247.124>;tag=as5a3b15c5
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@207.244.247.124:5060>
-Call-ID: 32eff5633a91e73e055017982c1375cc@207.244.247.124:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:36:36 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-<--- Received SIP request (544 bytes) from UDP:207.244.247.124:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 207.244.247.124:5060;branch=z9hG4bK5ae6aea7;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@207.244.247.124>;tag=as5a3b15c5
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@207.244.247.124:5060>
-Call-ID: 32eff5633a91e73e055017982c1375cc@207.244.247.124:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:36:36 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-<--- Transmitting SIP response (857 bytes) to UDP:207.244.247.124:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 207.244.247.124:5060;rport=5060;received=207.244.247.124;branch=z9hG4bK5ae6aea7
-Call-ID: 32eff5633a91e73e055017982c1375cc@207.244.247.124:5060
-From: "asterisk" <sip:asterisk@207.244.247.124>;tag=as5a3b15c5
-To: <sip:45.45.217.116>;tag=z9hG4bK5ae6aea7
-CSeq: 102 OPTIONS
-Accept: application/sdp, application/pidf+xml, application/dialog-info+xml, application/xpidf+xml, application/cpim-pidf+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, message/sipfrag;version=2.0
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub
-Accept-Encoding: identity
-Accept-Language: en
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Transmitting SIP response (857 bytes) to UDP:207.244.247.124:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 207.244.247.124:5060;rport=5060;received=207.244.247.124;branch=z9hG4bK5ae6aea7
-Call-ID: 32eff5633a91e73e055017982c1375cc@207.244.247.124:5060
-From: "asterisk" <sip:asterisk@207.244.247.124>;tag=as5a3b15c5
-To: <sip:45.45.217.116>;tag=z9hG4bK5ae6aea7
-CSeq: 102 OPTIONS
-Accept: application/sdp, application/pidf+xml, application/dialog-info+xml, application/xpidf+xml, application/cpim-pidf+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, message/sipfrag;version=2.0
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub
-Accept-Encoding: identity
-Accept-Language: en
-Server: Asterisk PBX certified-18.9-cert13
-Content-Length:  0
-
-
-<--- Received SIP request (532 bytes) from UDP:167.172.94.8:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 167.172.94.8:5060;branch=z9hG4bK41f1fd09;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@167.172.94.8>;tag=as7449536a
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@167.172.94.8:5060>
-Call-ID: 322c0d6d2f1767a2099d77735a787fc0@167.172.94.8:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Wed, 26 Mar 2025 02:36:40 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-<--- Received SIP request (532 bytes) from UDP:167.172.94.8:5060 --->
-OPTIONS sip:45.45.217.116 SIP/2.0
-Via: SIP/2.0/UDP 167.172.94.8:5060;branch=z9hG4bK41f1fd09;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@167.172.94.8>;tag=as7449536a
-To: <sip:45.45.217.116>
-Contact: <sip:asterisk@167.172.94.8:5060>
-Call-ID: 322c0d6d2f1767a2099d77735a787fc0@167.172.94.8:5060
-CSeq: 102 OPTIONS
+root@136119:/opt/sirencallcenter# python3 bot.py
+2025-05-13 02:10:31,856 - database - INFO - Creating database tables...
+2025-05-13 02:10:31,932 - database - INFO - Database tables created successfully
+2025-05-13 02:10:31,933 - __main__ - INFO - Database initialized successfully
+bot.py:1680: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  conv_handler = ConversationHandler(
+2025-05-13 02:10:32,022 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getMe "HTTP/1.1 200 OK"
+2025-05-13 02:10:32,023 - __main__ - INFO - Connecting to Asterisk AMI...
+2025-05-13 02:10:32,024 - panoramisk.ami_protocol - INFO - protocol version: '7.0.1'
+2025-05-13 02:10:32,024 - __main__ - INFO - Successfully connected to Asterisk AMI
+2025-05-13 02:10:32,026 - panoramisk.manager - INFO - Sending awaiting actions
+2025-05-13 02:10:32,167 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/sendMessage "HTTP/1.1 200 OK"
+2025-05-13 02:10:32,168 - __main__ - INFO - Test notification sent to user 7991166259
+2025-05-13 02:10:32,169 - __main__ - INFO - Registered AMI event listener for UserEvent.
+2025-05-13 02:10:32,188 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/deleteWebhook "HTTP/1.1 200 OK"
+2025-05-13 02:10:32,190 - telegram.ext.Application - INFO - Application started
+2025-05-13 02:10:42,251 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:10:52,276 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:11:02,300 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:11:12,323 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:11:22,349 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:11:32,369 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:11:42,389 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:11:52,409 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:12:02,432 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:12:12,456 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:12:22,478 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:12:32,498 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:12:42,519 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:12:52,539 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:13:02,562 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:13:12,583 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:13:22,604 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:13:32,625 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:13:42,645 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:13:52,666 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:14:02,688 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:14:12,710 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:14:22,730 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:14:32,751 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:14:42,775 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:14:52,800 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:15:02,826 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:15:12,847 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+^C^Croot@136119:/opt/sirencallcenter# ^C
+root@136119:/opt/sirencallcenter#
+root@136119:/opt/sirencallcenter# python3 bot.py
+2025-05-13 02:15:16,976 - database - INFO - Creating database tables...
+2025-05-13 02:15:17,042 - database - INFO - Database tables created successfully
+2025-05-13 02:15:17,043 - __main__ - INFO - Database initialized successfully
+bot.py:1680: PTBUserWarning: If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message. Read this FAQ entry to learn more about the per_* settings: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Frequently-Asked-Questions#what-do-the-per_-settings-in-conversationhandler-do.
+  conv_handler = ConversationHandler(
+2025-05-13 02:15:17,114 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getMe "HTTP/1.1 200 OK"
+2025-05-13 02:15:17,116 - __main__ - INFO - Connecting to Asterisk AMI...
+2025-05-13 02:15:17,119 - __main__ - INFO - Successfully connected to Asterisk AMI
+2025-05-13 02:15:17,120 - panoramisk.manager - INFO - protocol version: '7.0.1'
+2025-05-13 02:15:17,121 - panoramisk.manager - INFO - Sending awaiting actions
+2025-05-13 02:15:17,255 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/sendMessage "HTTP/1.1 200 OK"
+2025-05-13 02:15:17,257 - __main__ - INFO - Test notification sent to user 7991166259
+2025-05-13 02:15:17,257 - __main__ - INFO - Registered AMI event listener for all events.
+2025-05-13 02:15:17,272 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/deleteWebhook "HTTP/1.1 200 OK"
+2025-05-13 02:15:17,276 - telegram.ext.Application - INFO - Application started
+2025-05-13 02:15:25,702 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:15:25,896 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/sendMessage "HTTP/1.1 200 OK"
+2025-05-13 02:15:31,279 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:15:31,340 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getFile "HTTP/1.1 200 OK"
+2025-05-13 02:15:31,359 - httpx - INFO - HTTP Request: GET https://api.telegram.org/file/bot7523511699%3AAAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/documents/file_3.txt "HTTP/1.1 200 OK"
+2025-05-13 02:15:31,498 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/sendMessage "HTTP/1.1 200 OK"
+2025-05-13 02:15:32,884 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:15:33,010 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-13 02:15:33,143 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/editMessageText "HTTP/1.1 200 OK"
+2025-05-13 02:15:33,287 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/editMessageText "HTTP/1.1 200 OK"
+2025-05-13 02:15:33,489 - __main__ - INFO - Attempting to auto-dial +14802569373 for agent 7991166259 using trunk autodial-one and CID +18887219904
+2025-05-13 02:15:40,473 - __main__ - INFO - Auto-dial originate action sent for +14802569373 via autodial-one. Response: [<Message ActionID='action/3c84bf87-99eb-4e01-b6e1-12be083f287c/1/4' Message='Originate successfully queued' Response='Success' content=''>, <Message ActionID='action/3c84bf87-99eb-4e01-b6e1-12be083f287c/1/4' CallerIDName='+18887219904' CallerIDNum='+18887219904' Channel='PJSIP/autodial-one-00000007' Context='autodial-ivr' Event='OriginateResponse' Exten='s' Privilege='call,all' Reason='4' Response='Success' Uniqueid='1747102533.14' content=''>]
+2025-05-13 02:15:40,660 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/sendMessage "HTTP/1.1 200 OK"
+2025-05-13 02:15:40,822 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/editMessageText "HTTP/1.1 200 OK"
+2025-05-13 02:15:42,911 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"
+2025-05-13 02:15:52,932 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot7523511699:AAFwR1ifbxBMiBpzIWN9A2KbSlhQndMA_NQ/getUpdates "HTTP/1.1 200 OK"

@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import time
 from datetime import datetime
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -14,13 +15,14 @@ from telegram.ext import (
     filters,
 )
 from database import init_db, get_session as get_async_db_session
-from models import Agent
+from models import Agent, AutodialCampaign, AutodialResponse, Call
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from contextlib import asynccontextmanager
 from panoramisk import Manager
 import asyncio
-from typing import Optional
+import json
+from typing import Optional, Dict, Any
 
 # Load environment variables
 load_dotenv()
@@ -42,6 +44,15 @@ logger = logging.getLogger(__name__)
 # Conversation states
 (MAIN_MENU, SETTINGS, PHONE_SETTINGS, 
  CALL_MENU, AGENT_MANAGEMENT, AUTO_DIAL) = range(6)
+
+# Global in-memory data structures
+active_calls = {}
+pending_originations = {}
+uniqueid_to_call_id = {}
+channel_to_call_id = {}
+active_campaigns = {}
+
+global_application_instance = None # Declare global variable for application instance
 
 def validate_phone_number(number: str) -> bool:
     """Validate phone number in E.164 format."""
@@ -477,13 +488,13 @@ async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         # Use initially fetched agent for auth check
         if not agent.is_authorized:
-            await query.message.edit_text("❌ You are not authorized.") 
+            await query.message.edit_text("❌ You are not authorized to set configuration.")
             return SETTINGS
         
         # Need a session to update the DB
         async with get_db_session() as session:
             try:
-                # Re-fetch agent within this transaction to ensure it's bound
+                # Fetch agent again within this transaction to ensure it's bound
                 result = await session.execute(select(Agent).filter_by(telegram_id=user_id))
                 agent_to_update = result.scalar_one_or_none()
 
@@ -665,7 +676,7 @@ async def set_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if agent: # Ensure agent exists before updating
              agent.phone_number = phone_number
              # session.add(agent) # Not strictly needed if object came from the session
-             # await session.commit() # No explicit commit needed here
+             # await session.commit() # Commit handled by context manager
              await update.message.reply_text(
                  "✅ Phone number updated successfully!\n\n"
                  f"📱 New number: `{phone_number}`",
@@ -1066,10 +1077,9 @@ async def originate_call(context: ContextTypes.DEFAULT_TYPE, agent_number: str, 
         if isinstance(response, list):
             # Check for error in any of the events
             for event in response:
-                if isinstance(event, dict):
-                    if event.get('Response') == 'Error':
-                        logger.error(f"AMI Error: {event.get('Message', 'Unknown error')}")
-                        return {'success': False, 'message': event.get('Message', 'Unknown error')}
+                if isinstance(event, dict) and event.get('Response') == 'Error':
+                    logger.error(f"AMI Error: {event.get('Message', 'Unknown error')}")
+                    return {'success': False, 'message': event.get('Message', 'Unknown error')}
             # If we got here, assume success
             return {'success': True}
         else:
@@ -1217,6 +1227,7 @@ async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
                  await update.message.reply_text(error_text)
 
 async def post_init(application: Application) -> None:
+    global global_application_instance
     """Post initialization hook for the bot to set up AMI connection and listener."""
     try:
         # Initialize AMI connection using PTB's event loop
@@ -1246,28 +1257,69 @@ async def post_init(application: Application) -> None:
 
         # Define the AMI event listener function inside post_init
         async def ami_event_listener(manager, event):
+            """Handle AMI events."""
             # Log all received events for debugging
-            logger.debug(f"Received AMI event: {event.name}, Headers: {event.headers}")
+            logger.debug(f"Received AMI event: {event}")
             
-            # Log all received UserEvents for debugging
-            if event.name == 'UserEvent':
-                logger.debug(f"Received UserEvent: {event.headers}")
+            # Handle call end events to clean up our tracking
+            if event.name == 'Hangup':
+                call_id = event.get('CallID')
+                if call_id and call_id in active_calls:
+                    update_call_status(call_id, 'completed', datetime.now())
+            
+            # Handle DTMF events
+            elif event.name == 'DTMFEnd':
+                call_id = event.get('CallID')
+                if call_id and call_id in active_calls:
+                    update_call_status(call_id, 'dtmf_received')
+            
+            # Handle UserEvent
+            elif getattr(event, 'name', '') == 'UserEvent':
+                logger.debug(f"Processing UserEvent: {dict(event)}")
 
                 # Check if it's our specific AutoDialResponse event
-                if event.headers.get('UserEvent') == 'AutoDialResponse':
-                    agent_id_str = event.headers.get('AgentID')
-                    caller_id = event.headers.get('CallerID', 'Unknown Caller')
-                    pressed_one = event.headers.get('PressedOne')
+                if event.get('UserEvent') == 'AutoDialResponse':
+                    agent_id_str = event.get('AgentID')
+                    caller_id = event.get('CallerID', 'Unknown Caller')
+                    pressed_one = event.get('PressedOne')
+                    campaign_id = event.get('CampaignID', 'unknown')
 
-                    logger.info(f"Received AutoDialResponse event for AgentID: {agent_id_str}, CallerID: {caller_id}, PressedOne: {pressed_one}")
+                    logger.info(f"Processing AutoDialResponse - AgentID: {agent_id_str}, CallerID: {caller_id}, PressedOne: {pressed_one}, CampaignID: {campaign_id}")
 
                     if pressed_one == 'Yes' and agent_id_str:
                         try:
                             agent_id_int = int(agent_id_str)
+                            
+                            # Record the response in the database
+                            async with get_session() as session:
+                                # Look up the campaign if it exists
+                                campaign = None
+                                if campaign_id != 'unknown':
+                                    result = await session.execute(
+                                        select(AutodialCampaign).filter_by(id=int(campaign_id))
+                                    )
+                                    campaign = result.scalar_one_or_none()
+                                
+                                # Create a response record
+                                new_response = AutodialResponse(
+                                    campaign_id=int(campaign_id) if campaign_id != 'unknown' else None,
+                                    phone_number=caller_id,
+                                    response_digit='1',
+                                    timestamp=datetime.utcnow()
+                                )
+                                session.add(new_response)
+                                await session.commit()
+                                logger.info(f"Recorded response from {caller_id} in campaign {campaign_id}")
+                            
+                            # Build enhanced notification with campaign info
+                            campaign_text = f"Campaign: {campaign.name}" if campaign else ""
                             notification_message = (
-                                f"📞 *Auto-Dial Response*\n\n"
-                                f"👤 The contact at `{caller_id}` pressed 1!"
+                                f"✅ *New Auto-Dial Response*\n\n"
+                                f"📱 Phone: `{caller_id}`\n"
+                                f"🔘 Response: Pressed 1\n"
+                                f"{campaign_text}"
                             )
+                            
                             # Use the application instance passed to post_init
                             logger.info(f"Attempting to send notification to agent {agent_id_int}")
                             await application.bot.send_message(
@@ -1276,26 +1328,568 @@ async def post_init(application: Application) -> None:
                                 parse_mode='Markdown'
                             )
                             logger.info(f"Sent notification to agent {agent_id_int} for call from {caller_id}")
-                        except ValueError:
-                            logger.error(f"Could not convert AgentID '{agent_id_str}' to integer.")
+                        except ValueError as ve:
+                            logger.error(f"Value error processing response: {ve}")
                         except Exception as e:
-                            logger.error(f"Failed to send notification to agent {agent_id_str}: {e}")
+                            logger.error(f"Failed to process response or send notification: {e}")
                     elif pressed_one != 'Yes':
                         logger.info(f"AutoDialResponse for AgentID {agent_id_str}: Called party did not press 1 (PressedOne: {pressed_one})")
+                
+                # Also handle the KeyPress event (alternative implementation)
+                elif event.headers.get('UserEvent') == 'KeyPress':
+                    number = event.headers.get('Number')
+                    pressed_digit = event.headers.get('Pressed')
+                    campaign_id = event.headers.get('Campaign', 'unknown')
+                    
+                    logger.info(f"Received KeyPress event: Number={number}, Pressed={pressed_digit}, Campaign={campaign_id}")
+                    
+                    if pressed_digit == '1':
+                        try:
+                            # Find the campaign owner
+                            async with get_session() as session:
+                                campaign = None
+                                user_id = None
+                                
+                                if campaign_id != 'unknown':
+                                    result = await session.execute(
+                                        select(AutodialCampaign).filter_by(id=int(campaign_id))
+                                    )
+                                    campaign = result.scalar_one_or_none()
+                                    if campaign:
+                                        user_id = campaign.telegram_user_id
+                                
+                                # Create response record
+                                new_response = AutodialResponse(
+                                    campaign_id=int(campaign_id) if campaign_id != 'unknown' else None,
+                                    phone_number=number,
+                                    response_digit=pressed_digit,
+                                    timestamp=datetime.utcnow()
+                                )
+                                session.add(new_response)
+                                await session.commit()
+                            
+                            # If we found the user, notify them
+                            if user_id:
+                                campaign_text = f"Campaign: {campaign.name}" if campaign else ""
+                                notification_message = (
+                                    f"✅ *New Response*\n\n"
+                                    f"📱 Phone: `{number}`\n"
+                                    f"🔘 Digit: {pressed_digit}\n"
+                                    f"{campaign_text}"
+                                )
+                                
+                                await application.bot.send_message(
+                                    chat_id=user_id,
+                                    text=notification_message,
+                                    parse_mode='Markdown'
+                                )
+                                logger.info(f"Sent KeyPress notification to user {user_id}")
+                        except Exception as e:
+                            logger.error(f"Error processing KeyPress event: {e}")
+                    else:
+                        logger.info(f"KeyPress event: {number} pressed {pressed_digit} (not 1)")
         
-        # Register the listener for UserEvent
+        # Newchannel event listener to map Uniqueid to call_id using database
+        async def new_channel_event_listener(manager, event):
+            # Log all the event fields at debug level
+            event_dict = dict(event)
+            logger.debug("=== Newchannel Event Fields ===")
+            for key, value in event_dict.items():
+                logger.debug(f"{key}: {value}")
+            logger.debug("==============================")
+            
+            uniqueid = event.get('Uniqueid')
+            channel = event.get('Channel')
+            exten = event.get('Exten')
+            context = event.get('Context')
+            call_id_from_event = event.get('CallID')  # Check if CallID is passed in event
+            
+            logger.info(f"Processing Newchannel event: Uniqueid={uniqueid}, Channel={channel}, Exten={exten}, Context={context}, CallID={call_id_from_event}")
+            
+            # Check if this is a new outbound call in our autodial-ivr context
+            if context == 'autodial-ivr':
+                try:
+                    async with get_async_db_session() as session:
+                        # Try finding the call using different methods - prioritize uniqueid which is often our call_id
+                        call = None
+                        
+                        if uniqueid:
+                            # First try by Asterisk Uniqueid which often contains our call_id
+                            call = await Call.find_by_uniqueid(session, uniqueid)
+                            if not call:
+                                # If not found directly, try using uniqueid as call_id (they're often the same)
+                                call = await Call.find_by_call_id(session, uniqueid)
+                            if call:
+                                logger.info(f"Found call in database by Uniqueid/CallID: {uniqueid}")
+                        
+                        if not call and call_id_from_event:
+                            # Then try by call_id from event variables
+                            call = await Call.find_by_call_id(session, call_id_from_event)
+                            if call:
+                                logger.info(f"Found call {call_id_from_event} by CallID variable from event")
+                        
+                        # If not found by call_id, try to match by target number from channel name
+                        if not call and channel and 'PJSIP/' in channel:
+                            # Extract the target number from the channel name (e.g., PJSIP/1234567890@trunk)
+                            try:
+                                target_part = channel.split('PJSIP/')[1].split('@')[0]
+                                if target_part.isdigit() or (target_part.startswith('+') and target_part[1:].isdigit()):
+                                    target_number = target_part
+                                    call = await Call.find_latest_by_target(session, target_number)
+                                    if call:
+                                        logger.info(f"Found call {call.call_id} by matching target number {target_number} from channel")
+                            except (IndexError, AttributeError):
+                                pass
+                        
+                        # If still not found, try to find the most recent pending call
+                        if not call:
+                            call = await Call.find_latest_pending(session)
+                            if call:
+                                logger.info(f"Found latest pending call {call.call_id} with no uniqueid/channel")
+                        
+                        # If a call was found, update it with the uniqueid and channel
+                        if call:
+                            # Update the call with Uniqueid and actual channel
+                            original_status = call.status
+                            call.uniqueid = uniqueid
+                            call.channel = channel
+                            call.status = "connected"
+                            call.call_metadata = {
+                                **(call.call_metadata or {}),
+                                "connected_time": datetime.now().isoformat(),
+                                "asterisk_context": context,
+                                "asterisk_exten": exten
+                            }
+                            await session.commit()
+                            
+                            logger.info(f"Updated call {call.call_id} with uniqueid={uniqueid}, channel={channel}")
+                            logger.info(f"Call status changed from {original_status} to connected")
+                            
+                            # Log detailed call info for debugging
+                            logger.debug(f"Call details: Target={call.target_number}, Campaign={call.campaign_id}, Agent={call.agent_telegram_id}")
+                        else:
+                            # No matching call found in database, create a new record if needed
+                            logger.warning(f"No matching call found in database for channel {channel} and Uniqueid {uniqueid}")
+                            
+                            # Extract target number from channel if possible
+                            target_number = None
+                            if channel and 'PJSIP/' in channel:
+                                try:
+                                    target_part = channel.split('PJSIP/')[1].split('@')[0]
+                                    if target_part.isdigit() or (target_part.startswith('+') and target_part[1:].isdigit()):
+                                        target_number = target_part
+                                except (IndexError, AttributeError):
+                                    pass
+                            
+                            # Optionally create a new call record for unknown calls
+                            # This is for debugging purposes - we can track all calls even if not initiated by us
+                            if target_number:
+                                new_call_id = f"unknown_{uniqueid}_{int(time.time())}"
+                                new_call = Call(
+                                    call_id=new_call_id,
+                                    target_number=target_number,
+                                    uniqueid=uniqueid,
+                                    channel=channel,
+                                    status="unknown_origin",
+                                    start_time=datetime.now(),
+                                    call_metadata={
+                                        "context": context,
+                                        "exten": exten,
+                                        "detected_time": datetime.now().isoformat(),
+                                        "origin": "external"
+                                    }
+                                )
+                                session.add(new_call)
+                                await session.commit()
+                                logger.info(f"Created new record for unknown call: {new_call_id} with target {target_number}")
+                except Exception as e:
+                    logger.error(f"Error processing Newchannel event: {str(e)}")
+            else:
+                logger.debug(f"Ignoring non-autodial channel: {channel} (Context: {context})")
+
+
+        # Register event listeners
         ami_manager.register_event('UserEvent', ami_event_listener)
-        logger.info("Registered AMI event listener for UserEvent.")
+        ami_manager.register_event('Newchannel', new_channel_event_listener)
+        ami_manager.register_event('DTMFBegin', dtmf_begin_listener)  # Add DTMFBegin listener
+        ami_manager.register_event('DTMFEnd', dtmf_event_listener)
+        ami_manager.register_event('Hangup', hangup_event_listener) # Register Hangup event listener
+        logger.info("AMI event listeners registered.")
 
         # Store in application context for access in handlers
         application.bot_data["ami_manager"] = ami_manager
+        global_application_instance = application # Store application instance globally
 
     except Exception as e:
         logger.error(f"Failed to establish AMI connection or register listener: {str(e)}")
         application.bot_data["ami_manager"] = None
 
-async def originate_autodial_call(context: ContextTypes.DEFAULT_TYPE, target_number: str, trunk: str, caller_id: str, agent_telegram_id: int) -> dict:
-    """Originate a call for an auto-dial campaign through Asterisk AMI."""
+async def dtmf_begin_listener(manager, event):
+    """Handle DTMFBegin events from calls using database for tracking."""
+    # Log ALL event fields for analysis
+    event_dict = dict(event)
+    logger.info("=== DTMFBegin Event Fields ===")
+    for key, value in event_dict.items():
+        logger.info(f"{key}: {value}")
+    logger.info("==============================")
+    
+    digit = event.get('Digit')
+    channel = event.get('Channel')
+    uniqueid = event.get('Uniqueid')
+    direction = event.get('Direction')  # DTMFBegin includes direction
+    call_id_from_event = event.get('CallID')  # Check if CallID is passed in event
+    
+    logger.info(f"DTMFBegin detected - Digit: {digit}, Channel: {channel}, Direction: {direction}, UniqueID: {uniqueid}, CallID: {call_id_from_event}")
+    
+    try:
+        # Get the target number from our database
+        target_number = 'Unknown'
+        campaign_id = None
+        agent_id = 7991166259  # Default agent ID if not found
+        
+        async with get_async_db_session() as session:
+            call = None
+            
+            # Try finding the call using different methods
+            if call_id_from_event:
+                # First check by call_id from event variables
+                call = await Call.find_by_call_id(session, call_id_from_event)
+                if call:
+                    logger.info(f"Found call in database by CallID: {call_id_from_event}")
+            
+            if not call and uniqueid:
+                # Then try by Asterisk Uniqueid
+                call = await Call.find_by_uniqueid(session, uniqueid)
+                if call:
+                    logger.info(f"Found call in database by Uniqueid: {uniqueid}")
+                    
+            if not call and channel:
+                # Finally try by channel name
+                call = await Call.find_by_channel(session, channel)
+                if call:
+                    logger.info(f"Found call in database by Channel: {channel}")
+            
+            if call:
+                # Update the call status to indicate DTMF started
+                target_number = call.target_number
+                campaign_id = call.campaign_id
+                agent_id = call.agent_telegram_id or agent_id
+                
+                # Update the call status
+                call.status = 'dtmf_started'
+                call.call_metadata = {
+                    **(call.call_metadata or {}),
+                    "dtmf_start": {
+                        "time": datetime.now().isoformat(),
+                        "digit": digit,
+                        "direction": direction
+                    }
+                }
+                await session.commit()
+                logger.info(f"Updated call {call.call_id} status to dtmf_started")
+            else:
+                logger.warning(f"Could not find call in database for Channel: {channel} or Uniqueid: {uniqueid}")
+
+        # Get the caller ID (your number that made the call)
+        caller_id = event.get('CallerIDNum') or 'Unknown Caller'
+        
+        logger.info(f"DTMFBegin '{digit}' pressed - Target: {target_number}, CallerID: {caller_id}, Channel: {channel}, Direction: {direction}")
+        
+        # Format the notification
+        campaign_text = f"• Campaign: `{campaign_id}`\n" if campaign_id else ""
+        notification = (
+            "🔔 *DTMF PRESS STARTED*\n\n"
+            f"{campaign_text}"
+            f"• Target: `{target_number}`\n"
+            f"• CallerID: `{caller_id}`\n"
+            f"• Direction: `{direction}`\n"
+            f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
+        )
+        
+        # Get application instance from global variable
+        global application
+        application = global_application_instance
+        if not application:
+            logger.error("Application instance not found globally. Cannot send DTMFBegin notification.")
+            return
+
+        await application.bot.send_message(
+            chat_id=agent_id,
+            text=notification,
+            parse_mode='Markdown'
+        )
+        
+        logger.info(f"Sent DTMFBegin notification to agent {agent_id}")
+        
+    except Exception as e:
+        logger.error(f"Error processing DTMFBegin event: {e}", exc_info=True)
+
+async def dtmf_event_listener(manager, event):
+    """Handle DTMF events from calls using database for tracking."""
+    # Retrieve application instance from global variable
+    global application
+    application = global_application_instance
+    if not application:
+        logger.error("Application instance not found globally. Cannot send DTMF notification.")
+        return
+
+    logger.debug(f"DTMF Event: {dict(event)}")
+    
+    digit = event.get('Digit')
+    channel = event.get('Channel')
+    uniqueid = event.get('Uniqueid')
+    
+    # Try to get tracking information from event variables
+    tracking_id = event.get('TrackingID')  # Our primary identifier JKD1.x
+    call_id_from_event = event.get('CallID')  # Fallback to old CallID
+    
+    # Log the DTMF press for debugging
+    logger.info(f"DTMF '{digit}' detected on channel {channel} (UniqueID: {uniqueid}, TrackingID: {tracking_id})")
+    
+    try:
+        # Initialize variables
+        target_number = 'Unknown'
+        campaign_id = None
+        caller_id = event.get('CallerIDNum') or 'Unknown Caller'
+        agent_id = 7991166259  # Default agent ID
+        
+        # Try to get AgentTelegramID from event variables
+        if 'AgentTelegramID' in event:
+            try:
+                agent_id = int(event['AgentTelegramID'])
+                logger.info(f"Found AgentTelegramID in event: {agent_id}")
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid AgentTelegramID in event: {event.get('AgentTelegramID')}")
+        
+        async with get_async_db_session() as session:
+            call = None
+            
+            # Try finding the call using different methods - CHANGED ORDER to prioritize uniqueid
+            # Since we've observed that uniqueid is actually our call_id in many cases
+            if uniqueid:
+                # First try by Asterisk Uniqueid which often contains our call_id
+                call = await Call.find_by_uniqueid(session, uniqueid)
+                if not call:
+                    # If not found directly, try using uniqueid as call_id (they're often the same)
+                    call = await Call.find_by_call_id(session, uniqueid)
+                if call:
+                    logger.info(f"Found call in database by Uniqueid/CallID: {uniqueid}")
+            
+            if not call and call_id_from_event:
+                # Then try by call_id from event variables
+                call = await Call.find_by_call_id(session, call_id_from_event)
+                if call:
+                    logger.info(f"Found call in database by CallID: {call_id_from_event}")
+            
+            if not call and tracking_id:
+                # Then check by tracking_id
+                call = await Call.find_by_tracking_id(session, tracking_id)
+                if call:
+                    logger.info(f"Found call in database by TrackingID: {tracking_id}")
+                    
+            if not call and channel:
+                # Finally try by channel name
+                call = await Call.find_by_channel(session, channel)
+                if call:
+                    logger.info(f"Found call in database by Channel: {channel}")
+            
+            if call:
+                # Get the call details
+                target_number = call.target_number
+                campaign_id = call.campaign_id
+                
+                # Use agent from database if available, otherwise use from event
+                if call.agent_telegram_id:
+                    agent_id = call.agent_telegram_id
+                
+                # Update the call record with DTMF information
+                call.status = 'dtmf_processed'
+                call.dtmf_digits = (call.dtmf_digits or '') + digit if call.dtmf_digits else digit
+                
+                # Update call_metadata
+                current_metadata = call.call_metadata or {}
+                dtmf_history = current_metadata.get('dtmf_history', [])
+                dtmf_history.append({
+                    "time": datetime.now().isoformat(),
+                    "digit": digit,
+                    "uniqueid": uniqueid,
+                    "channel": channel
+                })
+                
+                call.call_metadata = {
+                    **current_metadata,
+                    "dtmf_history": dtmf_history,
+                    "last_dtmf": {
+                        "time": datetime.now().isoformat(),
+                        "digit": digit
+                    }
+                }
+                
+                await session.commit()
+                logger.info(f"Updated call {call.call_id} with DTMF digit {digit}, status now dtmf_processed")
+            else:
+                logger.warning(f"Could not find call in database for Uniqueid: {uniqueid} or Channel: {channel}")
+                
+                # Optionally create a new record for unknown DTMF events
+                if uniqueid:
+                    new_call_id = f"dtmf_unknown_{uniqueid}_{int(time.time())}"
+                    new_call = Call(
+                        call_id=new_call_id,
+                        uniqueid=uniqueid,
+                        channel=channel,
+                        target_number=caller_id,  # Use caller_id as fallback
+                        status="unknown_dtmf",
+                        dtmf_digits=digit,
+                        start_time=datetime.now(),
+                        call_metadata={
+                            "detected_time": datetime.now().isoformat(),
+                            "origin": "external_dtmf",
+                            "dtmf_history": [{
+                                "time": datetime.now().isoformat(),
+                                "digit": digit,
+                                "uniqueid": uniqueid,
+                                "channel": channel
+                            }]
+                        }
+                    )
+                    session.add(new_call)
+                    await session.commit()
+                    logger.info(f"Created new record for unknown DTMF: {new_call_id}")
+        
+        # Format the notification with tracking ID prominently displayed
+        # Get the tracking ID from the call record if found, otherwise from event or fallback
+        display_tracking_id = "Unknown"
+        if call and call.tracking_id:
+            display_tracking_id = call.tracking_id
+            logger.info(f"Using tracking ID from database: {display_tracking_id}")
+        elif tracking_id:
+            display_tracking_id = tracking_id
+            logger.info(f"Using tracking ID from event: {display_tracking_id}")
+        
+        # Format campaign display - use campaign_id if available, otherwise use tracking_id
+        campaign_display = f"{campaign_id}" if campaign_id else display_tracking_id
+        
+        notification = (
+            f"🔔 *DTMF PRESS DETECTED*\n\n"
+            f"#{campaign_display}\n\n"
+            f"• Target: `{target_number}`\n"
+            f"• CallerID: `{caller_id}`\n"
+            f"• Digit: `{digit}`\n"
+            f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
+        )
+        
+        await application.bot.send_message(
+            chat_id=agent_id,
+            text=notification,
+            parse_mode='Markdown'
+        )
+        
+        logger.info(f"Sent DTMF notification to agent {agent_id}")
+        
+    except Exception as e:
+        logger.error(f"Error processing DTMF event: {e}", exc_info=True)
+
+async def hangup_event_listener(manager, event):
+    """Handle Hangup events from calls using database for tracking."""
+    # Retrieve application instance from global variable (if needed for future use)
+    global application
+    application = global_application_instance
+    if not application:
+        logger.debug("Application instance not found globally in hangup_event_listener.")
+
+    logger.debug(f"Hangup Event: {dict(event)}")
+    uniqueid = event.get('Uniqueid')
+    channel = event.get('Channel')
+    tracking_id = event.get('TrackingID')  # Our primary identifier JKD1.x
+    call_id_from_event = event.get('CallID')  # Fallback identifier
+    cause = event.get('Cause')
+    cause_txt = event.get('Cause-txt')
+
+    logger.info(f"Hangup Event: Uniqueid={uniqueid}, Channel={channel}, TrackingID={tracking_id}, CallID={call_id_from_event}, Cause={cause}, Cause-txt={cause_txt}")
+
+    try:
+        if tracking_id or uniqueid or channel or call_id_from_event:
+            async with get_async_db_session() as session:
+                call = None
+                
+                # Try finding the call using different methods - CHANGED ORDER to prioritize uniqueid
+                # Since we've observed that uniqueid is actually our call_id in many cases
+                if uniqueid:
+                    # First try by Asterisk Uniqueid which often contains our call_id
+                    call = await Call.find_by_uniqueid(session, uniqueid)
+                    if not call:
+                        # If not found directly, try using uniqueid as call_id (they're often the same)
+                        call = await Call.find_by_call_id(session, uniqueid)
+                    if call:
+                        logger.info(f"Found call in database by Uniqueid/CallID: {uniqueid}")
+                
+                if not call and call_id_from_event:
+                    # Then try by call_id from event variables
+                    call = await Call.find_by_call_id(session, call_id_from_event)
+                    if call:
+                        logger.info(f"Found call in database by CallID: {call_id_from_event}")
+                
+                if not call and tracking_id:
+                    # Then check by tracking_id
+                    call = await Call.find_by_tracking_id(session, tracking_id)
+                    if call:
+                        logger.info(f"Found call in database by TrackingID: {tracking_id}")
+                        
+                if not call and channel:
+                    # Finally try by channel name
+                    call = await Call.find_by_channel(session, channel)
+                    if call:
+                        logger.info(f"Found call in database by Channel: {channel}")
+                
+                if call:
+                    # Update the call status to completed and record end time
+                    call.status = 'completed'
+                    call.end_time = datetime.now()
+                    
+                    # Update call_metadata with hangup information
+                    call.call_metadata = {
+                        **(call.call_metadata or {}),
+                        "hangup": {
+                            "time": datetime.now().isoformat(),
+                            "cause": cause,
+                            "cause_txt": cause_txt,
+                            "channel": channel
+                        }
+                    }
+                    
+                    await session.commit()
+                    logger.info(f"Call {call.call_id} (Uniqueid: {uniqueid}) marked as completed in database")
+                    
+                    # Optional: Send notification to agent that call has ended
+                    if call.agent_telegram_id and application:
+                        try:
+                            # Format campaign display - use campaign_id if available, otherwise use tracking_id
+                            campaign_display = f"{call.campaign_id}" if call.campaign_id else (call.tracking_id or "Unknown")
+                            
+                            notification = (
+                                f"🔔 *Call Ended*\n\n"
+                                f"#{campaign_display}\n\n"
+                                f"• Target: `{call.target_number}`\n"
+                                f"• Duration: {(call.end_time - call.start_time).total_seconds():.0f} seconds\n"
+                                f"• Status: Completed\n"
+                                f"• Hangup Cause: {cause_txt or 'Unknown'}"
+                            )
+                            
+                            await application.bot.send_message(
+                                chat_id=call.agent_telegram_id,
+                                text=notification,
+                                parse_mode='Markdown'
+                            )
+                            logger.info(f"Sent hangup notification to agent {call.agent_telegram_id}")
+                        except Exception as e:
+                            logger.error(f"Failed to send hangup notification: {e}")
+                else:
+                    logger.debug(f"No call found in database for Uniqueid: {uniqueid}, Channel: {channel}, CallID: {call_id_from_event}")
+    except Exception as e:
+        logger.error(f"Error processing hangup event: {e}", exc_info=True)
+
+async def originate_autodial_call(context: ContextTypes.DEFAULT_TYPE, target_number: str, trunk: str, caller_id: str, agent_telegram_id: int, campaign_id: Optional[int] = None, sequence_number: Optional[int] = None) -> dict:
+    """Originate a call for an auto-dial campaign through Asterisk AMI using database for tracking."""
     ami_manager = context.application.bot_data.get("ami_manager")
     
     if not ami_manager:
@@ -1303,46 +1897,135 @@ async def originate_autodial_call(context: ContextTypes.DEFAULT_TYPE, target_num
         return {'success': False, 'message': 'AMI not connected'}
         
     try:
-        # Build variables string
-        # AgentTelegramID will be used by Asterisk to send the UserEvent back to the correct agent
-        # OriginalTargetNumber is useful for logging/tracking within Asterisk if needed
+        # Generate a unique ID for this call
+        timestamp = int(time.time())
+        call_id = f"campaign_{campaign_id or 'none'}_{timestamp}"
+        action_id = f"originate_{call_id}"
+        
+        # Create tracking ID in format JKD1.{sequence_number}
+        tracking_id = f"JKD1.{sequence_number}" if sequence_number is not None else f"JKD1.{timestamp % 1000}"
+        
+        # Build the channel name that will be used
+        channel = f'PJSIP/{target_number}@{trunk}'
+        
+        # Create call record in database
+        async with get_async_db_session() as session:
+            # Create new call record
+            new_call = Call(
+                call_id=call_id,
+                campaign_id=campaign_id,
+                sequence_number=sequence_number,
+                tracking_id=tracking_id,  # Our new tracking ID (e.g., JKD1.1)
+                agent_telegram_id=agent_telegram_id,
+                target_number=target_number,
+                caller_id=caller_id,
+                trunk=trunk,
+                channel=channel,  # Initial channel name
+                action_id=action_id,
+                status="initiated",
+                start_time=datetime.now(),
+                # Store additional metadata as JSON
+                call_metadata={
+                    "timestamp": timestamp,
+                    "origin": "autodial",
+                    "tracking_id": tracking_id  # Store in metadata too for redundancy
+                }
+            )
+            session.add(new_call)
+            await session.commit()
+            logger.info(f"Created call record in database: {call_id}")
+        
+        # Build variables string for Asterisk using double underscores for persistence across contexts
+        # These variables will be available in the dialplan and DTMF events
         variables = (
-            f'AgentTelegramID={agent_telegram_id},'
-            f'OriginalTargetNumber={target_number}'
+            f'__AgentTelegramID={agent_telegram_id},'  # Double underscore ensures persistence
+            f'__CallID={call_id},'  # Original call ID
+            f'__TrackingID={tracking_id},'  # Our new primary tracking ID (e.g., JKD1.1)
+            f'__SequenceNumber={sequence_number or 0},'  # Position in the campaign
+            f'__OriginalTargetNumber={target_number},'  # Will persist in all contexts
+            f'__CallerID={caller_id},'  # Will persist in all contexts
+            f'__CampaignID={campaign_id or ""},'  # Will persist in all contexts
+            f'__Origin=autodial,'  # Will persist in all contexts
+            f'__ActionID={action_id}'  # Will persist in all contexts
         )
         
+        logger.info(f"Originating call to {target_number} via {trunk} (Campaign: {campaign_id or 'N/A'})")
+        logger.debug(f"Call variables: {variables}")
+            
         # Send originate action
         # The call goes directly to the target number into the IVR context
         response = await ami_manager.send_action({
             'Action': 'Originate',
-            'Channel': f'PJSIP/{target_number}@{trunk}', # Target number uses the selected autodial trunk
-            'Context': 'autodial-ivr',                 # Send to the autodial IVR context
-            'Exten': 's',                              # Start at the 's' extension
+            'ActionID': action_id,
+            'Channel': channel,
+            'Context': 'autodial-ivr',
+            'Exten': 's',
             'Priority': 1,
-            'CallerID': f'"{caller_id}" <{caller_id}>',  # Use the agent's autodial CID
+            'CallerID': f'"{caller_id}" <{caller_id}>',
             'Async': 'true',
             'Variable': variables,
-            'Timeout': 45000 # Timeout for the call attempt (e.g., 45 seconds)
+            'Timeout': 45000,  # 45 seconds timeout
+            'ChannelId': call_id  # Use call_id as ChannelId for easier tracking
         })
         
         logger.info(f"Auto-dial originate action sent for {target_number} via {trunk}. Response: {response}")
         
-        # Simplified success check for originate async. A successful action submission is usually enough.
-        # More robust error checking might involve listening for specific failure events if needed.
-        if isinstance(response, list): # panoramisk can return a list
-            for event_item in response:
-                if isinstance(event_item, dict) and event_item.get('Response') == 'Error':
-                    logger.error(f"AMI Error for {target_number}: {event_item.get('Message', 'Unknown error')}")
-                    return {'success': False, 'message': event_item.get('Message', 'Unknown error')}
-            return {'success': True, 'message': 'Originate action sent.'} # Assume success if no explicit error in list
-        elif isinstance(response, dict) and response.get('Response') == 'Error':
-            logger.error(f"AMI Error for {target_number}: {response.get('Message', 'Unknown error')}")
-            return {'success': False, 'message': response.get('Message', 'Unknown error')}
-        
-        return {'success': True, 'message': 'Originate action sent.'}
+        # Update call status based on response
+        async with get_async_db_session() as session:
+            call = await Call.find_by_call_id(session, call_id)
+            if call:
+                if isinstance(response, list): # panoramisk can return a list
+                    for event_item in response:
+                        if isinstance(event_item, dict) and event_item.get('Response') == 'Error':
+                            error_msg = event_item.get('Message', 'Unknown error')
+                            logger.error(f"AMI Error for {target_number}: {error_msg}")
+                            # Update call status to error
+                            call.status = "error"
+                            call.call_metadata = {
+                                **(call.call_metadata or {}),
+                                "error": error_msg,
+                                "error_time": datetime.now().isoformat()
+                            }
+                            await session.commit()
+                            return {'success': False, 'message': error_msg}
+                elif isinstance(response, dict) and response.get('Response') == 'Error':
+                    error_msg = response.get('Message', 'Unknown error')
+                    logger.error(f"AMI Error for {target_number}: {error_msg}")
+                    # Update call status to error
+                    call.status = "error"
+                    call.call_metadata = {
+                        **(call.call_metadata or {}),
+                        "error": error_msg,
+                        "error_time": datetime.now().isoformat()
+                    }
+                    await session.commit()
+                    return {'success': False, 'message': error_msg}
+                
+                # If we made it here, assume success
+                call.status = "sending"
+                await session.commit()
+                return {'success': True, 'message': 'Originate action sent.'}
+            else:
+                logger.error(f"Call {call_id} not found in database after creation")
+                return {'success': False, 'message': 'Database error: Call record not found'}
             
     except Exception as e:
         logger.error(f"Error originating auto-dial call to {target_number}: {str(e)}")
+        # Try to mark the call as error in the database if it exists
+        try:
+            async with get_async_db_session() as session:
+                call = await Call.find_by_call_id(session, call_id)
+                if call:
+                    call.status = "error"
+                    call.call_metadata = {
+                        **(call.call_metadata or {}),
+                        "error": str(e),
+                        "error_time": datetime.now().isoformat()
+                    }
+                    await session.commit()
+        except Exception as db_error:
+            logger.error(f"Failed to update call error status in database: {db_error}")
+            
         return {'success': False, 'message': str(e)}
 
 async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Optional[int]:
@@ -1526,11 +2209,29 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 if query.message:
                      await query.message.edit_text("Error: Agent data not found.")
                  # Decide where to go if agent is gone - END might be safest
-                return ConversationHandler.END 
+                return ConversationHandler.END # End conversation if agent gone
         return MAIN_MENU
             
     elif query.data == "start_autodial_campaign":
         await query.message.edit_text("🔄 Initializing Auto-Dial campaign...", parse_mode='Markdown')
+
+        # Get campaign name if provided, or generate a default one with timestamp
+        campaign_name = context.user_data.get('autodial_campaign_name', f"Campaign {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+        # Create a new campaign entry in the database
+        campaign_id = None
+        try:
+            async with get_db_session() as session:
+                # Create new campaign with correct model name and field name
+                new_campaign = AutodialCampaign(name=campaign_name, telegram_user_id=user_id)
+                session.add(new_campaign)
+                await session.flush()  # Get ID before commit
+                campaign_id = new_campaign.id
+                await session.commit()
+                logger.info(f"Created new autodial campaign with ID {campaign_id} for user {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to create campaign record: {e}")
+            # Continue without campaign tracking if there's an error
 
         numbers_to_dial = context.user_data.get('autodial_numbers', [])
         if not numbers_to_dial:
@@ -1541,92 +2242,75 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             # Need to decide if we return AUTO_DIAL or MAIN_MENU. Let's stick to AUTO_DIAL for consistency.
             return AUTO_DIAL 
 
-        async with get_db_session() as session: # <-- Async Context for agent check
-            # agent = session.query(Agent).filter_by(telegram_id=user_id).first()
-            result = await session.execute(select(Agent).filter_by(telegram_id=user_id)) # <-- Async Query
+        # Get the trunk and other info needed for calls
+        async with get_db_session() as session: 
+            result = await session.execute(select(Agent).filter_by(telegram_id=user_id))
             agent = result.scalar_one_or_none()
-
             if not agent:
-                await query.message.edit_text("Error: Agent data not found.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]))
-                return MAIN_MENU # Go to main menu if agent not found
+                await query.message.edit_text("Error: Agent data not found for making calls.")
+                return MAIN_MENU
+                
+            # Determine actual trunk name
+            asterisk_trunk_name = f"autodial-{agent.autodial_trunk}"
             
-            # Check authorization and configuration (using fetched agent)
-            if not agent.is_authorized or not agent.auto_dial:
-                await query.message.edit_text("❌ You are not authorized for Auto-Dial.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]))
-                return MAIN_MENU # Go to main menu if not authorized
-
-            if not agent.autodial_caller_id:
-                await query.message.edit_text(
-                    "⚠️ Auto-Dial Caller ID not set. Please set it via `/setautodialcid` or in Settings.",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]])
-                )
-                # Stay in AUTO_DIAL or go to MAIN_MENU? Let's go to MAIN_MENU to encourage fixing config.
-                await show_main_menu(update, context, agent) # Show menu after message
-                return MAIN_MENU
-
-            if not agent.autodial_trunk:
-                await query.message.edit_text(
-                    "⚠️ Auto-Dial Trunk not selected. Please select it in Settings.",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]])
-                )
-                await show_main_menu(update, context, agent) # Show menu after message
-                return MAIN_MENU
-        
-        # If all checks pass, proceed with origination (no more DB needed here)
-        # Check AMI connection
-        if not await check_ami_status(context):
+            # Update the message with campaign info
+            campaign_info = f"Campaign ID: {campaign_id}\n" if campaign_id else ""
             await query.message.edit_text(
-                "❌ Error: AMI connection is not available. Campaign cannot start.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]))
-            # Can't show main menu without agent, and agent fetch was in a closed session.
-            # Re-fetch or just end?
-            # Let's try to refetch to show the main menu for a better UX
-            async with get_db_session() as final_session:
-                 result = await final_session.execute(select(Agent).filter_by(telegram_id=user_id))
-                 final_agent = result.scalar_one_or_none()
-                 if final_agent:
-                     await show_main_menu(update, context, final_agent)
-            return MAIN_MENU
-
-        # Determine actual trunk name (using agent object from above, which is now out of session scope but attributes are still accessible)
-        asterisk_trunk_name = f"autodial-{agent.autodial_trunk}"
-
-        await query.message.edit_text(
-            f"🚀 Starting Auto-Dial Campaign for {len(numbers_to_dial)} numbers using trunk '{asterisk_trunk_name}' and CID '{agent.autodial_caller_id}'.\n"
-            "Monitor your Telegram for responses from the IVR.",
-            parse_mode='Markdown'
-        )
-
+                f"🚀 Starting Auto-Dial Campaign for {len(numbers_to_dial)} numbers.\n"
+                f"{campaign_info}"
+                "Dialing in progress... Please wait.",
+                parse_mode='Markdown'
+            )
+        
+        # Initialize counters
         successful_originations = 0
         failed_originations = 0
-
-        for number in numbers_to_dial:
-            await asyncio.sleep(0.2) 
+        
+        # Process all numbers in the list with sequence numbers for tracking
+        for idx, number in enumerate(numbers_to_dial, 1):  # Start index at 1
+            await asyncio.sleep(0.2)  # Throttle calls to avoid flooding
             
-            logger.info(f"Attempting to auto-dial {number} for agent {user_id} using trunk {asterisk_trunk_name} and CID {agent.autodial_caller_id}")
-            # originate_autodial_call is already async
-            response = await originate_autodial_call(
-                context,
-                target_number=number,
-                trunk=asterisk_trunk_name,
-                caller_id=agent.autodial_caller_id,
-                agent_telegram_id=user_id 
-            )
-            if response['success']:
-                successful_originations += 1
-            else:
+            logger.info(f"Dialing {number} for user {user_id}, campaign {campaign_id}, sequence {idx}")
+            
+            try:
+                # Use our enhanced autodial function with sequence number for tracking
+                result = await originate_autodial_call(
+                    context=context, 
+                    target_number=number, 
+                    trunk=asterisk_trunk_name, 
+                    caller_id=agent.autodial_caller_id, 
+                    agent_telegram_id=user_id, 
+                    campaign_id=campaign_id,
+                    sequence_number=idx  # This is the key change - add sequence number
+                )
+                
+                # Check result from originate_autodial_call
+                if result.get('success', False):
+                    successful_originations += 1
+                    logger.info(f"Successfully initiated call to {number} (sequence {idx})")
+                else:
+                    failed_originations += 1
+                    logger.error(f"Failed to initiate call to {number}: {result.get('message', 'Unknown error')}")
+                    
+            except Exception as e:
                 failed_originations += 1
-                logger.error(f"Failed to originate auto-dial for {number}: {response.get('message')}")
-
+                logger.error(f"Error dialing {number}: {e}")
+        
         # Clear the list from user_data
         if 'autodial_numbers' in context.user_data:
             del context.user_data['autodial_numbers']
         
         final_message = (
-            f"✅ Auto-Dial Campaign Initiated.\n\n"
-            f"• Successfully initiated calls: {successful_originations}\n"
-            f"• Failed to initiate calls: {failed_originations}\n\n"
-            "You will be notified here if a contact presses '1' in the IVR."
+            "🚀 *Auto-Dial Campaign Started!*\n\n"
+            "📊 *Campaign Summary*\n"
+            f"• 📞 Attempted Calls: {successful_originations + failed_originations}\n"
+            f"• ✅ Successful Initiations: {successful_originations}\n"
+            f"• ❌ Failed Initiations: {failed_originations}\n\n"
+            "🔔 *Next Steps*\n"
+            "• You'll receive a notification when someone presses '1' during a call\n"
+            "• Check back here for campaign updates\n"
+            "• Use /status to check campaign progress\n\n"
+            "_Processing calls in the background..._"
         )
         await context.bot.send_message(chat_id=user_id, text=final_message, parse_mode='Markdown')
         
@@ -1648,6 +2332,20 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     logger.warning(f"Unhandled callback data in AUTO_DIAL state: {query.data}")
     return AUTO_DIAL
 
+# In-memory storage for tracking active calls and campaigns
+active_campaigns = {}  # campaign_id: [target_numbers]
+active_calls = {}      # call_id: {"campaign_id": x, "target_number": y, ...}
+
+def update_call_status(call_id, status, end_time=None):
+    """Update the status of a call in our in-memory tracking."""
+    if call_id in active_calls:
+        active_calls[call_id]['status'] = status
+        if end_time:
+            active_calls[call_id]['end_time'] = end_time.isoformat()
+        logger.debug(f"Updated call {call_id} status to {status}")
+    else:
+        logger.warning(f"Call ID {call_id} not found in active_calls")
+
 def main():
     """Start the bot."""
 
@@ -1667,6 +2365,9 @@ def main():
     
     # Add error handler
     application.add_error_handler(error_handler)
+    
+    # Register post_init callback
+    application.post_init = post_init
     
     # --- Define Handlers to be separated ---
     setphone_handler = CommandHandler("setphone", set_phone)
@@ -1715,10 +2416,6 @@ def main():
     application.add_handler(call_handler)
     application.add_handler(status_handler)
     
-    # Set up post init hook for AMI connection
-    # post_init itself needs to be async if it does async work
-    application.post_init = post_init 
-    
     # Run the bot
     # application.run_polling() is synchronous, but it runs the async handlers correctly.
     # The Application object manages the event loop needed for the async handlers and post_init.
@@ -1727,4 +2424,3 @@ def main():
 if __name__ == "__main__":
     # asyncio.run(main()) # <-- Previous version causing loop error
     main() # <-- Call synchronous main directly
-  

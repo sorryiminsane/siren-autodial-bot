@@ -89,11 +89,61 @@ class Call(Base):
         
     @classmethod
     async def find_by_uniqueid(cls, session, uniqueid):
-        """Find a call by Asterisk Uniqueid"""
+        """Find a call by Asterisk Uniqueid
+        
+        This method handles both exact matches and also tries to match based on
+        campaign_id patterns in the uniqueid (e.g., campaign_73_1748128482_1_547499)
+        """
+        import logging
+        logger = logging.getLogger(__name__)
         from sqlalchemy import select
+        
+        # First try exact match
         stmt = select(cls).where(cls.uniqueid == uniqueid)
         result = await session.execute(stmt)
-        return result.scalar_one_or_none()
+        call = result.scalar_one_or_none()
+        if call:
+            return call
+            
+        # If not found and uniqueid has campaign pattern, try to find by call_id
+        # The format is typically: campaign_[campaign_id]_[timestamp]_[sequence]_[microseconds]
+        if uniqueid and isinstance(uniqueid, str) and uniqueid.startswith('campaign_'):
+            try:
+                # Try to use uniqueid as call_id
+                stmt = select(cls).where(cls.call_id == uniqueid)
+                result = await session.execute(stmt)
+                call = result.scalar_one_or_none()
+                if call:
+                    # Update the uniqueid to match for future lookups
+                    call.uniqueid = uniqueid
+                    await session.commit()
+                    logger.info(f"Found call by call_id matching uniqueid: {uniqueid}")
+                    return call
+                    
+                # If not found, parse parts and try to match on campaign_id and sequence
+                parts = uniqueid.split('_')
+                if len(parts) >= 4:
+                    campaign_id = int(parts[1])
+                    sequence_number = int(parts[3])
+                    
+                    # Try to find by campaign_id and sequence_number
+                    stmt = select(cls).where(
+                        cls.campaign_id == campaign_id,
+                        cls.sequence_number == sequence_number
+                    )
+                    result = await session.execute(stmt)
+                    call = result.scalar_one_or_none()
+                    if call:
+                        # Update the uniqueid to match for future lookups
+                        call.uniqueid = uniqueid
+                        await session.commit()
+                        logger.info(f"Found call by campaign_id {campaign_id} and sequence {sequence_number}")
+                        return call
+            except (ValueError, IndexError, Exception) as e:
+                # Log but continue if parsing fails
+                logger.warning(f"Error parsing campaign uniqueid {uniqueid}: {str(e)}")
+                
+        return None
         
     @classmethod
     async def find_by_channel(cls, session, channel):

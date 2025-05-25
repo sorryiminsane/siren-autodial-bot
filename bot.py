@@ -1537,32 +1537,36 @@ async def dtmf_begin_listener(manager, event):
     channel = event.get('Channel')
     uniqueid = event.get('Uniqueid')
     direction = event.get('Direction')  # DTMFBegin includes direction
-    call_id_from_event = event.get('CallID')  # Check if CallID is passed in event
     
-    logger.info(f"DTMFBegin detected - Digit: {digit}, Channel: {channel}, Direction: {direction}, UniqueID: {uniqueid}, CallID: {call_id_from_event}")
+    # Try to get information directly from channel variables
+    target_from_event = event.get('TARGET') or event.get('target')
+    campaign_from_event = event.get('CAMPAIGNID') or event.get('campaignid')
+    tracking_id_from_event = event.get('TRACKINGID') or event.get('trackingid')
+    
+    logger.info(f"DTMFBegin detected - Digit: {digit}, Channel: {channel}, Direction: {direction}, UniqueID: {uniqueid}, Target: {target_from_event}, Campaign: {campaign_from_event}")
     
     try:
-        # Get the target number from our database
-        target_number = 'Unknown'
-        campaign_id = None
-        agent_id = 7991166259  # Default agent ID if not found
+        # Initialize with values from event if available
+        target_number = target_from_event or 'Unknown'
+        campaign_id = campaign_from_event
+        agent_id = event.get('AGENTID') or event.get('agentid') or 7991166259  # Default agent ID if not found
         
         async with get_async_db_session() as session:
             call = None
             
             # Try finding the call using different methods
-            if call_id_from_event:
-                # First check by call_id from event variables
-                call = await Call.find_by_call_id(session, call_id_from_event)
-                if call:
-                    logger.info(f"Found call in database by CallID: {call_id_from_event}")
-            
-            if not call and uniqueid:
-                # Then try by Asterisk Uniqueid
+            if uniqueid:
+                # First try by Asterisk Uniqueid
                 call = await Call.find_by_uniqueid(session, uniqueid)
                 if call:
                     logger.info(f"Found call in database by Uniqueid: {uniqueid}")
-                    
+            
+            if not call and tracking_id_from_event:
+                # Try by tracking ID if available in event
+                call = await Call.find_by_tracking_id(session, tracking_id_from_event)
+                if call:
+                    logger.info(f"Found call in database by TrackingID: {tracking_id_from_event}")
+            
             if not call and channel:
                 # Finally try by channel name
                 call = await Call.find_by_channel(session, channel)
@@ -1588,12 +1592,49 @@ async def dtmf_begin_listener(manager, event):
                 await session.commit()
                 logger.info(f"Updated call {call.call_id} status to dtmf_started")
             else:
+                # If we still don't have a target number but have it from the event, use that
+                if target_from_event and target_from_event != 'Unknown':
+                    target_number = target_from_event
+                    logger.info(f"Using target number from event: {target_number}")
+                    
                 logger.warning(f"Could not find call in database for Channel: {channel} or Uniqueid: {uniqueid}")
 
         # Get the caller ID (your number that made the call)
         caller_id = event.get('CallerIDNum') or 'Unknown Caller'
         
         logger.info(f"DTMFBegin '{digit}' pressed - Target: {target_number}, CallerID: {caller_id}, Channel: {channel}, Direction: {direction}")
+        
+        # Add a delay to allow database operations to complete
+        logger.info(f"Adding delay before sending DTMFBegin notification to allow database sync")
+        await asyncio.sleep(2)  # 2-second delay
+        
+        # Try to find the call record again after the delay
+        if target_number == 'Unknown':
+            async with get_async_db_session() as session:
+                # Second attempt to find the call
+                if uniqueid:
+                    call = await Call.find_by_uniqueid(session, uniqueid)
+                    if call:
+                        logger.info(f"Found call in database by Uniqueid after delay: {uniqueid}")
+                        target_number = call.target_number
+                        campaign_id = call.campaign_id
+                        agent_id = call.agent_telegram_id or agent_id
+                
+                if not call and tracking_id_from_event:
+                    call = await Call.find_by_tracking_id(session, tracking_id_from_event)
+                    if call:
+                        logger.info(f"Found call in database by TrackingID after delay: {tracking_id_from_event}")
+                        target_number = call.target_number
+                        campaign_id = call.campaign_id
+                        agent_id = call.agent_telegram_id or agent_id
+                
+                if not call and channel:
+                    call = await Call.find_by_channel(session, channel)
+                    if call:
+                        logger.info(f"Found call in database by Channel after delay: {channel}")
+                        target_number = call.target_number
+                        campaign_id = call.campaign_id
+                        agent_id = call.agent_telegram_id or agent_id
         
         # Format the notification
         campaign_text = f"• Campaign: `{campaign_id}`\n" if campaign_id else ""
@@ -1633,60 +1674,54 @@ async def dtmf_event_listener(manager, event):
         logger.error("Application instance not found globally. Cannot send DTMF notification.")
         return
 
-    logger.debug(f"DTMF Event: {dict(event)}")
+    # Log ALL event fields for analysis in debug mode
+    event_dict = dict(event)
+    logger.debug(f"DTMF Event: {event_dict}")
     
     digit = event.get('Digit')
     channel = event.get('Channel')
     uniqueid = event.get('Uniqueid')
     
-    # Try to get tracking information from event variables
-    tracking_id = event.get('TrackingID')  # Our primary identifier JKD1.x
-    call_id_from_event = event.get('CallID')  # Fallback to old CallID
+    # Try to get tracking and target information directly from event variables
+    tracking_id = event.get('TrackingID') or event.get('TRACKINGID') or event.get('trackingid')  # Our primary identifier JKD1.x
+    target_from_event = event.get('TARGET') or event.get('target')
+    campaign_from_event = event.get('CAMPAIGNID') or event.get('campaignid')
     
     # Log the DTMF press for debugging
-    logger.info(f"DTMF '{digit}' detected on channel {channel} (UniqueID: {uniqueid}, TrackingID: {tracking_id})")
+    logger.info(f"DTMF '{digit}' detected on channel {channel} (UniqueID: {uniqueid}, TrackingID: {tracking_id}, Target: {target_from_event})")
     
     try:
-        # Initialize variables
-        target_number = 'Unknown'
-        campaign_id = None
+        # Initialize variables with values from event if available
+        target_number = target_from_event or 'Unknown'
+        campaign_id = campaign_from_event
         caller_id = event.get('CallerIDNum') or 'Unknown Caller'
         agent_id = 7991166259  # Default agent ID
         
         # Try to get AgentTelegramID from event variables
-        if 'AgentTelegramID' in event:
+        agent_from_event = event.get('AGENTID') or event.get('agentid') or event.get('AgentTelegramID')
+        if agent_from_event:
             try:
-                agent_id = int(event['AgentTelegramID'])
-                logger.info(f"Found AgentTelegramID in event: {agent_id}")
+                agent_id = int(agent_from_event)
+                logger.info(f"Found agent ID in event: {agent_id}")
             except (ValueError, TypeError):
-                logger.warning(f"Invalid AgentTelegramID in event: {event.get('AgentTelegramID')}")
+                logger.warning(f"Invalid agent ID in event: {agent_from_event}")
         
         async with get_async_db_session() as session:
             call = None
             
-            # Try finding the call using different methods - CHANGED ORDER to prioritize uniqueid
-            # Since we've observed that uniqueid is actually our call_id in many cases
+            # Try finding the call using different methods - prioritize uniqueid
             if uniqueid:
                 # First try by Asterisk Uniqueid which often contains our call_id
                 call = await Call.find_by_uniqueid(session, uniqueid)
-                if not call:
-                    # If not found directly, try using uniqueid as call_id (they're often the same)
-                    call = await Call.find_by_call_id(session, uniqueid)
                 if call:
-                    logger.info(f"Found call in database by Uniqueid/CallID: {uniqueid}")
-            
-            if not call and call_id_from_event:
-                # Then try by call_id from event variables
-                call = await Call.find_by_call_id(session, call_id_from_event)
-                if call:
-                    logger.info(f"Found call in database by CallID: {call_id_from_event}")
+                    logger.info(f"Found call in database by Uniqueid: {uniqueid}")
             
             if not call and tracking_id:
                 # Then check by tracking_id
                 call = await Call.find_by_tracking_id(session, tracking_id)
                 if call:
                     logger.info(f"Found call in database by TrackingID: {tracking_id}")
-                    
+            
             if not call and channel:
                 # Finally try by channel name
                 call = await Call.find_by_channel(session, channel)
@@ -1755,6 +1790,38 @@ async def dtmf_event_listener(manager, event):
                     session.add(new_call)
                     await session.commit()
                     logger.info(f"Created new record for unknown DTMF: {new_call_id}")
+        
+        # Add a delay to allow database operations to complete
+        logger.info(f"Adding delay before sending DTMF notification to allow database sync")
+        await asyncio.sleep(2)  # 2-second delay
+        
+        # Try to find the call record again after the delay
+        if target_number == 'Unknown':
+            async with get_async_db_session() as session:
+                # Second attempt to find the call
+                if uniqueid:
+                    call = await Call.find_by_uniqueid(session, uniqueid)
+                    if call:
+                        logger.info(f"Found call in database by Uniqueid after delay: {uniqueid}")
+                        target_number = call.target_number
+                        campaign_id = call.campaign_id
+                        agent_id = call.agent_telegram_id or agent_id
+                
+                if not call and tracking_id:
+                    call = await Call.find_by_tracking_id(session, tracking_id)
+                    if call:
+                        logger.info(f"Found call in database by TrackingID after delay: {tracking_id}")
+                        target_number = call.target_number
+                        campaign_id = call.campaign_id
+                        agent_id = call.agent_telegram_id or agent_id
+                
+                if not call and channel:
+                    call = await Call.find_by_channel(session, channel)
+                    if call:
+                        logger.info(f"Found call in database by Channel after delay: {channel}")
+                        target_number = call.target_number
+                        campaign_id = call.campaign_id
+                        agent_id = call.agent_telegram_id or agent_id
         
         # Format the notification with tracking ID prominently displayed
         # Get the tracking ID from the call record if found, otherwise from event or fallback
@@ -1888,6 +1955,131 @@ async def hangup_event_listener(manager, event):
     except Exception as e:
         logger.error(f"Error processing hangup event: {e}", exc_info=True)
 
+async def originate_autodial_call_from_record(context: ContextTypes.DEFAULT_TYPE, call_id: str, tracking_id: str) -> dict:
+    """Originate a call using a pre-created call record."""
+    ami_manager = context.application.bot_data.get("ami_manager")
+    
+    if not ami_manager:
+        logger.error("AMI not connected for auto-dial")
+        return {'success': False, 'message': 'AMI not connected'}
+        
+    try:
+        # Get the call record from the database
+        async with get_async_db_session() as session:
+            call = await Call.find_by_call_id(session, call_id)
+            if not call:
+                logger.error(f"Call record {call_id} not found")
+                return {'success': False, 'message': 'Call record not found'}
+            
+            # Extract needed information from the call record
+            target_number = call.target_number
+            trunk = call.trunk
+            caller_id = call.caller_id
+            agent_telegram_id = call.agent_telegram_id
+            campaign_id = call.campaign_id
+            sequence_number = call.sequence_number
+            action_id = f"originate_{call_id}"
+            
+            # Build the channel name
+            channel = f'PJSIP/{target_number}@{trunk}'
+            
+            # Update the call record
+            call.action_id = action_id
+            call.channel = channel
+            call.status = "initiated"
+            await session.commit()
+        
+        # Build variables string for Asterisk using double underscores for persistence across contexts
+        variables = (
+            f'__AgentTelegramID={agent_telegram_id},'  # Double underscore ensures persistence
+            f'__CallID={call_id},'  # Original call ID
+            f'__TrackingID={tracking_id},'  # Our tracking ID (e.g., JKD1.1)
+            f'__SequenceNumber={sequence_number or 0},'  # Position in the campaign
+            f'__OriginalTargetNumber={target_number},'  # Will persist in all contexts
+            f'__CallerID={caller_id},'  # Will persist in all contexts
+            f'__CampaignID={campaign_id or ""},'  # Will persist in all contexts
+            f'__Origin=autodial,'  # Will persist in all contexts
+            f'__ActionID={action_id}'  # Will persist in all contexts
+        )
+        
+        logger.info(f"Originating call to {target_number} via {trunk} (Campaign: {campaign_id or 'N/A'})")
+        logger.debug(f"Call variables: {variables}")
+            
+        # Send originate action
+        response = await ami_manager.send_action({
+            'Action': 'Originate',
+            'ActionID': action_id,
+            'Channel': channel,
+            'Context': 'autodial-ivr',
+            'Exten': 's',
+            'Priority': 1,
+            'CallerID': f'"{caller_id}" <{caller_id}>',
+            'Async': 'true',
+            'Variable': variables,
+            'Timeout': 45000,  # 45 seconds timeout
+            'ChannelId': call_id  # Use call_id as ChannelId for easier tracking
+        })
+        
+        logger.info(f"Auto-dial originate action sent for {target_number} via {trunk}. Response: {response}")
+        
+        # Update call status based on response
+        async with get_async_db_session() as session:
+            call = await Call.find_by_call_id(session, call_id)
+            if call:
+                if isinstance(response, list): # panoramisk can return a list
+                    for event_item in response:
+                        if isinstance(event_item, dict) and event_item.get('Response') == 'Error':
+                            error_msg = event_item.get('Message', 'Unknown error')
+                            logger.error(f"AMI Error for {target_number}: {error_msg}")
+                            # Update call status to error
+                            call.status = "error"
+                            call.call_metadata = {
+                                **(call.call_metadata or {}),
+                                "error": error_msg,
+                                "error_time": datetime.now().isoformat()
+                            }
+                            await session.commit()
+                            return {'success': False, 'message': error_msg}
+                elif isinstance(response, dict) and response.get('Response') == 'Error':
+                    error_msg = response.get('Message', 'Unknown error')
+                    logger.error(f"AMI Error for {target_number}: {error_msg}")
+                    # Update call status to error
+                    call.status = "error"
+                    call.call_metadata = {
+                        **(call.call_metadata or {}),
+                        "error": error_msg,
+                        "error_time": datetime.now().isoformat()
+                    }
+                    await session.commit()
+                    return {'success': False, 'message': error_msg}
+                
+                # If we made it here, assume success
+                call.status = "sending"
+                await session.commit()
+                return {'success': True, 'message': 'Originate action sent.'}
+            else:
+                logger.error(f"Call {call_id} not found in database after originate")
+                return {'success': False, 'message': 'Database error: Call record not found'}
+            
+    except Exception as e:
+        logger.error(f"Error originating auto-dial call to {target_number}: {str(e)}")
+        # Try to mark the call as error in the database if it exists
+        try:
+            async with get_async_db_session() as session:
+                call = await Call.find_by_call_id(session, call_id)
+                if call:
+                    call.status = "error"
+                    call.call_metadata = {
+                        **(call.call_metadata or {}),
+                        "error": str(e),
+                        "error_time": datetime.now().isoformat()
+                    }
+                    await session.commit()
+        except Exception as db_error:
+            logger.error(f"Error updating call record after originate error: {str(db_error)}")
+        
+        return {'success': False, 'message': f'Error: {str(e)}'}
+
 async def originate_autodial_call(context: ContextTypes.DEFAULT_TYPE, target_number: str, trunk: str, caller_id: str, agent_telegram_id: int, campaign_id: Optional[int] = None, sequence_number: Optional[int] = None) -> dict:
     """Originate a call for an auto-dial campaign through Asterisk AMI using database for tracking."""
     ami_manager = context.application.bot_data.get("ami_manager")
@@ -1897,9 +2089,11 @@ async def originate_autodial_call(context: ContextTypes.DEFAULT_TYPE, target_num
         return {'success': False, 'message': 'AMI not connected'}
         
     try:
-        # Generate a unique ID for this call
+        # Generate a unique ID for this call with microsecond precision
         timestamp = int(time.time())
-        call_id = f"campaign_{campaign_id or 'none'}_{timestamp}"
+        microseconds = datetime.now().microsecond
+        # Include sequence number and microseconds to ensure uniqueness
+        call_id = f"campaign_{campaign_id or 'none'}_{timestamp}_{sequence_number}_{microseconds}"
         action_id = f"originate_{call_id}"
         
         # Create tracking ID in format JKD1.{sequence_number}
@@ -2157,8 +2351,82 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                 " Please check the file format and try again."
             )
              return AUTO_DIAL
-
+        
+        # Pre-create call records for each valid number
+        # This will make parallel dialing more reliable by having records ready before calls are made
+        campaign_id = None
+        pre_created_calls = []
+        
+        try:
+            # Create a new campaign entry in the database
+            campaign_name = context.user_data.get('autodial_campaign_name', f"Campaign {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+            
+            async with get_async_db_session() as session:
+                # Create new campaign
+                new_campaign = AutodialCampaign(name=campaign_name, telegram_user_id=user.id)
+                session.add(new_campaign)
+                await session.flush()  # Get ID before commit
+                campaign_id = new_campaign.id
+                await session.commit()
+                logger.info(f"Created new autodial campaign with ID {campaign_id} for user {user.id}")
+                
+                # Get agent info for caller ID
+                result = await session.execute(select(Agent).filter_by(telegram_id=user.id))
+                agent = result.scalar_one_or_none()
+                caller_id = agent.autodial_caller_id if agent and agent.autodial_caller_id else None
+                trunk = f"autodial-{agent.autodial_trunk}" if agent and agent.autodial_trunk else "autodial-one"
+                
+                # Create a call record for each number
+                timestamp = int(time.time())
+                for idx, number in enumerate(valid_numbers, 1):
+                    # Generate a unique tracking ID and call ID
+                    tracking_id = f"JKD1.{idx}"
+                    microseconds = datetime.now().microsecond
+                    call_id = f"campaign_{campaign_id}_{timestamp}_{idx}_{microseconds}"
+                    
+                    # Create the call record
+                    new_call = Call(
+                        call_id=call_id,
+                        campaign_id=campaign_id,
+                        sequence_number=idx,
+                        tracking_id=tracking_id,
+                        agent_telegram_id=user.id,
+                        target_number=number,
+                        caller_id=caller_id,
+                        trunk=trunk,
+                        status="queued",  # New status to indicate pre-created record
+                        start_time=datetime.now(),
+                        call_metadata={
+                            "timestamp": timestamp,
+                            "origin": "autodial",
+                            "tracking_id": tracking_id,
+                            "pre_created": True
+                        }
+                    )
+                    session.add(new_call)
+                    pre_created_calls.append({
+                        "call_id": call_id,
+                        "target_number": number,
+                        "sequence_number": idx,
+                        "tracking_id": tracking_id
+                    })
+                
+                # Commit all call records at once
+                await session.commit()
+                logger.info(f"Pre-created {len(pre_created_calls)} call records for campaign {campaign_id}")
+        
+        except Exception as e:
+            logger.error(f"Error pre-creating call records: {e}")
+            await update.message.reply_text(
+                "⚠️ There was an error preparing the campaign. Please try again.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]])
+            )
+            return AUTO_DIAL
+        
+        # Store the pre-created calls and campaign ID in user_data
         context.user_data['autodial_numbers'] = valid_numbers
+        context.user_data['autodial_campaign_id'] = campaign_id
+        context.user_data['autodial_pre_created_calls'] = pre_created_calls
 
         response_message = f"✅ Successfully processed file '{document.file_name}'.\n\n"
         response_message += f"• Found {len(valid_numbers)} valid numbers (out of {processed_count} non-empty lines processed).\n"
@@ -2218,87 +2486,101 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         # Get campaign name if provided, or generate a default one with timestamp
         campaign_name = context.user_data.get('autodial_campaign_name', f"Campaign {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
-        # Create a new campaign entry in the database
-        campaign_id = None
-        try:
-            async with get_db_session() as session:
-                # Create new campaign with correct model name and field name
-                new_campaign = AutodialCampaign(name=campaign_name, telegram_user_id=user_id)
-                session.add(new_campaign)
-                await session.flush()  # Get ID before commit
-                campaign_id = new_campaign.id
-                await session.commit()
-                logger.info(f"Created new autodial campaign with ID {campaign_id} for user {user_id}")
-        except Exception as e:
-            logger.error(f"Failed to create campaign record: {e}")
-            # Continue without campaign tracking if there's an error
-
-        numbers_to_dial = context.user_data.get('autodial_numbers', [])
-        if not numbers_to_dial:
+        # Get the campaign ID from pre-created records
+        campaign_id = context.user_data.get('autodial_campaign_id')
+        pre_created_calls = context.user_data.get('autodial_pre_created_calls', [])
+        
+        if not campaign_id or not pre_created_calls:
+            logger.error("No pre-created campaign or call records found")
             await query.message.edit_text(
-                "⚠️ No numbers found to dial. Please upload a file again.",
+                "⚠️ Campaign preparation data not found. Please upload the file again.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]])
             )
-            # Need to decide if we return AUTO_DIAL or MAIN_MENU. Let's stick to AUTO_DIAL for consistency.
-            return AUTO_DIAL 
-
-        # Get the trunk and other info needed for calls
-        async with get_db_session() as session: 
-            result = await session.execute(select(Agent).filter_by(telegram_id=user_id))
-            agent = result.scalar_one_or_none()
-            if not agent:
-                await query.message.edit_text("Error: Agent data not found for making calls.")
-                return MAIN_MENU
-                
-            # Determine actual trunk name
-            asterisk_trunk_name = f"autodial-{agent.autodial_trunk}"
-            
-            # Update the message with campaign info
-            campaign_info = f"Campaign ID: {campaign_id}\n" if campaign_id else ""
-            await query.message.edit_text(
-                f"🚀 Starting Auto-Dial Campaign for {len(numbers_to_dial)} numbers.\n"
-                f"{campaign_info}"
-                "Dialing in progress... Please wait.",
-                parse_mode='Markdown'
-            )
+            return MAIN_MENU
         
         # Initialize counters
         successful_originations = 0
         failed_originations = 0
         
-        # Process all numbers in the list with sequence numbers for tracking
-        for idx, number in enumerate(numbers_to_dial, 1):  # Start index at 1
-            await asyncio.sleep(0.2)  # Throttle calls to avoid flooding
+        # Set maximum concurrent calls to avoid overloading Asterisk
+        MAX_CONCURRENT_CALLS = 5  # Adjust based on your server capacity
+        
+        # Process pre-created call records in batches
+        pre_created_calls = context.user_data.get('autodial_pre_created_calls', [])
+        total_calls = len(pre_created_calls)
+        processed = 0
+        
+        # Define a helper function to process a single pre-created call
+        async def process_pre_created_call(call_data):
+            nonlocal successful_originations, failed_originations
             
-            logger.info(f"Dialing {number} for user {user_id}, campaign {campaign_id}, sequence {idx}")
+            call_id = call_data['call_id']
+            target_number = call_data['target_number']
+            tracking_id = call_data['tracking_id']
+            sequence_number = call_data['sequence_number']
+            
+            logger.info(f"Dialing pre-created call {call_id} to {target_number} (sequence {sequence_number})")
             
             try:
-                # Use our enhanced autodial function with sequence number for tracking
-                result = await originate_autodial_call(
-                    context=context, 
-                    target_number=number, 
-                    trunk=asterisk_trunk_name, 
-                    caller_id=agent.autodial_caller_id, 
-                    agent_telegram_id=user_id, 
-                    campaign_id=campaign_id,
-                    sequence_number=idx  # This is the key change - add sequence number
+                # Get the trunk and other info needed for calls
+                async with get_async_db_session() as session: 
+                    # Look up the pre-created call record
+                    call = await Call.find_by_call_id(session, call_id)
+                    if not call:
+                        logger.error(f"Pre-created call record {call_id} not found")
+                        failed_originations += 1
+                        return False
+                    
+                    # Update the call status to 'initiating'
+                    call.status = "initiating"
+                    await session.commit()
+                
+                # Use the asterisk_trunk_name from the agent record
+                result = await originate_autodial_call_from_record(
+                    context=context,
+                    call_id=call_id,
+                    tracking_id=tracking_id
                 )
                 
-                # Check result from originate_autodial_call
+                # Check result
                 if result.get('success', False):
                     successful_originations += 1
-                    logger.info(f"Successfully initiated call to {number} (sequence {idx})")
+                    logger.info(f"Successfully initiated call to {target_number} (sequence {sequence_number})")
+                    return True
                 else:
                     failed_originations += 1
-                    logger.error(f"Failed to initiate call to {number}: {result.get('message', 'Unknown error')}")
+                    logger.error(f"Failed to initiate call to {target_number}: {result.get('message', 'Unknown error')}")
+                    return False
                     
             except Exception as e:
                 failed_originations += 1
-                logger.error(f"Error dialing {number}: {e}")
+                logger.error(f"Error dialing {target_number}: {e}")
+                return False
+        
+        # Process calls in batches
+        while processed < total_calls:
+            # Get the next batch of calls to process
+            batch_end = min(processed + MAX_CONCURRENT_CALLS, total_calls)
+            current_batch = pre_created_calls[processed:batch_end]
+            
+            # Process the batch in parallel
+            tasks = [process_pre_created_call(call_data) for call_data in current_batch]
+            await asyncio.gather(*tasks)
+            
+            # Update progress
+            processed = batch_end
+            
+            # Small delay between batches
+            if processed < total_calls:
+                await asyncio.sleep(0.5)  # Half-second delay between batches
         
         # Clear the list from user_data
         if 'autodial_numbers' in context.user_data:
             del context.user_data['autodial_numbers']
+        if 'autodial_pre_created_calls' in context.user_data:
+            del context.user_data['autodial_pre_created_calls']
+        if 'autodial_campaign_id' in context.user_data:
+            del context.user_data['autodial_campaign_id']
         
         final_message = (
             "🚀 *Auto-Dial Campaign Started!*\n\n"

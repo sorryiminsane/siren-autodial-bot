@@ -77,46 +77,94 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.effective_message.reply_text(error_message)
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, agent: Agent) -> None:
-    """Show the main menu."""
-    keyboard = [
-        [InlineKeyboardButton("📞 Make a Call", callback_data="make_call")],
-        [InlineKeyboardButton("🤖 Auto-Dial", callback_data="auto_dial")],
-        [InlineKeyboardButton("📱 My Phone Number", callback_data="phone_number")],
-        [InlineKeyboardButton("📊 Call History", callback_data="call_history")],
-        [InlineKeyboardButton("⚙️ Settings", callback_data="settings")],
-    ]
+    """Show the modern, overhauled main menu."""
+    user_id = update.effective_user.id
     
-    if update.effective_user.id == SUPER_ADMIN_ID:
-        keyboard.append([InlineKeyboardButton("👥 Manage Agents", callback_data="manage_agents")])
+    # Get user display name - username with @ prefix, or first name as fallback
+    user_display = f"@{agent.username}" if agent.username else (update.effective_user.first_name or "User")
+    
+    # Build dynamic status indicators
+    auth_status = "ACTIVE" if agent.is_authorized else "UNAUTHORIZED"
+    phone_status = agent.phone_number if agent.phone_number else "Not Set"
+    
+    # Route status
+    route_status = "Not Set"
+    if agent.route:
+        route_map = {"M": "MAIN-TRUNK", "R": "RED-TRUNK", "B": "BLACK-TRUNK"}
+        route_status = route_map.get(agent.route, "UNKNOWN")
+    
+    # AutoDial status
+    autodial_status = "DISABLED"
+    if agent.auto_dial:
+        trunk_display = agent.autodial_trunk or "Default"
+        autodial_status = f"ENABLED ({trunk_display.title()})"
+    
+    # Caller ID status
+    manual_cid = agent.caller_id or "Not Set"
+    autodial_cid = agent.autodial_caller_id or "Not Set"
+    
+    # Build main action buttons - organized by priority
+    keyboard = []
+    
+    # Primary Actions Row
+    if agent.is_authorized and agent.phone_number and agent.route:
+        keyboard.append([
+            InlineKeyboardButton("📞 Make Call", callback_data="make_call"),
+            InlineKeyboardButton("📊 Call History", callback_data="call_history")
+        ])
+    else:
+        keyboard.append([
+            InlineKeyboardButton("⚠️ Complete Setup", callback_data="setup_wizard")
+        ])
+    
+    # AutoDial Row (only if authorized)
+    if agent.is_authorized:
+        if agent.auto_dial:
+            keyboard.append([
+                InlineKeyboardButton("🤖 Start Campaign", callback_data="auto_dial"),
+                InlineKeyboardButton("📈 Campaign Stats", callback_data="campaign_stats")
+            ])
+        else:
+            keyboard.append([
+                InlineKeyboardButton("🤖 Enable AutoDial", callback_data="enable_autodial")
+            ])
+    
+    # Configuration Row
+    keyboard.append([
+        InlineKeyboardButton("⚙️ Settings", callback_data="settings"),
+        InlineKeyboardButton("📱 Profile", callback_data="profile")
+    ])
+    
+    # Admin Row (only for super admin)
+    if user_id == SUPER_ADMIN_ID:
+        keyboard.append([
+            InlineKeyboardButton("👥 Manage Agents", callback_data="manage_agents"),
+            InlineKeyboardButton("🔧 System Status", callback_data="system_status")
+        ])
+    
+    # Help Row
+    keyboard.append([
+        InlineKeyboardButton("ℹ️ Help & Commands", callback_data="help"),
+        InlineKeyboardButton("🔄 Refresh", callback_data="refresh_menu")
+    ])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Get route display
-    route_display = f" (Manual Route: {agent.route})" if agent.route else " (Manual Route: No Route)"
-    autodial_trunk_display = f" (AutoDial Trunk: {agent.autodial_trunk or 'Not Set'})" if agent.auto_dial else ""
-    
+    # Build the welcome message using Layout A5 format
     welcome_message = (
-        "🎯 *Welcome to Siren Call Center* 🎯\n\n"
-        "Your professional call management solution\n"
-        "─────────────────────\n\n"
-        "*Status:* " + ('✅ Authorized' if agent.is_authorized else '❌ Unauthorized') + 
-        (" 🤖 AutoDial: " + ("🟢 Enabled" if agent.auto_dial else "🔴 Disabled")) + "\n"
-        "*Phone:* 📱 " + (agent.phone_number or 'Not set') + " _(Registered)_\n"
-        "*CallerID (Manual):* 📲 " + (agent.caller_id or agent.phone_number or 'Not set') + route_display + "\n"
-        "*CallerID (AutoDial):* 🤖 " + (agent.autodial_caller_id or 'Not set') + autodial_trunk_display + "\n\n"
-        "*Available Commands:*\n"
-        "📞 /call - Make an outbound call\n"
-        "🤖 /autodial - Upload numbers for auto-dialing\n"
-        "📱 /setphone - Register your phone number\n"
-        "📲 /setcid - Set manual outbound caller ID\n"
-        "🤖 /setautodialcid - Set Auto-Dial caller ID\n"
-        "🌐 /route - Set your manual call route (M/R/B)\n"
-        "⚙️ /settings - Access settings (Auto-Dial toggle, Trunks, etc.)\n"
-        "📊 /history - View your call history\n"
-        "ℹ️ /help - Show detailed help\n\n"
-        "Please select an option from the menu below:"
+        "SIREN\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"USER: {user_display}\n"
+        f"├ Authorization: {auth_status}\n"
+        f"├ Phone: {phone_status}\n"
+        f"├ Route: {route_status}\n"
+        f"├ Caller ID: {manual_cid}\n"
+        f"├ AutoDial: {autodial_status}\n"
+        f"└ AutoDial Caller ID: {autodial_cid}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     )
 
+    # Send or edit the message
     if isinstance(update.callback_query, type(None)):
         await update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='Markdown')
     else:
@@ -215,20 +263,67 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     # Add handling for back_main first
     if query.data == "back_main":
-        async with get_db_session() as session: # <-- Async context
-            # agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
-            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id)) # <-- Async query
+        async with get_db_session() as session:
+            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id))
             agent = result.scalar_one_or_none()
             if agent:
-                await show_main_menu(update, context, agent) # <-- Await helper
+                await show_main_menu(update, context, agent)
             else:
-                # Handle case where agent might not be found (though unlikely if they got here)
                 await query.message.edit_text("Error retrieving agent data.")
-                return ConversationHandler.END # Or MAIN_MENU
+                return ConversationHandler.END
+        return MAIN_MENU
+
+    elif query.data == "refresh_menu":
+        # Refresh the main menu with latest data
+        async with get_db_session() as session:
+            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id))
+            agent = result.scalar_one_or_none()
+            if agent:
+                await show_main_menu(update, context, agent)
+            else:
+                await query.message.edit_text("Error retrieving agent data.")
+                return ConversationHandler.END
+        return MAIN_MENU
+
+    elif query.data == "setup_wizard":
+        # Guide user through initial setup
+        async with get_db_session() as session:
+            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id))
+            agent = result.scalar_one_or_none()
+            
+            if not agent:
+                await query.message.edit_text("Error: Agent not found.")
+                return ConversationHandler.END
+            
+            # Determine what needs to be set up
+            setup_steps = []
+            if not agent.is_authorized:
+                setup_steps.append("• Contact administrator for authorization")
+            if not agent.phone_number:
+                setup_steps.append("• Set phone number: `/setphone +1234567890`")
+            if not agent.route:
+                setup_steps.append("• Select a route in Settings")
+            if not agent.caller_id:
+                setup_steps.append("• Set caller ID: `/setcid +1234567890`")
+            
+            setup_text = (
+                "🛠️ *Setup Wizard*\n\n"
+                "Complete these steps to start making calls:\n\n"
+                + "\n".join(setup_steps) + "\n\n"
+                "Use the buttons below to configure your account:"
+            )
+            
+            keyboard = [
+                [InlineKeyboardButton("📱 Set Phone", callback_data="phone_number")],
+                [InlineKeyboardButton("⚙️ Settings", callback_data="settings")],
+                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.message.edit_text(setup_text, reply_markup=reply_markup, parse_mode='Markdown')
         return MAIN_MENU
 
     elif query.data == "make_call":
-        # No DB interaction here
         await query.message.edit_text(
             "📞 *Make a Call*\n\n"
             "To make a call, use the command:\n"
@@ -244,9 +339,8 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return CALL_MENU
     
     elif query.data == "auto_dial":
-        async with get_db_session() as session: # <-- Async context
-            # agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
-            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id)) # <-- Async query
+        async with get_db_session() as session:
+            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id))
             agent = result.scalar_one_or_none()
             if not agent or not agent.is_authorized or not agent.auto_dial:
                 await query.message.edit_text(
@@ -258,7 +352,7 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 return MAIN_MENU
 
         await query.message.edit_text(
-            "🤖 *Auto-Dial Setup*\n\n"
+            "🤖 *Auto-Dial Campaign*\n\n"
             "Please upload your .txt file containing phone numbers.\n\n"
             "File format requirements:\n"
             "• One phone number per line\n"
@@ -268,9 +362,99 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             parse_mode='Markdown'
         )
         return AUTO_DIAL
+
+    elif query.data == "enable_autodial":
+        async with get_db_session() as session:
+            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id))
+            agent = result.scalar_one_or_none()
+            
+            if not agent or not agent.is_authorized:
+                await query.message.edit_text(
+                    "❌ You are not authorized to enable Auto-Dial.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]])
+                )
+                return MAIN_MENU
+            
+            # Enable auto-dial for the agent
+            agent.auto_dial = True
+            await session.commit()
+            
+            await query.message.edit_text(
+                "✅ *Auto-Dial Enabled*\n\n"
+                "Auto-Dial feature has been enabled for your account.\n"
+                "You can now start campaigns and configure trunks in Settings.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⚙️ Configure Settings", callback_data="settings")],
+                    [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
+                ]),
+                parse_mode='Markdown'
+            )
+        return MAIN_MENU
+
+    elif query.data == "campaign_stats":
+        # Show campaign statistics
+        await query.message.edit_text(
+            "📈 *Campaign Statistics*\n\n"
+            "Your campaign performance data will appear here.\n"
+            "_(Feature coming soon)_\n\n"
+            "• Active campaigns\n"
+            "• Response rates\n"
+            "• Call completion stats",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
+            parse_mode='Markdown'
+        )
+        return MAIN_MENU
+
+    elif query.data == "profile":
+        # Show agent profile
+        async with get_db_session() as session:
+            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id))
+            agent = result.scalar_one_or_none()
+            
+            if not agent:
+                await query.message.edit_text("Error: Agent not found.")
+                return ConversationHandler.END
+            
+            profile_text = (
+                "📱 *Agent Profile*\n\n"
+                f"*Username:* @{agent.username or 'Not set'}\n"
+                f"*Telegram ID:* `{agent.telegram_id}`\n"
+                f"*Phone Number:* `{agent.phone_number or 'Not set'}`\n"
+                f"*Authorization:* {'✅ Authorized' if agent.is_authorized else '❌ Unauthorized'}\n"
+                f"*Manual Caller ID:* `{agent.caller_id or 'Not set'}`\n"
+                f"*AutoDial Caller ID:* `{agent.autodial_caller_id or 'Not set'}`\n"
+                f"*Route:* {agent.route or 'Not set'}\n"
+                f"*AutoDial:* {'🟢 Enabled' if agent.auto_dial else '🔴 Disabled'}\n"
+                f"*AutoDial Trunk:* {agent.autodial_trunk or 'Not set'}\n\n"
+                "Use the buttons below to update your profile:"
+            )
+            
+            keyboard = [
+                [InlineKeyboardButton("📱 Update Phone", callback_data="phone_number")],
+                [InlineKeyboardButton("📲 Set Caller ID", callback_data="set_caller_id")],
+                [InlineKeyboardButton("⚙️ Settings", callback_data="settings")],
+                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.message.edit_text(profile_text, reply_markup=reply_markup, parse_mode='Markdown')
+        return MAIN_MENU
+
+    elif query.data == "set_caller_id":
+        await query.message.edit_text(
+            "📲 *Set Caller ID*\n\n"
+            "To set your outbound caller ID, use:\n"
+            "`/setcid <your_number>`\n\n"
+            "Example: `/setcid +1234567890`\n\n"
+            "• Use international format\n"
+            "• Include country code\n"
+            "• No spaces or special characters",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Profile", callback_data="profile")]]),
+            parse_mode='Markdown'
+        )
+        return MAIN_MENU
     
     elif query.data == "phone_number":
-        # No DB interaction here
         await query.message.edit_text(
             "📱 *Phone Number Settings*\n\n"
             "To set your phone number, use:\n"
@@ -285,7 +469,6 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return PHONE_SETTINGS
     
     elif query.data == "call_history":
-        # No DB interaction here (yet)
         await query.message.edit_text(
             "📊 *Call History*\n\n"
             "Your recent calls will appear here.\n"
@@ -299,31 +482,64 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return MAIN_MENU
     
     elif query.data == "settings":
-        async with get_db_session() as session: # <-- Async context
-            # agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
-            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id)) # <-- Async query
+        async with get_db_session() as session:
+            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id))
             agent = result.scalar_one_or_none()
             if not agent:
                 await query.message.edit_text("Error: Agent not found. Please try /start again.")
                 return ConversationHandler.END
-            await show_settings_menu(update, context, agent) # <-- Await helper
+            await show_settings_menu(update, context, agent)
         return SETTINGS
+
+    elif query.data == "system_status" and update.effective_user.id == SUPER_ADMIN_ID:
+        # Show system status (admin only)
+        await query.message.edit_text(
+            "🔧 *System Status*\n\n"
+            "Checking system components...\n"
+            "_(Use /status command for detailed info)_",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
+            parse_mode='Markdown'
+        )
+        return MAIN_MENU
     
     elif query.data == "manage_agents" and update.effective_user.id == SUPER_ADMIN_ID:
-        # Use the centralized agent management menu function
         await show_agent_management_menu(update, context)
         return AGENT_MANAGEMENT
 
-    # If no known callback data is matched, perhaps show main menu again or do nothing
-    # For safety, let's reshow main menu if callback data is unknown within this state
+    elif query.data == "help":
+        help_text = (
+            "ℹ️ *Help & Commands*\n\n"
+            "*Quick Commands:*\n"
+            "📞 `/call +1234567890` - Make a call\n"
+            "📱 `/setphone +1234567890` - Set phone\n"
+            "📲 `/setcid +1234567890` - Set caller ID\n"
+            "🌐 `/route M/R/B` - Set route\n"
+            "🤖 `/autodial` - Start campaign\n"
+            "⚙️ `/settings` - Open settings\n"
+            "📊 `/status` - System status (admin)\n\n"
+            "*Getting Started:*\n"
+            "1. Set your phone number\n"
+            "2. Choose a route\n"
+            "3. Start making calls!\n\n"
+            "*Need Support?*\n"
+            "Contact your administrator for assistance."
+        )
+        
+        await query.message.edit_text(
+            help_text,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
+            parse_mode='Markdown'
+        )
+        return MAIN_MENU
+
+    # Fallback for unknown callback data
     else:
         logger.warning(f"Unhandled callback data in MAIN_MENU: {query.data}")
-        async with get_db_session() as session: # <-- Async context
-            # agent = session.query(Agent).filter_by(telegram_id=update.effective_user.id).first()
-            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id)) # <-- Async query
+        async with get_db_session() as session:
+            result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id))
             agent = result.scalar_one_or_none()
             if agent:
-                await show_main_menu(update, context, agent) # <-- Await helper
+                await show_main_menu(update, context, agent)
         return MAIN_MENU
 
 async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

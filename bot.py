@@ -84,7 +84,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     user_display = f"@{agent.username}" if agent.username else (update.effective_user.first_name or "User")
     
     # Build dynamic status indicators
-    auth_status = "ACTIVE" if agent.is_authorized else "UNAUTHORIZED"
+    auth_status_emoji = "🟢" if agent.is_authorized else "🔴"
     phone_status = agent.phone_number if agent.phone_number else "Not Set"
     
     # Route status
@@ -97,7 +97,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     autodial_status = "DISABLED"
     if agent.auto_dial:
         trunk_display = agent.autodial_trunk or "Default"
-        autodial_status = f"ENABLED ({trunk_display.title()})"
+        autodial_status = "ENABLED"
     
     # Caller ID status
     manual_cid = agent.caller_id or "Not Set"
@@ -113,18 +113,15 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Build the welcome message using CARD STACK format
+    # Build the welcome message using Dashboard Style format
     welcome_message = (
-        "⚡ **SIREN**\n\n"
-        f"**USER:** `{user_display}`\n\n"
-        "**📡 CONNECTION STATUS**\n"
-        f"🟢 Authorization: `{auth_status}`\n"
-        f"📱 Phone: `{phone_status}`\n"
-        f"🌐 Route: `{route_status}`\n\n"
-        "**📞 CALLER CONFIGURATION**\n"
-        f"📲 Manual CID: `{manual_cid}`\n"
-        f"🤖 AutoDial: `{autodial_status}`\n"
-        f"📞 AutoDial CID: `{autodial_cid}`"
+        f"⚡ **SIREN** \n\n"
+        f"**{user_display}** {auth_status_emoji}\n\n"
+        f"**CONNECTION**\n"
+        f"📱 `{phone_status}` → 🌐 `{route_status}`\n\n"
+        f"**OUTBOUND CALLER IDS**\n"
+        f"📲 `{manual_cid}` (Manual)\n"
+        f"🤖 `{autodial_cid}` (AutoDial: **{autodial_status}**)"
     )
 
     # Send or edit the message

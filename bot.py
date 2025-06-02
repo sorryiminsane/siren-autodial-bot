@@ -88,11 +88,11 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     auth_color = "🟢" if agent.is_authorized else "🔴"
     phone_status = agent.phone_number if agent.phone_number else "Not Set"
     
-    # Route status
+    # Route status - simplified to just MAIN/RED/BLACK
     route_status = "Not Set"
     route_emoji = "❌"
     if agent.route:
-        route_map = {"M": "MAIN-TRUNK", "R": "RED-TRUNK", "B": "BLACK-TRUNK"}
+        route_map = {"M": "MAIN", "R": "RED", "B": "BLACK"}
         route_status = route_map.get(agent.route, "UNKNOWN")
         route_emoji = "🌐"
     
@@ -123,18 +123,29 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Build the welcome message using enhanced HTML formatting with symbols
+    # Build the welcome message with help commands section
     welcome_message = (
         "⚡ <b><u>SIREN</u></b>\n\n"
         "👤 <b><u>USER</u></b>\n"
-        f"└─ <code>{user_display}</code>\n\n"
+        f"└─ {user_display}\n\n"
         "🔐 <b><u>STATUS</u></b>\n"
         f"├─ {auth_color} Authorization: <b>{auth_status}</b>\n"
         f"├─ 📱 Phone: <code>{phone_status}</code>\n"
         f"└─ {route_emoji} Route: <b>{route_status}</b>\n\n"
         "📞 <b><u>CALLER IDS</u></b>\n"
         f"├─ 📲 Manual: <code>{manual_cid}</code>\n"
-        f"└─ {autodial_emoji} AutoDial: {autodial_trunk_display} • <code>{autodial_cid}</code>"
+        f"└─ {autodial_emoji} AutoDial: {autodial_trunk_display} • <code>{autodial_cid}</code>\n\n"
+        "~~~\n"
+        "Available Commands:\n"
+        "📞 /call - Make an outbound call\n"
+        "🤖 /autodial - Upload numbers for auto-dialing\n"
+        "📱 /setphone - Register your phone number\n"
+        "📲 /setcid - Set manual outbound caller ID\n"
+        "🤖 /setautodialcid - Set Auto-Dial caller ID\n"
+        "🌐 /route - Set your manual call route (M/R/B)\n"
+        "⚙️ /settings - Access settings (Auto-Dial toggle, Trunks, etc.)\n"
+        "📊 /history - View your call history\n"
+        "ℹ️ /help - Show detailed help"
     )
 
     # Send or edit the message

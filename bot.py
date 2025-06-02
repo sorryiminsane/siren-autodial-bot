@@ -113,18 +113,18 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Build the welcome message using enhanced professional format
+    # Build the welcome message using CARD STACK format
     welcome_message = (
-        "⚡ **SIREN**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"**USER:** `{user_display}`\n"
-        f"├ 🟢 Authorization: `{auth_status}`\n"
-        f"├ 📱 Phone: `{phone_status}`\n"
-        f"├ 🌐 Route: `{route_status}`\n"
-        f"├ 📲 Caller ID: `{manual_cid}`\n"
-        f"├ 🤖 AutoDial: `{autodial_status}`\n"
-        f"└ 📞 AutoDial CID: `{autodial_cid}`\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "⚡ **SIREN**\n\n"
+        f"**USER:** `{user_display}`\n\n"
+        "**📡 CONNECTION STATUS**\n"
+        f"🟢 Authorization: `{auth_status}`\n"
+        f"📱 Phone: `{phone_status}`\n"
+        f"🌐 Route: `{route_status}`\n\n"
+        "**📞 CALLER CONFIGURATION**\n"
+        f"📲 Manual CID: `{manual_cid}`\n"
+        f"🤖 AutoDial: `{autodial_status}`\n"
+        f"📞 AutoDial CID: `{autodial_cid}`"
     )
 
     # Send or edit the message

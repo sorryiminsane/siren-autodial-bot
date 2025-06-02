@@ -84,7 +84,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     user_display = f"@{agent.username}" if agent.username else (update.effective_user.first_name or "User")
     
     # Build dynamic status indicators
-    auth_status_emoji = "🟢" if agent.is_authorized else "🔴"
+    auth_status = "ACTIVE" if agent.is_authorized else "UNAUTHORIZED"
     phone_status = agent.phone_number if agent.phone_number else "Not Set"
     
     # Route status
@@ -95,9 +95,13 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     # AutoDial status
     autodial_status = "DISABLED"
+    autodial_trunk_display = ""
     if agent.auto_dial:
         trunk_display = agent.autodial_trunk or "Default"
-        autodial_status = "ENABLED"
+        autodial_status = f"ENABLED ({trunk_display.title()})"
+        autodial_trunk_display = f"**{autodial_status}**"
+    else:
+        autodial_trunk_display = "**DISABLED**"
     
     # Caller ID status
     manual_cid = agent.caller_id or "Not Set"
@@ -113,15 +117,18 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Build the welcome message using Dashboard Style format
+    # Build the welcome message using STATUS BLOCKS format
     welcome_message = (
-        f"⚡ **SIREN** \n\n"
-        f"**{user_display}** {auth_status_emoji}\n\n"
-        f"**CONNECTION**\n"
-        f"📱 `{phone_status}` → 🌐 `{route_status}`\n\n"
-        f"**OUTBOUND CALLER IDS**\n"
-        f"📲 `{manual_cid}` (Manual)\n"
-        f"🤖 `{autodial_cid}` (AutoDial: **{autodial_status}**)"
+        "⚡ **SIREN**\n\n"
+        "👤 **USER**\n"
+        f"`{user_display}`\n\n"
+        "🔐 **STATUS**\n"
+        f"🟢 Authorization: **{auth_status}**\n"
+        f"📱 Phone: `{phone_status}`\n"
+        f"🌐 Route: **{route_status}**\n\n"
+        "📞 **CALLER IDS**\n"
+        f"📲 Manual: `{manual_cid}`\n"
+        f"🤖 AutoDial: {autodial_trunk_display} • `{autodial_cid}`"
     )
 
     # Send or edit the message

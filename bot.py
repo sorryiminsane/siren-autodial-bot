@@ -85,23 +85,29 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     # Build dynamic status indicators
     auth_status = "ACTIVE" if agent.is_authorized else "UNAUTHORIZED"
+    auth_color = "🟢" if agent.is_authorized else "🔴"
     phone_status = agent.phone_number if agent.phone_number else "Not Set"
     
     # Route status
     route_status = "Not Set"
+    route_emoji = "❌"
     if agent.route:
         route_map = {"M": "MAIN-TRUNK", "R": "RED-TRUNK", "B": "BLACK-TRUNK"}
         route_status = route_map.get(agent.route, "UNKNOWN")
+        route_emoji = "🌐"
     
     # AutoDial status
-    autodial_status = "DISABLED"
+    autodial_emoji = "🤖"
+    autodial_status_text = "DISABLED"
     autodial_trunk_display = ""
     if agent.auto_dial:
         trunk_display = agent.autodial_trunk or "Default"
-        autodial_status = f"ENABLED ({trunk_display.title()})"
-        autodial_trunk_display = f"**{autodial_status}**"
+        autodial_status_text = f"ENABLED"
+        autodial_trunk_display = f"<b>{autodial_status_text}</b> <i>({trunk_display.title()})</i>"
+        autodial_emoji = "✅"
     else:
-        autodial_trunk_display = "**DISABLED**"
+        autodial_trunk_display = f"<b>{autodial_status_text}</b>"
+        autodial_emoji = "❌"
     
     # Caller ID status
     manual_cid = agent.caller_id or "Not Set"
@@ -117,25 +123,25 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Build the welcome message using STATUS BLOCKS format
+    # Build the welcome message using enhanced HTML formatting with symbols
     welcome_message = (
-        "⚡ **SIREN**\n\n"
-        "👤 **USER**\n"
-        f"`{user_display}`\n\n"
-        "🔐 **STATUS**\n"
-        f"🟢 Authorization: **{auth_status}**\n"
-        f"📱 Phone: `{phone_status}`\n"
-        f"🌐 Route: **{route_status}**\n\n"
-        "📞 **CALLER IDS**\n"
-        f"📲 Manual: `{manual_cid}`\n"
-        f"🤖 AutoDial: {autodial_trunk_display} • `{autodial_cid}`"
+        "⚡ <b><u>SIREN</u></b>\n\n"
+        "👤 <b><u>USER</u></b>\n"
+        f"└─ <code>{user_display}</code>\n\n"
+        "🔐 <b><u>STATUS</u></b>\n"
+        f"├─ {auth_color} Authorization: <b>{auth_status}</b>\n"
+        f"├─ 📱 Phone: <code>{phone_status}</code>\n"
+        f"└─ {route_emoji} Route: <b>{route_status}</b>\n\n"
+        "📞 <b><u>CALLER IDS</u></b>\n"
+        f"├─ 📲 Manual: <code>{manual_cid}</code>\n"
+        f"└─ {autodial_emoji} AutoDial: {autodial_trunk_display} • <code>{autodial_cid}</code>"
     )
 
     # Send or edit the message
     if isinstance(update.callback_query, type(None)):
-        await update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='Markdown')
+        await update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='HTML')
     else:
-        await update.callback_query.message.edit_text(welcome_message, reply_markup=reply_markup, parse_mode='Markdown')
+        await update.callback_query.message.edit_text(welcome_message, reply_markup=reply_markup, parse_mode='HTML')
 
 async def show_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, agent: Agent):
     """Displays the dynamic settings menu."""

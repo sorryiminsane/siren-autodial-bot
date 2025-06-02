@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import re
@@ -43,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 # Conversation states
 (MAIN_MENU, SETTINGS, PHONE_SETTINGS, 
- CALL_MENU, AGENT_MANAGEMENT, AUTO_DIAL) = range(6)
+ CALL_MENU, AGENT_MANAGEMENT, AUTO_DIAL, AGENT_ID_INPUT) = range(7)
 
 # Global in-memory data structures
 active_calls = {}
@@ -309,25 +310,8 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return SETTINGS
     
     elif query.data == "manage_agents" and update.effective_user.id == SUPER_ADMIN_ID:
-        # No DB interaction here (yet)
-        keyboard = [
-            [InlineKeyboardButton("👥 List All Agents", callback_data="list_agents")],
-            [InlineKeyboardButton("✅ Authorize Agent", callback_data="auth_agent")],
-            [InlineKeyboardButton("❌ Deauthorize Agent", callback_data="deauth_agent")],
-            [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text(
-            "👥 *Agent Management*\n\n"
-            "Manage your call center agents:\n\n"
-            "• View all agents\n"
-            "• Authorize new agents\n"
-            "• Manage permissions\n"
-            "• View agent statistics\n\n"
-            "Select an option:",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
+        # Use the centralized agent management menu function
+        await show_agent_management_menu(update, context)
         return AGENT_MANAGEMENT
 
     # If no known callback data is matched, perhaps show main menu again or do nothing
@@ -376,6 +360,7 @@ async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             [InlineKeyboardButton("🔙 Back", callback_data="back_settings")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await query.message.edit_text(
             "🌐 *Route Selection*\n\n"
             "Please select your preferred route:\n\n"
@@ -591,6 +576,32 @@ async def handle_call_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     # If other actions were added to call menu, handle them here
     return CALL_MENU
 
+async def show_agent_management_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the agent management menu."""
+    keyboard = [
+        [InlineKeyboardButton("👥 List All Agents", callback_data="list_agents")],
+        [InlineKeyboardButton("✅ Authorize Agent", callback_data="authorize_agent")],
+        [InlineKeyboardButton("❌ Deauthorize Agent", callback_data="deauthorize_agent")],
+        [InlineKeyboardButton("🗑️ Delete Agent", callback_data="delete_agent")],
+        [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    menu_text = (
+        "👥 *Agent Management*\n\n"
+        "Manage your call center agents:\n\n"
+        "• View all agents\n"
+        "• Authorize new agents\n"
+        "• Manage permissions\n"
+        "• View agent statistics\n\n"
+        "Select an option:"
+    )
+    
+    if update.callback_query and update.callback_query.message:
+        await update.callback_query.message.edit_text(menu_text, reply_markup=reply_markup, parse_mode='Markdown')
+    elif update.message:
+        await update.message.reply_text(menu_text, reply_markup=reply_markup, parse_mode='Markdown')
+
 async def handle_agent_management(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle agent management menu interactions."""
     query = update.callback_query
@@ -611,9 +622,201 @@ async def handle_agent_management(update: Update, context: ContextTypes.DEFAULT_
     if update.effective_user.id != SUPER_ADMIN_ID:
         await query.message.edit_text("❌ Unauthorized access.")
         return MAIN_MENU # Return to main menu if not admin
+    
+    # Handle cancel for authorize/deauthorize
+    if query.data == "cancel_authorize" or query.data == "cancel_deauthorize":
+        # Just clear user data - no need to remove handler as we're using ConversationHandler states now
+        context.user_data.pop("awaiting_agent_action", None)
+        await show_agent_management_menu(update, context)
+        return AGENT_MANAGEMENT
+
+    # Show agent management menu if the callback is "manage_agents"
+    if query.data == "manage_agents": 
+        await show_agent_management_menu(update, context)
+        return AGENT_MANAGEMENT
         
-    # Handle agent management specific callbacks (list_agents, auth_agent, etc.) here
-    # Add DB interactions as needed using async with get_db_session()
+    # List all agents
+    elif query.data == "list_agents":
+        async with get_db_session() as session:
+            result = await session.execute(select(Agent))
+            agents = result.scalars().all()
+            
+            if not agents:
+                await query.message.edit_text(
+                    "No agents found in the database.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")]])
+                )
+                return AGENT_MANAGEMENT
+            
+            agent_list = "👥 *All Agents*\n\n"
+            for agent in agents:
+                status = "✅ Authorized" if agent.is_authorized else "❌ Unauthorized"
+                phone = f"`{agent.phone_number}`" if agent.phone_number else "Not set"
+                agent_list += f"*ID:* `{agent.telegram_id}`\n*Username:* @{agent.username or 'None'}\n*Status:* {status}\n*Phone:* {phone}\n\n"
+            
+            # Add a back button
+            keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="manage_agents")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.message.edit_text(agent_list, reply_markup=reply_markup, parse_mode='Markdown')
+            return AGENT_MANAGEMENT
+    
+    # Authorize an agent
+    elif query.data == "authorize_agent":
+        # Store that we're waiting for an agent ID to authorize
+        context.user_data["awaiting_agent_action"] = "authorize"
+        
+        await query.message.edit_text(
+            "✅ *Authorize Agent*\n\n"
+            "Please enter the Telegram ID of the agent you want to authorize.\n"
+            "Example: `123456789`\n\n"
+            "The agent must have used the bot at least once.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Cancel", callback_data="cancel_authorize")],
+                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
+            ]),
+            parse_mode='Markdown'
+        )
+        
+        # No longer register a temporary handler - it will be handled by the ConversationHandler
+        return AGENT_ID_INPUT
+    
+    # Deauthorize an agent
+    elif query.data == "deauthorize_agent":
+        # Store that we're waiting for an agent ID to deauthorize
+        context.user_data["awaiting_agent_action"] = "deauthorize"
+        
+        await query.message.edit_text(
+            "❌ *Deauthorize Agent*\n\n"
+            "Please enter the Telegram ID of the agent you want to deauthorize.\n"
+            "Example: `123456789`\n\n"
+            "This will revoke their access to the bot's features.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Cancel", callback_data="cancel_deauthorize")],
+                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
+            ]),
+            parse_mode='Markdown'
+        )
+        
+        # No longer register a temporary handler - it will be handled by the ConversationHandler
+        return AGENT_ID_INPUT
+    
+    # Default: show agent management menu
+    await show_agent_management_menu(update, context)
+    return AGENT_MANAGEMENT
+
+async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle agent ID input for authorization/deauthorization."""
+    # Handle callback queries (buttons) first
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        
+        # Handle cancel buttons
+        if query.data in ("cancel_authorize", "cancel_deauthorize"):
+            context.user_data.pop("awaiting_agent_action", None)
+            await show_agent_management_menu(update, context)
+            return AGENT_MANAGEMENT
+            
+        # Handle back to main menu
+        elif query.data == "back_main":
+            context.user_data.pop("awaiting_agent_action", None)
+            async with get_db_session() as session:
+                result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id))
+                agent = result.scalar_one_or_none()
+                if agent:
+                    await show_main_menu(update, context, agent)
+                else:
+                    await query.message.edit_text("Error: Agent data not found.")
+            return MAIN_MENU
+    
+    # If not a callback query, it must be a text message with the agent ID
+    # Get the action type (authorize or deauthorize)
+    action = context.user_data.get("awaiting_agent_action")
+    if not action:
+        await update.message.reply_text("Error: No pending agent action found.")
+        return MAIN_MENU
+    
+    # Clear the awaiting action
+    del context.user_data["awaiting_agent_action"]
+    
+    # Get the agent ID from the message
+    try:
+        agent_id = int(update.message.text.strip())
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Invalid agent ID format. Please use only numbers.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")],
+                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
+            ])
+        )
+        return AGENT_ID_INPUT
+    
+    # Process the agent ID
+    async with get_db_session() as session:
+        # Check if the agent exists
+        result = await session.execute(select(Agent).filter_by(telegram_id=agent_id))
+        agent = result.scalar_one_or_none()
+        
+        if not agent:
+            await update.message.reply_text(
+                f"❌ Agent with ID `{agent_id}` not found. The agent must use the bot at least once.",
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")],
+                    [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
+                ])
+            )
+            return AGENT_ID_INPUT
+        
+        # Update the agent's authorization status
+        if action == "authorize":
+            # Don't change if already authorized
+            if agent.is_authorized:
+                await update.message.reply_text(
+                    f"ℹ️ Agent @{agent.username or agent_id} is already authorized.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="manage_agents")]]),
+                    parse_mode='Markdown'
+                )
+                return AGENT_MANAGEMENT
+            
+            agent.is_authorized = True
+            await session.commit()
+            
+            await update.message.reply_text(
+                f"✅ Agent @{agent.username or agent_id} has been successfully authorized!",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")]]),
+                parse_mode='Markdown'
+            )
+            
+        elif action == "deauthorize":
+            # Don't change if already unauthorized
+            if not agent.is_authorized:
+                await update.message.reply_text(
+                    f"ℹ️ Agent @{agent.username or agent_id} is already unauthorized.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]]),
+                    parse_mode='Markdown'
+                )
+                return AGENT_MANAGEMENT
+            
+            # Don't allow deauthorizing the super admin
+            if agent.telegram_id == SUPER_ADMIN_ID:
+                await update.message.reply_text(
+                    "❌ Cannot deauthorize the super admin!",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]]),
+                    parse_mode='Markdown'
+                )
+                return AGENT_MANAGEMENT
+            
+            agent.is_authorized = False
+            await session.commit()
+            
+            await update.message.reply_text(
+                f"❌ Agent @{agent.username or agent_id} has been deauthorized.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]]),
+                parse_mode='Markdown'
+            )
     
     return AGENT_MANAGEMENT
 
@@ -1201,7 +1404,7 @@ async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             
             # Update status for successful initiation
-            await status_message.edit_text(
+            updated_message = await status_message.edit_text(
                 "📞 *Call Status*\n\n"
                 f"• *Agent:* `{agent.phone_number}`\n"
                 f"• *Target:* `{target_number}`\n"
@@ -1212,6 +1415,29 @@ async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Please answer your phone when it rings.",
                 parse_mode='Markdown'
             )
+            
+            # Store the message ID in the call record for later updates
+            # We need to find the call record that was created by originate_call
+            async with get_async_db_session() as session:
+                # Find the most recent call for this agent and target
+                result = await session.execute(
+                    select(Call)
+                    .filter_by(agent_telegram_id=user.id, target_number=target_number)
+                    .order_by(Call.start_time.desc())
+                )
+                call = result.scalar_one_or_none()
+                
+                if call:
+                    # Store the message ID and chat ID for later updates
+                    call.call_metadata = {
+                        **(call.call_metadata or {}),
+                        "status_message_id": updated_message.message_id,
+                        "status_chat_id": user.id
+                    }
+                    await session.commit()
+                    logger.info(f"Stored status message ID {updated_message.message_id} for call {call.call_id}")
+                else:
+                    logger.warning(f"Could not find call record for agent {user.id} and target {target_number}")
             
         except Exception as e:
             logger.error(f"Error in call command: {str(e)}")
@@ -1406,8 +1632,8 @@ async def post_init(application: Application) -> None:
             
             logger.info(f"Processing Newchannel event: Uniqueid={uniqueid}, Channel={channel}, Exten={exten}, Context={context}, CallID={call_id_from_event}")
             
-            # Check if this is a new outbound call in our autodial-ivr context
-            if context == 'autodial-ivr':
+            # Check if this is a new outbound call (either from autodial-ivr or manual call from main trunk)
+            if context in ['autodial-ivr', 'from-main-trunk']:
                 try:
                     async with get_async_db_session() as session:
                         # Try finding the call using different methods - prioritize uniqueid which is often our call_id
@@ -1453,13 +1679,54 @@ async def post_init(application: Application) -> None:
                             original_status = call.status
                             call.uniqueid = uniqueid
                             call.channel = channel
-                            call.status = "connected"
-                            call.call_metadata = {
-                                **(call.call_metadata or {}),
-                                "connected_time": datetime.now().isoformat(),
-                                "asterisk_context": context,
-                                "asterisk_exten": exten
-                            }
+                            
+                            # Only update to connected if we're not already in a connected state
+                            if call.status != "connected":
+                                call.status = "connected"
+                                call.call_metadata = {
+                                    **(call.call_metadata or {}),
+                                    "connected_time": datetime.now().isoformat(),
+                                    "asterisk_context": context,
+                                    "asterisk_exten": exten,
+                                    "last_status_update": datetime.now().isoformat()
+                                }
+                                
+                                # Update the existing status message if available
+                                if call.agent_telegram_id and global_application_instance:
+                                    # Check if we have a stored status message ID
+                                    status_message_id = call.call_metadata.get('status_message_id')
+                                    status_chat_id = call.call_metadata.get('status_chat_id')
+                                    
+                                    if status_message_id and status_chat_id:
+                                        # Update the existing status message
+                                        try:
+                                            await global_application_instance.bot.edit_message_text(
+                                                chat_id=status_chat_id,
+                                                message_id=status_message_id,
+                                                text=f"📞 *Call Status*\n\n"
+                                                     f"• *Agent:* `{call.agent_phone or 'Unknown'}`\n"
+                                                     f"• *Target:* `{call.target_number or 'Unknown'}`\n"
+                                                     f"• *Route:* {call.route or 'Default'} Route\n"
+                                                     f"• *Status:* Connecting to target...\n\n"
+                                                     f"_Step 1: ✓ Agent answered_\n"
+                                                     f"_Step 2: Dialing target number..._\n\n"
+                                                     f"_Please wait while we connect your call._",
+                                                parse_mode='Markdown'
+                                            )
+                                            logger.info(f"Updated status message {status_message_id} for call {call.call_id} - agent answered")
+                                        except Exception as e:
+                                            logger.error(f"Failed to update status message: {e}")
+                                    else:
+                                        # No stored message ID, send a new message
+                                        logger.warning(f"No status message ID found for call {call.call_id}, sending new status update")
+                                        await global_application_instance.bot.send_message(
+                                            chat_id=call.agent_telegram_id,
+                                            text=f"🔊 *Call Status Update*\n\n"
+                                                 f"• *To:* `{call.target_number or 'Unknown'}`\n"
+                                                 f"• *Status:* Connecting to target...\n"
+                                                 f"• *Time:* {datetime.now().strftime('%H:%M:%S')}",
+                                            parse_mode='Markdown'
+                                        )
                             await session.commit()
                             
                             logger.info(f"Updated call {call.call_id} with uniqueid={uniqueid}, channel={channel}")
@@ -1467,6 +1734,10 @@ async def post_init(application: Application) -> None:
                             
                             # Log detailed call info for debugging
                             logger.debug(f"Call details: Target={call.target_number}, Campaign={call.campaign_id}, Agent={call.agent_telegram_id}")
+                            
+                            # ICM is now handled by bridge_event_listener when target answers
+                            # This ensures we only show ICM when call is actually connected to target
+                            # DO NOT DISPLAY ICM HERE - ONLY IN BRIDGE EVENT
                         else:
                             # No matching call found in database, create a new record if needed
                             logger.warning(f"No matching call found in database for channel {channel} and Uniqueid {uniqueid}")
@@ -1514,6 +1785,7 @@ async def post_init(application: Application) -> None:
         ami_manager.register_event('DTMFBegin', dtmf_begin_listener)  # Add DTMFBegin listener
         ami_manager.register_event('DTMFEnd', dtmf_event_listener)
         ami_manager.register_event('Hangup', hangup_event_listener) # Register Hangup event listener
+        ami_manager.register_event('BridgeEnter', bridge_event_listener) # Register Bridge event listener for ICM
         logger.info("AMI event listeners registered.")
 
         # Store in application context for access in handlers
@@ -1549,20 +1821,21 @@ async def dtmf_begin_listener(manager, event):
         # Initialize with values from event if available
         target_number = target_from_event or 'Unknown'
         campaign_id = campaign_from_event
-        agent_id = event.get('AGENTID') or event.get('agentid') or 7991166259  # Default agent ID if not found
+        caller_id = event.get('CallerIDNum') or 'Unknown Caller'
+        agent_id = 7991166259  # Default agent ID
         
         async with get_async_db_session() as session:
             call = None
             
             # Try finding the call using different methods
             if uniqueid:
-                # First try by Asterisk Uniqueid
+                # First try by Asterisk Uniqueid which often contains our call_id
                 call = await Call.find_by_uniqueid(session, uniqueid)
                 if call:
                     logger.info(f"Found call in database by Uniqueid: {uniqueid}")
             
             if not call and tracking_id_from_event:
-                # Try by tracking ID if available in event
+                # Then try by tracking ID if available in event
                 call = await Call.find_by_tracking_id(session, tracking_id_from_event)
                 if call:
                     logger.info(f"Found call in database by TrackingID: {tracking_id_from_event}")
@@ -1577,7 +1850,10 @@ async def dtmf_begin_listener(manager, event):
                 # Update the call status to indicate DTMF started
                 target_number = call.target_number
                 campaign_id = call.campaign_id
-                agent_id = call.agent_telegram_id or agent_id
+                
+                # Use agent from database if available, otherwise use from event
+                if call.agent_telegram_id:
+                    agent_id = call.agent_telegram_id
                 
                 # Update the call status
                 call.status = 'dtmf_started'
@@ -1696,15 +1972,6 @@ async def dtmf_event_listener(manager, event):
         campaign_id = campaign_from_event
         caller_id = event.get('CallerIDNum') or 'Unknown Caller'
         agent_id = 7991166259  # Default agent ID
-        
-        # Try to get AgentTelegramID from event variables
-        agent_from_event = event.get('AGENTID') or event.get('agentid') or event.get('AgentTelegramID')
-        if agent_from_event:
-            try:
-                agent_id = int(agent_from_event)
-                logger.info(f"Found agent ID in event: {agent_id}")
-            except (ValueError, TypeError):
-                logger.warning(f"Invalid agent ID in event: {agent_from_event}")
         
         async with get_async_db_session() as session:
             call = None
@@ -1855,6 +2122,193 @@ async def dtmf_event_listener(manager, event):
         
     except Exception as e:
         logger.error(f"Error processing DTMF event: {e}", exc_info=True)
+
+# Global set to track bridges we've already processed
+_processed_bridges = set()
+
+async def bridge_event_listener(manager, event):
+    """Handle Bridge events to display ICM when a call is actually connected.
+    
+    This is triggered when the target answers the call and both channels are bridged.
+    We only show the ICM once per bridge, regardless of how many channels join.
+    """
+    # Retrieve application instance from global variable
+    global application, _processed_bridges
+    application = global_application_instance
+    if not application:
+        logger.debug("Application instance not found globally in bridge_event_listener.")
+        return
+        
+    # Log the bridge event details
+    event_dict = dict(event)
+    logger.debug(f"=== Bridge Event ===\n{event_dict}")
+    
+    # Only process BridgeEnter events (when a channel joins a bridge)
+    if event.get('Event') != 'BridgeEnter':
+        return
+        
+    bridge_id = event.get('BridgeUniqueid')
+    channel = event.get('Channel')
+    channel_state = event.get('ChannelState')
+    uniqueid = event.get('Uniqueid', event.get('ChannelUniqueid'))
+    
+    if not bridge_id or not channel or not uniqueid:
+        logger.debug(f"Incomplete bridge event data: bridge_id={bridge_id}, channel={channel}, uniqueid={uniqueid}")
+        return
+    
+    # Check if we've already processed this bridge (not just channel)
+    # This ensures we only show the ICM once per call, regardless of which channel triggers it
+    if bridge_id in _processed_bridges:
+        logger.info(f"Already processed bridge {bridge_id}, skipping")
+        return
+    
+    # Add this bridge to our processed set
+    _processed_bridges.add(bridge_id)
+    
+    # Check if this is a channel in Up state (answered call)
+    if channel_state != '6' and event.get('ChannelStateDesc') != 'Up':
+        logger.debug(f"Channel {channel} not in Up state, ignoring bridge event")
+        _processed_bridges.discard(bridge_id)  # Remove from processed set since we're ignoring it
+        return
+    
+    # We're now tracking by bridge_id only, so no need for these checks
+        
+    logger.info(f"Processing Bridge event: BridgeUniqueid={bridge_id}, Channel={channel}, Uniqueid={uniqueid}")
+    
+    # Check if this is a channel in Up state (answered call)
+    if channel_state != '6' and event.get('ChannelStateDesc') != 'Up':
+        logger.debug(f"Channel {channel} not in Up state, ignoring bridge event")
+        _processed_bridges.discard(bridge_channel_key)  # Remove from processed set since we're ignoring it
+        return
+        
+    # Find the call in the database
+    try:
+        async with get_async_db_session() as session:
+            # First try to find the call by uniqueid
+            call = await Call.find_by_uniqueid(session, uniqueid)
+            
+            if not call and channel:
+                # Try to find by channel name
+                call = await Call.find_by_channel(session, channel)
+                
+            if not call:
+                logger.debug(f"No matching call found for Bridge event: Uniqueid={uniqueid}, Channel={channel}")
+                return
+                
+            # We need to handle both manual calls and campaign calls
+            # The key is to only show the ICM when the bridge is established
+            # This means the target has answered the call
+            logger.info(f"Processing Bridge event for call {call.call_id} (Campaign ID: {call.campaign_id})")
+            
+            # Check if we've already shown the ICM for this call
+            if call.call_metadata and call.call_metadata.get('icm_displayed'):
+                logger.info(f"ICM already displayed for call {call.call_id}, not showing again")
+                return
+                
+            # Update call metadata to indicate the bridge has been established
+            call.call_metadata = {
+                **(call.call_metadata or {}),
+                "bridge_time": datetime.now().isoformat(),
+                "bridge_id": bridge_id,
+                "target_channel": channel,
+                "bridge_state": "established"
+            }
+            
+            # Update call status to bridged if not already
+            if call.status != "bridged":
+                call.status = "bridged"
+                
+            # Mark that we're going to display the ICM
+            call.call_metadata["icm_displayed"] = False
+            
+            # Save the updated call
+            await session.commit()
+            
+            # Get a fresh copy of the call to avoid session conflicts
+            call_id = call.call_id
+            
+        # In a new session, get the call again and display ICM
+        async with get_async_db_session() as new_session:
+            # Re-fetch the call to avoid session conflicts
+            result = await new_session.execute(select(Call).filter_by(call_id=call_id))
+            refreshed_call = result.scalar_one_or_none()
+            
+            if not refreshed_call:
+                logger.error(f"Failed to retrieve call {call_id} in new session")
+                return
+                
+            # Update the existing status message if available, otherwise create a new one
+            if refreshed_call.agent_telegram_id:
+                try:
+                    # Check if we have a stored status message ID
+                    status_message_id = refreshed_call.call_metadata.get('status_message_id')
+                    status_chat_id = refreshed_call.call_metadata.get('status_chat_id')
+                    
+                    if status_message_id and status_chat_id:
+                        # Update the existing status message
+                        logger.info(f"Updating existing status message {status_message_id} for call {refreshed_call.call_id}")
+                        
+                        # Format the updated status message
+                        updated_status = (
+                            "📞 *Call Connected*\n\n"
+                            f"• *Agent:* `{refreshed_call.agent_phone or 'Unknown'}`\n"
+                            f"• *Target:* `{refreshed_call.target_number or 'Unknown'}`\n"
+                            f"• *Duration:* 00:00\n"
+                            f"• *Status:* Connected\n"
+                        )
+                        
+                        # Create inline keyboard with call control buttons
+                        keyboard = [
+                            [
+                                InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_call_{refreshed_call.call_id}"),
+                                InlineKeyboardButton("❌ Hangup", callback_data=f"hangup_call_{refreshed_call.call_id}")
+                            ],
+                            [
+                                InlineKeyboardButton("🔇 Mute", callback_data=f"mute_call_{refreshed_call.call_id}"),
+                                InlineKeyboardButton("🔈 Unmute", callback_data=f"unmute_call_{refreshed_call.call_id}")
+                            ],
+                            [
+                                InlineKeyboardButton("⏸ Hold", callback_data=f"hold_call_{refreshed_call.call_id}"),
+                                InlineKeyboardButton("▶ Resume", callback_data=f"resume_call_{refreshed_call.call_id}")
+                            ],
+                            [
+                                InlineKeyboardButton("📤 Transfer", callback_data=f"transfer_call_{refreshed_call.call_id}"),
+                                InlineKeyboardButton("🔢 DTMF", callback_data=f"dtmf_call_{refreshed_call.call_id}")
+                            ]
+                        ]
+                        
+                        reply_markup = InlineKeyboardMarkup(keyboard)
+                        
+                        # Update the message with new status and buttons
+                        await application.bot.edit_message_text(
+                            chat_id=status_chat_id,
+                            message_id=status_message_id,
+                            text=updated_status,
+                            reply_markup=reply_markup,
+                            parse_mode='Markdown'
+                        )
+                        
+                        # Mark that the ICM has been displayed
+                        refreshed_call.call_metadata["icm_displayed"] = True
+                        await new_session.commit()
+                        
+                        logger.info(f"Updated status message with ICM for call {refreshed_call.call_id}")
+                    else:
+                        # No stored message ID, fall back to creating a new ICM
+                        logger.warning(f"No status message ID found for call {refreshed_call.call_id}, creating new ICM")
+                        await show_interactive_call_menu(application, refreshed_call)
+                        
+                        # Mark that the ICM has been displayed
+                        refreshed_call.call_metadata["icm_displayed"] = True
+                        await new_session.commit()
+                except Exception as e:
+                    logger.error(f"Error updating status message: {str(e)}", exc_info=True)
+            else:
+                logger.warning(f"Cannot show ICM: Call {call_id} has no agent_telegram_id")
+                
+    except Exception as e:
+        logger.error(f"Error processing bridge event: {str(e)}", exc_info=True)
+
 
 async def hangup_event_listener(manager, event):
     """Handle Hangup events from calls using database for tracking."""
@@ -2076,9 +2530,9 @@ async def originate_autodial_call_from_record(context: ContextTypes.DEFAULT_TYPE
                     }
                     await session.commit()
         except Exception as db_error:
-            logger.error(f"Error updating call record after originate error: {str(db_error)}")
+            logger.error(f"Error updating call record after originate error: {db_error}")
         
-        return {'success': False, 'message': f'Error: {str(e)}'}
+        return {'success': False, 'message': str(e)}
 
 async def originate_autodial_call(context: ContextTypes.DEFAULT_TYPE, target_number: str, trunk: str, caller_id: str, agent_telegram_id: int, campaign_id: Optional[int] = None, sequence_number: Optional[int] = None) -> dict:
     """Originate a call for an auto-dial campaign through Asterisk AMI using database for tracking."""
@@ -2396,11 +2850,11 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                         trunk=trunk,
                         status="queued",  # New status to indicate pre-created record
                         start_time=datetime.now(),
+                        # Store additional metadata as JSON
                         call_metadata={
                             "timestamp": timestamp,
                             "origin": "autodial",
-                            "tracking_id": tracking_id,
-                            "pre_created": True
+                            "tracking_id": tracking_id
                         }
                     )
                     session.add(new_call)
@@ -2618,6 +3072,74 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 active_campaigns = {}  # campaign_id: [target_numbers]
 active_calls = {}      # call_id: {"campaign_id": x, "target_number": y, ...}
 
+async def show_interactive_call_menu(application, call):
+    """Display the Interactive Call Menu (ICM) with call control buttons.
+    
+    This is only for manual calls placed via /call command, not for auto-dial campaigns.
+    Only called by bridge_event_listener when target actually answers the call.
+    """
+    if not call or not call.agent_telegram_id:
+        logger.warning("Cannot show ICM: Missing call or agent_telegram_id")
+        return None
+    
+    # Only show ICM for manual calls (not from campaigns) or calls from main trunk
+    if call.campaign_id is not None and 'from-main-trunk' not in (call.call_metadata or {}).get('asterisk_context', ''):
+        logger.info(f"Skipping ICM for campaign call {call.call_id}")
+        return None
+    
+    # Check if ICM has already been displayed to avoid duplication
+    if call.call_metadata and call.call_metadata.get('icm_displayed', False):
+        logger.info(f"ICM already displayed for call {call.call_id}, not showing again")
+        return None
+    
+    try:
+        # Format the call information
+        call_info = (
+            f"📞 *Call Connected*\n\n"
+            f"• *To:* `{call.target_number or 'Unknown'}`\n"
+            f"• *Duration:* 00:00\n"
+            f"• *Status:* Connected\n"
+        )
+        
+        # Create inline keyboard with call control buttons
+        keyboard = [
+            [
+                InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_call_{call.call_id}"),
+                InlineKeyboardButton("❌ Hangup", callback_data=f"hangup_call_{call.call_id}")
+            ],
+            [
+                InlineKeyboardButton("🔇 Mute", callback_data=f"mute_call_{call.call_id}"),
+                InlineKeyboardButton("🔈 Unmute", callback_data=f"unmute_call_{call.call_id}")
+            ],
+            [
+                InlineKeyboardButton("⏸ Hold", callback_data=f"hold_call_{call.call_id}"),
+                InlineKeyboardButton("▶ Resume", callback_data=f"resume_call_{call.call_id}")
+            ],
+            [
+                InlineKeyboardButton("📤 Transfer", callback_data=f"transfer_call_{call.call_id}"),
+                InlineKeyboardButton("🔢 DTMF", callback_data=f"dtmf_call_{call.call_id}")
+            ]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Send the ICM message
+        message = await application.bot.send_message(
+            chat_id=call.agent_telegram_id,
+            text=call_info,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        
+        # No need to update the call object - this is done by the caller
+        logger.info(f"Displayed ICM for call {call.call_id} to agent {call.agent_telegram_id}")
+        return message
+        
+    except Exception as e:
+        logger.error(f"Error showing ICM: {str(e)}", exc_info=True)
+        return None
+
+
 def update_call_status(call_id, status, end_time=None):
     """Update the status of a call in our in-memory tracking."""
     if call_id in active_calls:
@@ -2629,27 +3151,28 @@ def update_call_status(call_id, status, end_time=None):
         logger.warning(f"Call ID {call_id} not found in active_calls")
 
 def main():
-    """Start the bot."""
-
-    # Initialize database synchronously using the event loop before PTB takes over
+    """Start the bot using a properly set up event loop."""
+    # Set up an event loop for the entire application
     try:
-        loop = asyncio.get_event_loop() # <--- Get loop
-        loop.run_until_complete(init_db()) # <--- Run init_db using loop
+        # Create a new event loop and set it as the current one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Run database initialization in this loop
+        loop.run_until_complete(init_db())
         logger.info("Database initialized successfully")
+        
+        # Create the Application with the current event loop
+        application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+        
+        # Add error handler
+        application.add_error_handler(error_handler)
+        
+        # Register post_init callback
+        application.post_init = post_init
     except Exception as e:
-        logger.error(f"Failed to initialize database: {str(e)}")
-        # Optionally close loop if obtained but init failed? Check asyncio docs for best practice.
+        logger.error(f"Failed to initialize application: {str(e)}")
         return
-    # Do not close the loop here, PTB will use it.
-
-    # Create the Application and pass it your bot's token
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    
-    # Add error handler
-    application.add_error_handler(error_handler)
-    
-    # Register post_init callback
-    application.post_init = post_init
     
     # --- Define Handlers to be separated ---
     setphone_handler = CommandHandler("setphone", set_phone)
@@ -2674,6 +3197,10 @@ def main():
             PHONE_SETTINGS: [CallbackQueryHandler(handle_phone_settings)],
             CALL_MENU: [CallbackQueryHandler(handle_call_menu)],
             AGENT_MANAGEMENT: [CallbackQueryHandler(handle_agent_management)],
+            AGENT_ID_INPUT: [
+                CallbackQueryHandler(handle_agent_id_input),  # Handle cancel/back buttons
+                MessageHandler(filters.TEXT & ~filters.COMMAND & filters.User(SUPER_ADMIN_ID), handle_agent_id_input)  # Handle agent ID input
+            ],
             AUTO_DIAL: [
                 CallbackQueryHandler(handle_auto_dial), # Handles button presses like 'start_autodial_campaign' and 'back_main'
                 MessageHandler(filters.Document.TEXT, handle_auto_dial_file) # Handles the file upload
@@ -2704,5 +3231,5 @@ def main():
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
-    # asyncio.run(main()) # <-- Previous version causing loop error
-    main() # <-- Call synchronous main directly
+    # Call main() directly since it's now a synchronous function
+    main()

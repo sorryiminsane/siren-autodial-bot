@@ -103,64 +103,27 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     manual_cid = agent.caller_id or "Not Set"
     autodial_cid = agent.autodial_caller_id or "Not Set"
     
-    # Build main action buttons - organized by priority
+    # Build main action buttons - only CALL button
     keyboard = []
     
-    # Primary Actions Row
-    if agent.is_authorized and agent.phone_number and agent.route:
-        keyboard.append([
-            InlineKeyboardButton("📞 Make Call", callback_data="make_call"),
-            InlineKeyboardButton("📊 Call History", callback_data="call_history")
-        ])
-    else:
-        keyboard.append([
-            InlineKeyboardButton("⚠️ Complete Setup", callback_data="setup_wizard")
-        ])
-    
-    # AutoDial Row (only if authorized)
-    if agent.is_authorized:
-        if agent.auto_dial:
-            keyboard.append([
-                InlineKeyboardButton("🤖 Start Campaign", callback_data="auto_dial"),
-                InlineKeyboardButton("📈 Campaign Stats", callback_data="campaign_stats")
-            ])
-        else:
-            keyboard.append([
-                InlineKeyboardButton("🤖 Enable AutoDial", callback_data="enable_autodial")
-            ])
-    
-    # Configuration Row
+    # Only the CALL button
     keyboard.append([
-        InlineKeyboardButton("⚙️ Settings", callback_data="settings"),
-        InlineKeyboardButton("📱 Profile", callback_data="profile")
-    ])
-    
-    # Admin Row (only for super admin)
-    if user_id == SUPER_ADMIN_ID:
-        keyboard.append([
-            InlineKeyboardButton("👥 Manage Agents", callback_data="manage_agents"),
-            InlineKeyboardButton("🔧 System Status", callback_data="system_status")
-        ])
-    
-    # Help Row
-    keyboard.append([
-        InlineKeyboardButton("ℹ️ Help & Commands", callback_data="help"),
-        InlineKeyboardButton("🔄 Refresh", callback_data="refresh_menu")
+        InlineKeyboardButton("📞 CALL", callback_data="make_call")
     ])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Build the welcome message using Layout A5 format
+    # Build the welcome message using enhanced professional format
     welcome_message = (
-        "SIREN\n"
+        "⚡ **SIREN**\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"USER: {user_display}\n"
-        f"├ Authorization: {auth_status}\n"
-        f"├ Phone: {phone_status}\n"
-        f"├ Route: {route_status}\n"
-        f"├ Caller ID: {manual_cid}\n"
-        f"├ AutoDial: {autodial_status}\n"
-        f"└ AutoDial Caller ID: {autodial_cid}\n\n"
+        f"**USER:** `{user_display}`\n"
+        f"├ 🟢 Authorization: `{auth_status}`\n"
+        f"├ 📱 Phone: `{phone_status}`\n"
+        f"├ 🌐 Route: `{route_status}`\n"
+        f"├ 📲 Caller ID: `{manual_cid}`\n"
+        f"├ 🤖 AutoDial: `{autodial_status}`\n"
+        f"└ 📞 AutoDial CID: `{autodial_cid}`\n\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     )
 

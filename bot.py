@@ -118,8 +118,35 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     # Only the CALL button
     keyboard.append([
-        InlineKeyboardButton("📞 CALL", callback_data="make_call")
+        InlineKeyboardButton("📞 Make a Call", callback_data="make_call")
     ])
+    
+    # Auto-Dial button (only if authorized and auto_dial enabled)
+    if agent.is_authorized and agent.auto_dial:
+        keyboard.append([
+            InlineKeyboardButton("🤖 Auto-Dial", callback_data="auto_dial")
+        ])
+    
+    # Phone Number button
+    keyboard.append([
+        InlineKeyboardButton("📱 My Phone Number", callback_data="phone_number")
+    ])
+    
+    # Call History button
+    keyboard.append([
+        InlineKeyboardButton("📊 Call History", callback_data="call_history")
+    ])
+    
+    # Settings button
+    keyboard.append([
+        InlineKeyboardButton("⚙️ Settings", callback_data="settings")
+    ])
+    
+    # Manage Agents button (admin only)
+    if update.effective_user.id == SUPER_ADMIN_ID:
+        keyboard.append([
+            InlineKeyboardButton("👥 Manage Agents", callback_data="manage_agents")
+        ])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     

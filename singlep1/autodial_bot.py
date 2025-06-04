@@ -801,7 +801,7 @@ async def process_campaign(campaign_id: int, bot=None):
             call_id = f"campaign_{campaign_id}_{timestamp}_{call.id}_{microseconds}"
             action_id = f"originate_{call_id}"
             
-            # Build variables string exactly as bot.py does
+            # Build variables string EXACTLY as bot.py does
             variables = (
                 f'__AgentTelegramID={campaign.agent_telegram_id},'  # Double underscore ensures persistence
                 f'__CallID={call_id},'  # Original call ID
@@ -974,19 +974,19 @@ async def on_userevent(manager, event):
                         
                         if call:
                             # Update the call with DTMF response
-                            call.response_digit = dtmf
+                            call.response_digit = '1'  # They pressed 1 if we got here
                             call.status = 'responded'  # Update status to indicate response received
                             await session.commit()
                             
                             # Log success
-                            logger.info(f"DTMF '{dtmf}' recorded for call {call.id} (tracking_id: {tracking_id}) in campaign {call.campaign_id}")
+                            logger.info(f"DTMF '1' recorded for call {call.id} (tracking_id: {tracking_id}) in campaign {call.campaign_id}")
                             
                             # Use agent_id_int if available, otherwise use call.agent_telegram_id
                             target_agent_id = agent_id_int if agent_id_int else call.agent_telegram_id
                         else:
                             # No call record found, but we can still notify based on agent_id
                             target_agent_id = agent_id_int
-                            logger.warning(f"Could not find call record for AutoDialResponse event, but will attempt notification to agent {agent_id}")
+                            logger.warning(f"Could not find call record for AutoDialResponse event, but will attempt notification to agent {agent_id_str}")
                     
                     # Send notification using the same pattern as bot.py
                     if target_agent_id:
@@ -995,7 +995,7 @@ async def on_userevent(manager, event):
                             f"🎯 *DTMF Response Received!*\n"
                             f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
                             f"📱 *Caller:* `{caller_id}`\n"
-                            f"🔘 *Response:* Pressed `{dtmf}` ✅\n"
+                            f"🔘 *Response:* Pressed `1` ✅\n"
                             f"📊 *Campaign:* #{campaign_id if campaign_id else 'Unknown'}\n"
                             f"🏷️ *Tracking:* {tracking_id if tracking_id else 'N/A'}\n"
                             f"⏰ *Time:* {datetime.now().strftime('%I:%M:%S %p')}\n\n"

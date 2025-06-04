@@ -64,6 +64,7 @@ class AutodialCall(Base):
     call_id = Column(String(150), nullable=True, unique=True, index=True)  # Unique call identifier
     tracking_id = Column(String(150), nullable=True, index=True)  # External tracking ID (e.g., JKD1.1)
     sequence_number = Column(Integer, nullable=True, index=True)  # Sequence in the campaign
+    agent_telegram_id = Column(BigInteger, nullable=True, index=True)  # Agent who initiated the campaign
     
     # Asterisk related info
     uniqueid = Column(String(150), nullable=True, index=True)  # Asterisk Uniqueid for the call leg

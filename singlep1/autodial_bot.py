@@ -80,25 +80,35 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         campaigns = campaigns.scalars().all()
 
         if campaigns:
-            stats_text = "*Recent Campaigns*\n"
-            for campaign in campaigns:
-                stats_text += f"• {campaign.name} - {campaign.status}\n"
+            stats_text = ""
+            for campaign in campaigns[:3]:  # Show only last 3
+                status_emoji = {
+                    'active': '🟢',
+                    'completed': '✅',
+                    'paused': '⏸️',
+                    'failed': '❌',
+                    'pending': '⏳'
+                }.get(campaign.status.lower(), '📋')
+                stats_text += f"{status_emoji} *{campaign.name}*\n   └─ {campaign.status.upper()}\n"
         else:
-            stats_text = "No campaigns yet."
+            stats_text = "📭 No campaigns yet. Start your first!"
 
     await update.message.reply_text(
-        "*SirenP1 Dashboard*\n\n"
+        f"🎯 *SirenP1 AutoDial Bot*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"Welcome back, *{user.first_name}*! 👋\n\n"
+        f"📊 *Recent Activity*\n"
         f"{stats_text}\n\n"
-        "*Quick Actions:*\n"
-        "/newcampaign - Start new campaign\n"
-        "/stats - View detailed campaign stats\n"
-        "/setcid - Set Caller ID\n"
-        "/route - Select trunk route\n"
-        "/settings - View current settings\n"
-        "\n*Help:*\n"
-        "/help - View command usage\n"
-        "/cancel - Cancel current campaign setup"
-        .format(first_name=user.first_name), parse_mode='Markdown'
+        f"⚡ *Quick Actions*\n"
+        f"┣ 🚀 /newcampaign - Launch campaign\n"
+        f"┣ 📈 /stats - Campaign analytics\n"
+        f"┣ 📲 /setcid - Configure Caller ID\n"
+        f"┣ 🌐 /route - Select trunk route\n"
+        f"┣ ⚙️ /settings - Bot settings\n"
+        f"┣ 🔍 /responses - View responses\n"
+        f"┗ ❓ /help - Command guide\n\n"
+        f"💡 *Tip:* Upload a .txt file anytime to start a campaign!",
+        parse_mode='Markdown'
     )
 
 async def set_caller_id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -136,7 +146,14 @@ async def set_caller_id_command(update: Update, context: ContextTypes.DEFAULT_TY
         agent.autodial_caller_id = caller_id.strip()
         await session.commit()
 
-    await message.reply_text(f"CallerID set to: {caller_id}")
+    await message.reply_text(
+        f"✅ *Caller ID Updated!*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"📲 New Caller ID: `{caller_id}`\n"
+        f"🎯 Status: Ready for campaigns\n\n"
+        f"💡 All your campaigns will now use this number as the caller ID.",
+        parse_mode='Markdown'
+    )
 
 async def set_route_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle the /route command to set the trunk/route."""
@@ -161,7 +178,15 @@ async def set_route_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         agent.autodial_trunk = route
         await session.commit()
     
-    await message.reply_text(f"Route set to: {route}")
+    route_display = {'one': 'Trunk One', 'two': 'Trunk Two'}.get(route, route)
+    await message.reply_text(
+        f"✅ *Trunk Route Updated!*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"🌐 Active Route: `{route_display}`\n"
+        f"📡 Context: `autodial-{route}`\n\n"
+        f"💡 All campaigns will now use this trunk for outbound calls.",
+        parse_mode='Markdown'
+    )
 
 def format_campaign_status(status):
     status_emojis = {
@@ -224,8 +249,9 @@ async def get_campaign_stats(update: Update, context: ContextTypes.DEFAULT_TYPE)
         # Build the dashboard
         dashboard = [
             "📊 *CAMPAIGN DASHBOARD*",
+            "━━━━━━━━━━━━━━━━━━━━━━",
             "",
-            f"Showing {len(campaigns)} most recent campaigns",
+            f"📈 Showing {len(campaigns)} most recent campaigns",
             ""
         ]
 
@@ -255,25 +281,26 @@ async def get_campaign_stats(update: Update, context: ContextTypes.DEFAULT_TYPE)
             
             dashboard.extend([
                 f"{status_emoji} *{campaign.name}*",
-                f"ID: `{campaign.id}` | {format_campaign_status(getattr(campaign, 'status', 'unknown'))}",
+                f"├─ ID: `{campaign.id}`",
+                f"├─ Status: {format_campaign_status(getattr(campaign, 'status', 'unknown'))}",
             ])
 
             # Add progress if available
             if hasattr(campaign, 'total_numbers'):
                 processed = getattr(campaign, 'processed_numbers', 0)
                 total_nums = getattr(campaign, 'total_numbers', 0)
-                dashboard.append(f"📊 {format_progress(processed, total_nums)}")
+                dashboard.append(f"├─ Progress: {format_progress(processed, total_nums)}")
             
             # Add call stats if available
             if calls:
                 dashboard.extend([
-                    f"📞 Calls: {completed}/{total} ({completed/max(total,1):.0%})",
-                    f"✅ Responses: {responded} ({responded/max(total,1):.0%})"
+                    f"├─ 📞 Completed: {completed}/{total} ({completed/max(total,1):.0%})",
+                    f"├─ ✅ Responses: {responded} ({responded/max(total,1):.0%})"
                 ])
             
             # Add created time if available
             if hasattr(campaign, 'created_at'):
-                dashboard.append(f"⏰ {campaign.created_at.strftime('%b %d %H:%M')}")
+                dashboard.append(f"└─ ⏰ Created: {campaign.created_at.strftime('%b %d %H:%M')}")
             
             dashboard.append("")
 
@@ -426,14 +453,17 @@ async def get_settings_command(update: Update, context: ContextTypes.DEFAULT_TYP
             return
             
         settings_text = (
-            "*SirenP1 Settings*\n"
-            f"• Caller ID: `{agent.autodial_caller_id or 'Not set'}`\n"
-            f"• Route: `{agent.autodial_trunk or 'one (default)'}`\n"
-            f"• Max Concurrent Calls: `{agent.max_concurrent_calls_override or DEFAULT_MAX_CONCURRENT_CALLS}`\n"
-            "\n*Quick Actions:*\n"
-            "/setcid - Update Caller ID\n"
-            "/route - Change trunk route\n"
-            "/newcampaign - Start new campaign"
+            "⚙️ *SirenP1 Settings*\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "📱 *Caller Configuration*\n"
+            f"┣ 📲 Caller ID: `{agent.autodial_caller_id or '❌ Not set'}`\n"
+            f"┣ 🌐 Trunk Route: `{agent.autodial_trunk or 'one'}`\n"
+            f"┗ 📊 Max Concurrent: `{agent.max_concurrent_calls_override or DEFAULT_MAX_CONCURRENT_CALLS}` calls\n\n"
+            "🔧 *Quick Configuration*\n"
+            "┣ 📲 /setcid `<number>` - Set Caller ID\n"
+            "┣ 🌐 /route `<one|two>` - Change trunk\n"
+            "┗ 🚀 /newcampaign - Launch campaign\n\n"
+            f"💡 *Status:* {'✅ Ready' if agent.autodial_caller_id else '⚠️ Set Caller ID first'}"
         )
         
         await update.message.reply_text(settings_text, parse_mode='Markdown')
@@ -454,7 +484,22 @@ async def new_campaign_command(update: Update, context: ContextTypes.DEFAULT_TYP
             return ConversationHandler.END
     
     await update.message.reply_text(
-        "Please upload a .txt file with one phone number per line (E.164 format, e.g., +1234567890)."
+        "📂 *Upload Campaign Numbers*\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Please upload a `.txt` file containing phone numbers.\n\n"
+        "📋 *File Requirements:*\n"
+        "• One phone number per line\n"
+        "• E.164 format (e.g., `+1234567890`)\n"
+        "• UTF-8 or ASCII encoding\n"
+        "• Max 10,000 numbers\n\n"
+        "💡 *Example:*\n"
+        "```\n"
+        "+14155551234\n"
+        "+13105556789\n"
+        "+12125550000\n"
+        "```\n\n"
+        "⏳ Waiting for your file...",
+        parse_mode='Markdown'
     )
     return UPLOAD_FILE
 
@@ -517,13 +562,28 @@ async def handle_file_upload(update: Update, context: ContextTypes.DEFAULT_TYPE)
     context.user_data['phone_numbers'] = phone_numbers
     context.user_data['campaign_name'] = f"Campaign_{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-    summary_message = f"File processed.\nValid numbers: {len(phone_numbers)}"
+    summary_message = f"📊 *Processing Results*\n"
+    summary_message += f"┣ ✅ Valid numbers: `{len(phone_numbers)}`"
     if invalid_lines:
-        summary_message += f"\nInvalid/skipped lines: {len(invalid_lines)}\nFirst 5 invalid: {', '.join(invalid_lines[:5])}"
+        summary_message += f"\n┣ ⚠️ Invalid lines: `{len(invalid_lines)}`"
+        if len(invalid_lines) > 0:
+            summary_message += f"\n┗ 📋 Examples: {', '.join(invalid_lines[:3])}"
+    else:
+        summary_message += f"\n┗ 🎯 All numbers valid!"
     
     await update.message.reply_text(
-        f"{summary_message}\n\nCampaign Name: {context.user_data['campaign_name']}\n"
-        "Type /startcampaign to begin, or /cancelcampaign to abort."
+        f"✅ *File Processing Complete*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"{summary_message}\n\n"
+        f"📌 *Campaign Details:*\n"
+        f"• Name: `{context.user_data['campaign_name']}`\n"
+        f"• Numbers: {len(phone_numbers)} ready to dial\n"
+        f"• Status: Pending\n\n"
+        f"🚀 *Ready to launch?*\n"
+        f"┣ ✅ /startcampaign - Begin dialing\n"
+        f"┗ ❌ /cancelcampaign - Cancel setup\n\n"
+        f"⚡ Campaign will use your configured Caller ID and trunk.",
+        parse_mode='Markdown'
     )
     return CONFIRM_CAMPAIGN
 
@@ -596,6 +656,7 @@ async def start_campaign_command(update: Update, context: ContextTypes.DEFAULT_T
                     call_id=call_id,
                     tracking_id=tracking_id,
                     sequence_number=idx,
+                    agent_telegram_id=user_id,  # Add the agent's telegram ID
                     call_metadata={
                         "timestamp": timestamp,
                         "origin": "autodial",
@@ -614,17 +675,26 @@ async def start_campaign_command(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text("❌ Error creating campaign. Please try again.")
         return ConversationHandler.END
 
-    await update.message.reply_text(f"Campaign '{campaign_name}' (ID: {campaign_id}) created and will start shortly.")
+    await update.message.reply_text(
+        f"🚀 *Campaign Launched!*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"📌 *Campaign ID:* `{campaign_id}`\n"
+        f"📋 *Name:* {campaign_name}\n"
+        f"📞 *Numbers:* {len(phone_numbers)} queued\n"
+        f"⏱️ *Status:* Initializing...\n\n"
+        f"🔔 *What happens next:*\n"
+        f"• Calls will start dialing automatically\n"
+        f"• You'll receive notifications for responses\n"
+        f"• Use /stats to monitor progress\n"
+        f"• Campaign runs in the background\n\n"
+        f"💡 *Tip:* You can start another campaign or use other commands while this runs!",
+        parse_mode='Markdown'
+    )
     logger.info(f"Campaign {campaign_id} for agent {user_id} starting with {len(phone_numbers)} numbers.")
     
     # Start processing the campaign asynchronously
     campaign_task = asyncio.create_task(process_campaign(campaign_id, context.bot))
     active_campaign_tasks[campaign_id] = campaign_task
-    
-    # Don't wait for campaign to complete - allow user to continue using other commands
-    await update.message.reply_text(
-        f"Campaign '{campaign_name}' is now running in the background. You can use other commands while it's active."
-    )
     
     context.user_data.clear()
     return ConversationHandler.END
@@ -694,8 +764,9 @@ async def process_campaign(campaign_id: int, bot=None):
         )
         calls = calls_query.scalars().all()
         
-        # Update campaign status to active
+        # Update campaign status to active and set total numbers
         campaign.status = 'active'
+        campaign.total_numbers = len(calls)
         await session.commit()
         
         # Get campaign configuration
@@ -726,6 +797,16 @@ async def process_campaign(campaign_id: int, bot=None):
             
             action_id = call.call_id or f"campaign_{campaign_id}_{int(time.time())}_{call.id}"
             
+            # Build variables string - must be comma-separated, not a list
+            variables = (
+                f'__OriginalTargetNumber={call.phone_number},'
+                f'__AgentTelegramID={campaign.agent_telegram_id},'
+                f'__CallID={action_id},'
+                f'__TrackingID={tracking_id},'
+                f'__CampaignID={campaign_id},'
+                f'__CALL_RECORD_ID={call.id}'
+            )
+            
             originate_action = {
                 'Action': 'Originate',
                 'ActionID': action_id,
@@ -736,14 +817,7 @@ async def process_campaign(campaign_id: int, bot=None):
                 'CallerID': caller_id_formatted,
                 'Timeout': 30000,
                 'Async': 'true',
-                'Variable': [
-                    f'__OriginalTargetNumber={call.phone_number}',
-                    f'__AgentTelegramID={campaign.agent_telegram_id}',
-                    f'__CallID={action_id}',
-                    f'__TrackingID={tracking_id}',
-                    f'__CampaignID={campaign_id}',
-                    f'__CALL_RECORD_ID={call.id}'
-                ]
+                'Variable': variables
             }
             
             # Update call status
@@ -783,7 +857,32 @@ async def process_campaign(campaign_id: int, bot=None):
         # Update campaign status to completed
         campaign.status = 'completed'
         campaign.processed_numbers = len(calls)
+        campaign.total_numbers = len(calls)
         await session.commit()
+        
+        # Send completion notification
+        if bot and campaign.agent_telegram_id:
+            # Count responses
+            response_count = len([c for c in calls if c.response_digit == '1'])
+            completion_message = (
+                f"🎊 *Campaign Complete!*\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"📊 *Final Results:*\n"
+                f"├─ 📋 Campaign: {campaign.name}\n"
+                f"├─ 📞 Total Calls: {len(calls)}\n"
+                f"├─ ✅ Responses: {response_count}\n"
+                f"├─ 📈 Response Rate: {(response_count/len(calls)*100) if calls else 0:.1f}%\n"
+                f"└─ ⏱️ Status: Completed\n\n"
+                f"💡 Use /responses to see all numbers that pressed 1"
+            )
+            try:
+                await bot.send_message(
+                    campaign.agent_telegram_id,
+                    completion_message,
+                    parse_mode='Markdown'
+                )
+            except Exception as e:
+                logger.error(f"Failed to send completion notification: {e}")
     
     # Clean up
     if campaign_id in active_campaign_tasks:
@@ -897,12 +996,15 @@ async def on_userevent(manager, event):
                     # Send notification using the same pattern as bot.py
                     if target_agent_id:
                         # Build enhanced notification message
-                        campaign_text = f"Campaign: {campaign_id}" if campaign_id else ""
                         notification_message = (
-                            f"✅ *New Auto-Dial Response*\n\n"
-                            f"📱 Phone: `{caller_id}`\n"
-                            f"🔘 Response: Pressed {dtmf}\n"
-                            f"{campaign_text}"
+                            f"🎯 *DTMF Response Received!*\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                            f"📱 *Caller:* `{caller_id}`\n"
+                            f"🔘 *Response:* Pressed `{dtmf}` ✅\n"
+                            f"📊 *Campaign:* #{campaign_id if campaign_id else 'Unknown'}\n"
+                            f"🏷️ *Tracking:* {tracking_id if tracking_id else 'N/A'}\n"
+                            f"⏰ *Time:* {datetime.now().strftime('%I:%M:%S %p')}\n\n"
+                            f"💡 This number responded positively to your campaign!"
                         )
                         
                         # Get the application instance (same pattern as bot.py)

@@ -1017,19 +1017,28 @@ async def on_dtmf_begin(manager, event):
         async with get_session() as session:
             call = None
             
-            # Try finding the call using different methods
+            # Query by Uniqueid -> TrackingID -> Channel
             if uniqueid:
-                call = await session.get(AutodialCall, int(uniqueid))
+                result = await session.execute(
+                    select(AutodialCall).filter_by(uniqueid=uniqueid)
+                )
+                call = result.scalar_one_or_none()
                 if call:
                     logger.info(f"Found call in database by Uniqueid: {uniqueid}")
             
             if not call and tracking_id_from_event:
-                call = await session.get(AutodialCall, tracking_id_from_event)
+                result = await session.execute(
+                    select(AutodialCall).filter_by(tracking_id=tracking_id_from_event)
+                )
+                call = result.scalar_one_or_none()
                 if call:
                     logger.info(f"Found call in database by TrackingID: {tracking_id_from_event}")
             
             if not call and channel:
-                call = await session.get(AutodialCall, int(channel))
+                result = await session.execute(
+                    select(AutodialCall).filter_by(channel=channel)
+                )
+                call = result.scalar_one_or_none()
                 if call:
                     logger.info(f"Found call in database by Channel: {channel}")
             
@@ -1081,7 +1090,7 @@ async def on_dtmf_begin(manager, event):
         logger.error(f"Error processing DTMFBegin event: {e}", exc_info=True)
 
 async def on_dtmf(manager, event):
-    """Handle DTMF events from calls."""
+    """Handle DTMF events from calls using database for tracking."""
     # Log ALL event fields for analysis
     event_dict = dict(event)
     logger.debug(f"DTMF Event: {event_dict}")
@@ -1106,19 +1115,28 @@ async def on_dtmf(manager, event):
         async with get_session() as session:
             call = None
             
-            # Try finding the call using different methods
+            # Query by Uniqueid -> TrackingID -> Channel
             if uniqueid:
-                call = await session.get(AutodialCall, int(uniqueid))
+                result = await session.execute(
+                    select(AutodialCall).filter_by(uniqueid=uniqueid)
+                )
+                call = result.scalar_one_or_none()
                 if call:
                     logger.info(f"Found call in database by Uniqueid: {uniqueid}")
             
             if not call and tracking_id:
-                call = await session.get(AutodialCall, int(tracking_id))
+                result = await session.execute(
+                    select(AutodialCall).filter_by(tracking_id=tracking_id)
+                )
+                call = result.scalar_one_or_none()
                 if call:
                     logger.info(f"Found call in database by TrackingID: {tracking_id}")
             
             if not call and channel:
-                call = await session.get(AutodialCall, int(channel))
+                result = await session.execute(
+                    select(AutodialCall).filter_by(channel=channel)
+                )
+                call = result.scalar_one_or_none()
                 if call:
                     logger.info(f"Found call in database by Channel: {channel}")
             

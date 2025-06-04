@@ -857,41 +857,11 @@ async def process_campaign(campaign_id: int, bot=None):
                 call.error_message = str(e)
                 await session.commit()
         
-        # Update campaign status to completed
-        campaign.status = 'completed'
-        campaign.processed_numbers = len(calls)
-        campaign.total_numbers = len(calls)
-        await session.commit()
-        
-        # Send completion notification
-        if bot and campaign.agent_telegram_id:
-            # Count responses
-            response_count = len([c for c in calls if getattr(c, 'response_digit', '') == '1'])
-            completion_message = (
-                f"🎊 *Campaign Complete!*\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                f"📊 *Final Results:*\n"
-                f"├─ 📋 Campaign: {campaign.name}\n"
-                f"├─ 📞 Total Calls: {len(calls)}\n"
-                f"├─ ✅ Responses: {response_count}\n"
-                f"├─ 📈 Response Rate: {(response_count/len(calls)*100) if calls else 0:.1f}%\n"
-                f"└─ ⏱️ Status: Completed\n\n"
-                f"💡 Use /responses to see all numbers that pressed 1"
-            )
-            try:
-                await bot.send_message(
-                    campaign.agent_telegram_id,
-                    completion_message,
-                    parse_mode='Markdown'
-                )
-            except Exception as e:
-                logger.error(f"Failed to send completion notification: {e}")
-    
     # Clean up
     if campaign_id in active_campaign_tasks:
         del active_campaign_tasks[campaign_id]
     
-    logger.info(f"Finished processing campaign ID: {campaign_id}")
+    logger.info(f"Finished originating calls for campaign ID: {campaign_id}. Campaign remains active pending call completions.")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show detailed help for all commands."""

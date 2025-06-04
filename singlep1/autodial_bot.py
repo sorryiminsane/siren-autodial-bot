@@ -783,8 +783,8 @@ async def process_campaign(campaign_id: int, bot=None):
             if call.status not in ['queued', 'pending']:
                 continue
                 
-            # Generate a unique tracking ID for this call
-            tracking_id = f"{campaign_id}_{call.id}_{int(time.time())}"
+            # Generate tracking ID in same format as bot.py: JKD1.{sequence_number}
+            tracking_id = f"JKD1.{call.id}"
             
             # Update the call record with the tracking ID
             call.tracking_id = tracking_id
@@ -795,19 +795,23 @@ async def process_campaign(campaign_id: int, bot=None):
             caller_id_to_use = caller_id
             caller_id_formatted = f'"{caller_id_to_use}" <{caller_id_to_use}>'
             
-            action_id = call.call_id or f"campaign_{campaign_id}_{int(time.time())}_{call.id}"
+            # Generate call_id in same format as bot.py
+            timestamp = int(time.time())
+            microseconds = datetime.now().microsecond
+            call_id = f"campaign_{campaign_id}_{timestamp}_{call.id}_{microseconds}"
+            action_id = f"originate_{call_id}"
             
-            # Build variables string to match main bot exactly - must be comma-separated, not a list
+            # Build variables string exactly as bot.py does
             variables = (
-                f'__AgentTelegramID={campaign.agent_telegram_id},'
-                f'__CallID={action_id},'
-                f'__TrackingID={tracking_id},'
-                f'__SequenceNumber={call.id},'
-                f'__OriginalTargetNumber={call.phone_number},'
-                f'__CallerID={caller_id},'
-                f'__CampaignID={campaign_id},'
-                f'__Origin=autodial,'
-                f'__ActionID={action_id}'
+                f'__AgentTelegramID={campaign.agent_telegram_id},'  # Double underscore ensures persistence
+                f'__CallID={call_id},'  # Original call ID
+                f'__TrackingID={tracking_id},'  # Our new primary tracking ID (e.g., JKD1.1)
+                f'__SequenceNumber={call.id},'  # Position in the campaign
+                f'__OriginalTargetNumber={call.phone_number},'  # Will persist in all contexts
+                f'__CallerID={caller_id},'  # Will persist in all contexts
+                f'__CampaignID={campaign_id},'  # Will persist in all contexts
+                f'__Origin=autodial,'  # Will persist in all contexts
+                f'__ActionID={action_id}'  # Will persist in all contexts
             )
             
             originate_action = {

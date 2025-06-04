@@ -43,6 +43,9 @@ DEFAULT_MAX_CONCURRENT_CALLS = 50  # Default to 50 concurrent calls per agent
 ami_manager = None
 active_campaign_tasks = {}
 
+# Global application instance (changed from bot_instance to match bot.py pattern)
+global_application_instance = None
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handles the /start command."""
     user = update.effective_user
@@ -636,9 +639,9 @@ async def process_campaign(campaign_id: int, bot=None):
     logger.info(f"Starting to process campaign ID: {campaign_id}")
     
     # Use the global bot instance if none provided
-    global bot_instance
-    if bot is None and bot_instance is not None:
-        bot = bot_instance
+    global global_application_instance
+    if bot is None and global_application_instance is not None:
+        bot = global_application_instance.bot
     
     # Ensure AMI is connected before proceeding
     if ami_manager is None or not ami_manager.connected:
@@ -839,9 +842,6 @@ async def on_hangup_event(manager, event):
     except Exception as e:
         logger.error(f"Error handling hangup event: {e}", exc_info=True)
 
-# Global bot instance that will be set during initialization
-bot_instance = None
-
 async def on_userevent(manager, event):
     """Handle UserEvents from Asterisk dialplan."""
     try:
@@ -853,49 +853,80 @@ async def on_userevent(manager, event):
             tracking_id = event.get('TrackingID')
             campaign_id = event.get('CampaignID')
             agent_id = event.get('AgentID')
+            caller_id = event.get('CallerID', 'Unknown Caller')
+            pressed_one = event.get('PressedOne')
             dtmf = event.get('DTMF') or '1'  # Default to '1' if not specified
             
-            logger.info(f"AutoDialResponse event: TrackingID={tracking_id}, CampaignID={campaign_id}, AgentID={agent_id}, DTMF={dtmf}")
+            logger.info(f"AutoDialResponse event: TrackingID={tracking_id}, CampaignID={campaign_id}, AgentID={agent_id}, CallerID={caller_id}, PressedOne={pressed_one}, DTMF={dtmf}")
             
-            # Find the call by tracking ID
-            async with get_session() as session:
-                # Try to find the call using tracking ID first
-                query = select(AutodialCall).where(AutodialCall.tracking_id == tracking_id)
-                result = await session.execute(query)
-                call = result.scalars().first()
-                
-                # If not found by tracking ID, try by campaign ID and agent ID
-                if not call and campaign_id:
-                    query = select(AutodialCall).where(
-                        AutodialCall.campaign_id == int(campaign_id) if campaign_id and campaign_id.isdigit() else None
-                    ).order_by(AutodialCall.start_time.desc()).limit(1)
-                    result = await session.execute(query)
-                    call = result.scalars().first()
-                
-                if call:
-                    # Update the call with DTMF response
-                    call.dtmf_response = dtmf
-                    await session.commit()
+            # Only process if someone pressed 1
+            if pressed_one == 'Yes' or dtmf == '1':
+                try:
+                    agent_id_int = int(agent_id) if agent_id else None
                     
-                    # Log success
-                    logger.info(f"DTMF '{dtmf}' recorded for call {call.id} (tracking_id: {tracking_id}) in campaign {call.campaign_id}")
+                    # Find the call by tracking ID
+                    async with get_session() as session:
+                        # Try to find the call using tracking ID first
+                        query = select(AutodialCall).where(AutodialCall.tracking_id == tracking_id)
+                        result = await session.execute(query)
+                        call = result.scalars().first()
+                        
+                        # If not found by tracking ID, try by campaign ID and agent ID
+                        if not call and campaign_id:
+                            query = select(AutodialCall).where(
+                                AutodialCall.campaign_id == int(campaign_id) if campaign_id and campaign_id.isdigit() else None
+                            ).order_by(AutodialCall.last_attempt_time.desc()).limit(1)
+                            result = await session.execute(query)
+                            call = result.scalars().first()
+                        
+                        if call:
+                            # Update the call with DTMF response
+                            call.response_digit = dtmf
+                            await session.commit()
+                            
+                            # Log success
+                            logger.info(f"DTMF '{dtmf}' recorded for call {call.id} (tracking_id: {tracking_id}) in campaign {call.campaign_id}")
+                            
+                            # Use agent_id_int if available, otherwise use call.agent_telegram_id
+                            target_agent_id = agent_id_int if agent_id_int else call.agent_telegram_id
+                        else:
+                            # No call record found, but we can still notify based on agent_id
+                            target_agent_id = agent_id_int
+                            logger.warning(f"Could not find call record for AutoDialResponse event, but will attempt notification to agent {agent_id}")
                     
-                    # Send notification to the agent
-                    try:
-                        global bot_instance
-                        if bot_instance:
-                            await bot_instance.send_message(
-                                chat_id=call.agent_telegram_id,
-                                text=f"✅ *Response Received*\n\n"
-                                     f"• Number: `{call.target_number}`\n"
-                                     f"• Response: Pressed `{dtmf}`\n"
-                                     f"• Campaign: {call.campaign_id}",
+                    # Send notification using the same pattern as bot.py
+                    if target_agent_id:
+                        # Build enhanced notification message
+                        campaign_text = f"Campaign: {campaign_id}" if campaign_id else ""
+                        notification_message = (
+                            f"✅ *New Auto-Dial Response*\n\n"
+                            f"📱 Phone: `{caller_id}`\n"
+                            f"🔘 Response: Pressed {dtmf}\n"
+                            f"{campaign_text}"
+                        )
+                        
+                        # Get the application instance (same pattern as bot.py)
+                        global global_application_instance
+                        if global_application_instance:
+                            logger.info(f"Attempting to send notification to agent {target_agent_id}")
+                            await global_application_instance.bot.send_message(
+                                chat_id=target_agent_id, 
+                                text=notification_message, 
                                 parse_mode='Markdown'
                             )
-                    except Exception as e:
-                        logger.error(f"Failed to send notification: {e}")
-                else:
-                    logger.warning(f"Could not find call record for AutoDialResponse event: {event}")
+                            logger.info(f"Sent notification to agent {target_agent_id} for call from {caller_id}")
+                        else:
+                            logger.error("Global application instance not available for notification")
+                    else:
+                        logger.warning(f"No valid agent ID found for notification. AgentID from event: {agent_id}")
+                        
+                except ValueError as ve:
+                    logger.error(f"Value error processing response: {ve}")
+                except Exception as e:
+                    logger.error(f"Failed to process response or send notification: {e}")
+            else:
+                logger.info(f"AutoDialResponse for AgentID {agent_id}: Called party did not press 1 (PressedOne: {pressed_one}, DTMF: {dtmf})")
+                
     except Exception as e:
         logger.error(f"Error handling user event: {e}", exc_info=True)
 
@@ -985,16 +1016,34 @@ async def cancel_campaign_command(update: Update, context: ContextTypes.DEFAULT_
 async def post_init_tasks(application: Application):
     """Tasks to run after the bot application has been initialized."""
     # Store the bot instance globally for event handlers to use
-    global bot_instance
-    bot_instance = application.bot
-    logger.info("Bot instance stored globally for event handlers")
+    global global_application_instance
+    global_application_instance = application
+    logger.info("Application instance stored globally for event handlers")
     
-    await init_db() # Initialize database schema
+    # Initialize database schema
+    await init_db()
+    logger.info("Database initialized successfully")
     
-    # Connect to Asterisk AMI with retries
+    # Wait a moment to ensure application is fully ready before connecting AMI
+    await asyncio.sleep(2)
+    
+    # Connect to Asterisk AMI with retries (same pattern as bot.py)
     ami_connected = await connect_ami(retry_count=5, retry_delay=3)
     if ami_connected:
         logger.info("AMI connection established successfully during startup.")
+        
+        # Send a test message to verify notification capability (same as bot.py)
+        test_user_id = SUPER_ADMIN_ID  # Use the super admin for testing
+        test_message = "🔔 *SirenP1 Test Notification*\n\nThis is a test message to confirm that the autodial bot can send notifications to you."
+        try:
+            await application.bot.send_message(
+                chat_id=test_user_id,
+                text=test_message,
+                parse_mode='Markdown'
+            )
+            logger.info(f"Test notification sent to user {test_user_id}")
+        except Exception as e:
+            logger.error(f"Failed to send test notification to user {test_user_id}: {e}")
     else:
         logger.error("Failed to establish AMI connection during startup. Will retry when needed.")
     

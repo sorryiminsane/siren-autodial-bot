@@ -919,43 +919,63 @@ async def on_hangup_event(manager, event):
         logger.error(f"Error handling hangup event: {e}", exc_info=True)
 
 async def on_userevent(manager, event):
-    """Handle AutoDialResponse UserEvent."""
+    """Handle AutoDialResponse UserEvent, mirroring bot.py's direct AgentID usage for notifications."""
     if getattr(event, 'name', '') != 'UserEvent' or event.get('UserEvent') != 'AutoDialResponse':
         return
 
-    asterisk_uniqueid = event.get('Uniqueid') # Asterisk's UniqueID for the channel associated with this UserEvent
-    pressed_one = event.get('PressedOne')     # Expecting this directly from the event header
-    # Other fields like AgentID, CallerID, CampaignID, TrackingID from the event are secondary if we can get the call_record by UniqueID
+    # Primary fields for notification, extracted directly from event headers as in bot.py
+    agent_id_str = event.get('AgentID')
+    pressed_one = event.get('PressedOne')
+    
+    # Fields for context and logging
+    caller_id_from_event = event.get('CallerID', 'Unknown Caller') # Target's number
+    campaign_id_from_event = event.get('CampaignID', 'unknown')
+    tracking_id_from_event = event.get('TrackingID')
+    asterisk_uniqueid = event.get('Uniqueid')
 
-    logger.info(f"Processing UserEvent 'AutoDialResponse': Asterisk UniqueID={asterisk_uniqueid}, PressedOne={pressed_one}")
+    logger.info(
+        f"Processing UserEvent 'AutoDialResponse': AgentID='{agent_id_str}', PressedOne='{pressed_one}', "
+        f"CallerID='{caller_id_from_event}', CampaignID='{campaign_id_from_event}', "
+        f"TrackingID='{tracking_id_from_event}', UniqueID='{asterisk_uniqueid}'"
+    )
     logger.debug(f"Full UserEvent details: {dict(event)}")
 
-    if not asterisk_uniqueid:
-        logger.warning("UserEvent 'AutoDialResponse' missing Uniqueid. Cannot reliably process.")
-        return
-
-    if pressed_one == 'Yes':
+    if pressed_one == 'Yes' and agent_id_str:
         try:
+            agent_id_to_notify = int(agent_id_str) # Agent to notify comes directly from event
+
+            # Attempt to find and update the corresponding AutodialCall record for logging purposes
             async with get_session() as session:
                 call_record = None
-                # Primary lookup using Asterisk UniqueID
-                result = await session.execute(
-                    select(AutodialCall).filter_by(uniqueid=asterisk_uniqueid)
-                )
-                call_record = result.scalar_one_or_none()
+                if asterisk_uniqueid: # Prefer UniqueID if available and linked by on_newchannel_event
+                    result = await session.execute(
+                        select(AutodialCall).filter_by(uniqueid=asterisk_uniqueid)
+                    )
+                    call_record = result.scalar_one_or_none()
+                    if call_record:
+                        logger.info(f"Found AutodialCall {call_record.id} by UniqueID '{asterisk_uniqueid}' for logging response.")
+
+                if not call_record and tracking_id_from_event: # Fallback to TrackingID
+                    result = await session.execute(
+                        select(AutodialCall).filter_by(tracking_id=tracking_id_from_event)
+                    )
+                    call_record = result.scalar_one_or_none()
+                    if call_record:
+                        logger.info(f"Found AutodialCall {call_record.id} by TrackingID '{tracking_id_from_event}' for logging response.")
+                
+                if not call_record and caller_id_from_event != 'Unknown Caller' and campaign_id_from_event != 'unknown':
+                    # Further fallback: try to find by target number and campaign ID from event if others fail
+                    # This is less precise.
+                    stmt = select(AutodialCall).filter_by(phone_number=caller_id_from_event)
+                    if campaign_id_from_event.isdigit():
+                         stmt = stmt.filter_by(campaign_id=int(campaign_id_from_event))
+                    result = await session.execute(stmt.order_by(AutodialCall.created_at.desc()).limit(1))
+                    call_record = result.scalar_one_or_none()
+                    if call_record:
+                        logger.info(f"Found AutodialCall {call_record.id} by fallback (PhoneNumber & CampaignID from event) for logging response.")
+
 
                 if call_record:
-                    logger.info(f"Found AutodialCall {call_record.id} by Asterisk UniqueID: {asterisk_uniqueid} for UserEvent")
-                    
-                    agent_id_to_notify = call_record.agent_telegram_id
-                    target_phone_number = call_record.phone_number # This is the number that pressed 1
-                    campaign_db_id = call_record.campaign_id
-
-                    if not agent_id_to_notify:
-                        logger.error(f"AutodialCall {call_record.id} (UniqueID: {asterisk_uniqueid}) is missing agent_telegram_id. Cannot send notification.")
-                        return
-
-                    # Update the call record with the response
                     call_record.response_digit = '1'
                     call_record.status = 'responded'
                     call_record.call_metadata = {
@@ -963,78 +983,60 @@ async def on_userevent(manager, event):
                         "user_event_response": {
                             "time": datetime.now().isoformat(),
                             "pressed_digit": '1',
-                            "source_uniqueid": asterisk_uniqueid
+                            "source_event_uniqueid": asterisk_uniqueid, # Log the uniqueid of the event source channel
+                            "agent_id_from_event": agent_id_str, # Log what event provided
+                            "callerid_from_event": caller_id_from_event,
+                            "campaign_id_from_event": campaign_id_from_event
                         }
                     }
                     await session.commit()
-                    logger.info(f"Recorded 'Pressed 1' response for AutodialCall {call_record.id} (Target: {target_phone_number})")
-
-                    # Fetch campaign name for notification context
-                    campaign_name_for_notif = f"ID {campaign_db_id}"
-                    if campaign_db_id:
-                        campaign_obj = await session.get(AutodialCampaign, campaign_db_id)
-                        if campaign_obj and campaign_obj.name:
-                            campaign_name_for_notif = campaign_obj.name
-                    
-                    campaign_text = f"Campaign: {campaign_name_for_notif}"
-                    notification_message = (
-                        f"✅ *New Auto-Dial Response*\n\n"
-                        f"📱 Phone: `{target_phone_number}` (pressed 1)\n"
-                        f"🔘 Response: Pressed 1\n"
-                        f"{campaign_text}"
-                    )
-                    
-                    if global_application_instance and global_application_instance.bot:
-                        await global_application_instance.bot.send_message(
-                            chat_id=agent_id_to_notify,
-                            text=notification_message,
-                            parse_mode='Markdown'
-                        )
-                        logger.info(f"Sent 'Pressed 1' notification to agent {agent_id_to_notify} for target {target_phone_number}, campaign {campaign_name_for_notif}")
-                    else:
-                        logger.error("global_application_instance.bot not available for sending UserEvent notification.")
-
+                    logger.info(f"Logged 'Pressed 1' response for AutodialCall {call_record.id} (Target: {call_record.phone_number}).")
                 else:
-                    # This case is problematic. It means the UserEvent's UniqueID didn't match any call 
-                    # that on_newchannel_event was able to update.
-                    # This could happen if UserEvent's UniqueID is from a different channel leg than the one Newchannel updated,
-                    # or if Newchannel event was missed/failed for this call.
-                    logger.warning(f"Could not find AutodialCall in database for Asterisk UniqueID: {asterisk_uniqueid} from UserEvent. Notification WILL NOT be sent.")
-                    # As a fallback, try to use AgentID from event if present, but this is less reliable for linking to specific call data.
-                    event_agent_id_str = event.get('AgentID')
-                    if event_agent_id_str:
-                        try:
-                            fallback_agent_id = int(event_agent_id_str)
-                            fallback_caller_id = event.get('CallerID', 'Unknown target')
-                            fallback_campaign_id = event.get('CampaignID', 'unknown campaign')
-                            logger.info(f"Attempting fallback notification to AgentID {fallback_agent_id} from UserEvent headers directly, as DB link failed.")
-                            fallback_notification_message = (
-                                f"⚠️ *New Auto-Dial Response (DB Link Failed)*\n\n"
-                                f"📱 Phone: `{fallback_caller_id}` (pressed 1)\n"
-                                f"🔘 Response: Pressed 1\n"
-                                f"Campaign Info (from event): {fallback_campaign_id}"
-                            )
-                            if global_application_instance and global_application_instance.bot:
-                                await global_application_instance.bot.send_message(
-                                    chat_id=fallback_agent_id,
-                                    text=fallback_notification_message,
-                                    parse_mode='Markdown'
-                                )
-                                logger.info(f"Sent FALLBACK 'Pressed 1' notification to agent {fallback_agent_id}.")
-                        except ValueError:
-                            logger.error(f"Fallback AgentID '{event_agent_id_str}' from UserEvent is not a valid integer.")
-                        except Exception as fallback_e:
-                            logger.error(f"Error sending fallback notification: {fallback_e}")
-                    else:
-                        logger.error("UserEvent did not contain a valid UniqueID for DB lookup, and also no AgentID for fallback notification.")
+                    logger.warning(
+                        f"Could not find a matching AutodialCall record to log response for UserEvent. "
+                        f"Details: UniqueID='{asterisk_uniqueid}', TrackingID='{tracking_id_from_event}', "
+                        f"EventCallerID='{caller_id_from_event}', EventCampaignID='{campaign_id_from_event}'. "
+                        f"Notification will still be attempted based on AgentID from event."
+                    )
 
+            # Build notification using information primarily from the event, as per bot.py
+            campaign_name_for_notif = campaign_id_from_event # Use campaign_id from event for notification text
+            # Try to get a more descriptive campaign name if we found a record and it has one
+            if call_record and call_record.campaign_id:
+                 async with get_session() as session_for_name: # New session if needed
+                    campaign_obj = await session_for_name.get(AutodialCampaign, call_record.campaign_id)
+                    if campaign_obj and campaign_obj.name:
+                        campaign_name_for_notif = campaign_obj.name
+            
+            campaign_text = f"Campaign: {campaign_name_for_notif}"
+            notification_message = (
+                f"✅ *New Auto-Dial Response*\n\n"
+                f"📱 Phone: `{caller_id_from_event}` (pressed 1)\n" # Use CallerID from event for who pressed
+                f"🔘 Response: Pressed 1\n"
+                f"{campaign_text}"
+            )
+            
+            if global_application_instance and global_application_instance.bot:
+                await global_application_instance.bot.send_message(
+                    chat_id=agent_id_to_notify,
+                    text=notification_message,
+                    parse_mode='Markdown'
+                )
+                logger.info(f"Sent 'Pressed 1' notification to agent {agent_id_to_notify} (from event) for target {caller_id_from_event}, campaign {campaign_name_for_notif}")
+            else:
+                logger.error("global_application_instance.bot not available for sending UserEvent notification.")
+
+        except ValueError as ve: # For int(agent_id_str)
+            logger.error(f"AgentID '{agent_id_str}' from UserEvent is not a valid integer: {ve}")
         except Exception as e:
-            logger.error(f"Failed to process UserEvent 'AutoDialResponse' or send notification: {e}", exc_info=True)
+            logger.error(f"Error processing UserEvent 'AutoDialResponse' or sending notification: {e}", exc_info=True)
     
-    elif pressed_one != 'Yes' and pressed_one is not None: # explicitly not 'Yes'
-        logger.info(f"UserEvent 'AutoDialResponse': Target did not press 1 (PressedOne: '{pressed_one}'). UniqueID: {asterisk_uniqueid}")
     elif pressed_one is None:
-        logger.warning(f"UserEvent 'AutoDialResponse': 'PressedOne' header was missing. Cannot confirm action. UniqueID: {asterisk_uniqueid}")
+        logger.warning(f"UserEvent 'AutoDialResponse': 'PressedOne' header was missing. Cannot confirm action. AgentID='{agent_id_str}', UniqueID='{asterisk_uniqueid}'")
+    elif agent_id_str is None and pressed_one == 'Yes':
+        logger.warning(f"UserEvent 'AutoDialResponse': 'PressedOne' was 'Yes' but AgentID was missing. Cannot send notification. UniqueID='{asterisk_uniqueid}'")
+    else: # pressed_one is not 'Yes' and not None
+        logger.info(f"UserEvent 'AutoDialResponse': Target did not press 1 (PressedOne: '{pressed_one}'). AgentID='{agent_id_str}', UniqueID='{asterisk_uniqueid}'")
 
 async def on_ami_event(manager, event):
     """Generic event handler to log important events."""

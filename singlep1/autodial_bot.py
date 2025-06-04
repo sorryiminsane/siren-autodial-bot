@@ -923,45 +923,56 @@ async def on_userevent(manager, event):
     # Only handle our AutoDialResponse events
     if getattr(event, 'name', '') != 'UserEvent' or event.get('UserEvent') != 'AutoDialResponse':
         return
-    # Parse AppData string as fallback for custom headers
-    raw_appdata = event.get('AppData') or ''
-    parsed = {}
-    for part in raw_appdata.split('&'):
-        if '=' in part:
-            key, val = part.split('=', 1)
-            parsed[key.strip()] = val.strip()
-    agent_id_str = parsed.get('AgentID') or event.get('AgentID')
-    caller_id = parsed.get('CallerID') or event.get('CallerID', 'Unknown Caller')
-    pressed_one = parsed.get('PressedOne') or event.get('PressedOne')
-    campaign_id = parsed.get('CampaignID') or event.get('CampaignID', 'unknown')
-    tracking_id = parsed.get('TrackingID') or event.get('TrackingID')
-    logger.info(f"Processing AutoDialResponse - AgentID: {agent_id_str}, CallerID: {caller_id}, PressedOne: {pressed_one}, CampaignID: {campaign_id}")
+
+    # Extract fields directly from event headers, like bot.py
+    agent_id_str = event.get('AgentID')
+    caller_id = event.get('CallerID', 'Unknown Caller')  # Default as in bot.py
+    pressed_one = event.get('PressedOne')
+    campaign_id = event.get('CampaignID', 'unknown')    # Default as in bot.py
+    tracking_id = event.get('TrackingID')             # Needed for DB lookup
+
+    # Fallback to AppData if critical fields are missing (optional enhancement, but for now match bot.py's direct approach)
+    # For strict matching with bot.py, we don't add complex AppData fallbacks here for these specific fields.
+    # bot.py relies on these being present as direct headers for the AutoDialResponse.
+
+    logger.info(f"Processing AutoDialResponse - AgentID: {agent_id_str}, CallerID: {caller_id}, PressedOne: {pressed_one}, CampaignID: {campaign_id}, TrackingID: {tracking_id}")
+
     if pressed_one == 'Yes' and agent_id_str:
         try:
             agent_id_int = int(agent_id_str)
             async with get_session() as session:
                 # Look up the campaign
                 campaign = None
-                if campaign_id != 'unknown':
+                if campaign_id != 'unknown' and campaign_id.isdigit(): # Check if campaign_id is a digit before int()
                     result = await session.execute(
                         select(AutodialCampaign).filter_by(id=int(campaign_id))
                     )
                     campaign = result.scalar_one_or_none()
+                
                 # Update the call record with response
-                tracking_id = event.get('TrackingID')
                 call = None
-                if tracking_id:
+                if tracking_id: # Ensure tracking_id is present
                     result = await session.execute(
                         select(AutodialCall).filter_by(tracking_id=tracking_id)
                     )
                     call = result.scalar_one_or_none()
+                
                 if call:
                     call.response_digit = '1'
-                    call.status = 'responded'
+                    call.status = 'responded' # Mark as responded
+                    # Add DTMF response to metadata or a dedicated field if it exists
+                    call.call_metadata = {
+                        **(call.call_metadata or {}),
+                        "dtmf_response_digit": '1',
+                        "dtmf_response_time": datetime.now().isoformat()
+                    }
                     await session.commit()
-                    logger.info(f"Recorded response for call {call.id}")
+                    logger.info(f"Recorded response for call {call.id} (TrackingID: {tracking_id})")
+                else:
+                    logger.warning(f"Could not find call with TrackingID: {tracking_id} to record response.")
+
             # Build notification
-            campaign_text = f"Campaign: {campaign.name}" if campaign else ""
+            campaign_text = f"Campaign: {campaign.name}" if campaign else f"Campaign ID: {campaign_id}"
             notification_message = (
                 f"✅ *New Auto-Dial Response*\n\n"
                 f"📱 Phone: `{caller_id}`\n"
@@ -969,16 +980,23 @@ async def on_userevent(manager, event):
                 f"{campaign_text}"
             )
             # Send notification
-            await global_application_instance.bot.send_message(
-                chat_id=agent_id_int,
-                text=notification_message,
-                parse_mode='Markdown'
-            )
-            logger.info(f"Sent notification to agent {agent_id_int}")
+            if global_application_instance and global_application_instance.bot:
+                await global_application_instance.bot.send_message(
+                    chat_id=agent_id_int,
+                    text=notification_message,
+                    parse_mode='Markdown'
+                )
+                logger.info(f"Sent notification to agent {agent_id_int} for caller {caller_id}, campaign {campaign_id}")
+            else:
+                logger.error("global_application_instance.bot not available for sending notification.")
         except ValueError as ve:
-            logger.error(f"Value error processing response: {ve}")
+            logger.error(f"Value error processing response (AgentID: {agent_id_str}, CampaignID: {campaign_id}): {ve}")
         except Exception as e:
-            logger.error(f"Failed to process response or send notification: {e}")
+            logger.error(f"Failed to process response or send notification: {e}", exc_info=True)
+    elif pressed_one != 'Yes':
+        logger.info(f"AutoDialResponse: Called party did not press 1 (PressedOne: {pressed_one}) for AgentID: {agent_id_str}, CallerID: {caller_id}")
+    elif not agent_id_str:
+        logger.warning(f"AutoDialResponse: AgentID is missing. Cannot send notification. CallerID: {caller_id}, PressedOne: {pressed_one}")
 
 async def on_ami_event(manager, event):
     """Generic event handler to log important events."""

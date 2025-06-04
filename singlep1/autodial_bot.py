@@ -1034,6 +1034,186 @@ async def on_ami_event(manager, event):
     if event_name in ['OriginateResponse', 'Newchannel', 'Newstate', 'Bridge']:
         logger.debug(f"AMI Event: {event_name} - {event}")
 
+async def on_dtmf_begin(manager, event):
+    """Handle DTMFBegin events from calls."""
+    # Log ALL event fields for analysis
+    event_dict = dict(event)
+    logger.info("=== DTMFBegin Event Fields ===")
+    for key, value in event_dict.items():
+        logger.info(f"{key}: {value}")
+    logger.info("==============================")
+    
+    digit = event.get('Digit')
+    channel = event.get('Channel')
+    uniqueid = event.get('Uniqueid')
+    direction = event.get('Direction')
+    
+    # Try to get information directly from channel variables
+    target_from_event = event.get('TARGET') or event.get('target')
+    campaign_from_event = event.get('CAMPAIGNID') or event.get('campaignid')
+    tracking_id_from_event = event.get('TRACKINGID') or event.get('trackingid')
+    
+    logger.info(f"DTMFBegin detected - Digit: {digit}, Channel: {channel}, Direction: {direction}, UniqueID: {uniqueid}, Target: {target_from_event}, Campaign: {campaign_from_event}")
+    
+    try:
+        # Initialize with values from event if available
+        target_number = target_from_event or 'Unknown'
+        campaign_id = campaign_from_event
+        caller_id = event.get('CallerIDNum') or 'Unknown Caller'
+        
+        async with get_session() as session:
+            call = None
+            
+            # Try finding the call using different methods
+            if uniqueid:
+                call = await session.get(AutodialCall, int(uniqueid))
+                if call:
+                    logger.info(f"Found call in database by Uniqueid: {uniqueid}")
+            
+            if not call and tracking_id_from_event:
+                call = await session.get(AutodialCall, tracking_id_from_event)
+                if call:
+                    logger.info(f"Found call in database by TrackingID: {tracking_id_from_event}")
+            
+            if not call and channel:
+                call = await session.get(AutodialCall, int(channel))
+                if call:
+                    logger.info(f"Found call in database by Channel: {channel}")
+            
+            if call:
+                # Update the call status to indicate DTMF started
+                target_number = call.phone_number
+                campaign_id = call.campaign_id
+                agent_id = call.agent_telegram_id
+                
+                # Update the call status
+                call.status = 'dtmf_started'
+                call.call_metadata = {
+                    **(call.call_metadata or {}),
+                    "dtmf_start": {
+                        "time": datetime.now().isoformat(),
+                        "digit": digit,
+                        "direction": direction
+                    }
+                }
+                await session.commit()
+                logger.info(f"Updated call {call.call_id} status to dtmf_started")
+
+                # Format the notification
+                campaign_text = f"• Campaign: `{campaign_id}`\n" if campaign_id else ""
+                notification = (
+                    "🔔 *DTMF PRESS STARTED*\n\n"
+                    f"{campaign_text}"
+                    f"• Target: `{target_number}`\n"
+                    f"• CallerID: `{caller_id}`\n"
+                    f"• Direction: `{direction}`\n"
+                    f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
+                )
+
+                # Get application instance from global variable
+                if global_application_instance:
+                    await global_application_instance.bot.send_message(
+                        chat_id=agent_id,
+                        text=notification,
+                        parse_mode='Markdown'
+                    )
+                    logger.info(f"Sent DTMFBegin notification to agent {agent_id}")
+                else:
+                    logger.error("Application instance not found globally. Cannot send DTMFBegin notification.")
+            else:
+                logger.warning(f"Could not find call in database for Channel: {channel} or Uniqueid: {uniqueid}")
+                
+    except Exception as e:
+        logger.error(f"Error processing DTMFBegin event: {e}", exc_info=True)
+
+async def on_dtmf(manager, event):
+    """Handle DTMF events from calls."""
+    # Log ALL event fields for analysis
+    event_dict = dict(event)
+    logger.debug(f"DTMF Event: {event_dict}")
+    
+    digit = event.get('Digit')
+    channel = event.get('Channel')
+    uniqueid = event.get('Uniqueid')
+    
+    # Try to get tracking and target information directly from event variables
+    tracking_id = event.get('TrackingID') or event.get('TRACKINGID') or event.get('trackingid')
+    target_from_event = event.get('TARGET') or event.get('target')
+    campaign_from_event = event.get('CAMPAIGNID') or event.get('campaignid')
+    
+    logger.info(f"DTMF '{digit}' detected on channel {channel} (UniqueID: {uniqueid}, TrackingID: {tracking_id}, Target: {target_from_event})")
+    
+    try:
+        # Initialize variables with values from event if available
+        target_number = target_from_event or 'Unknown'
+        campaign_id = campaign_from_event
+        caller_id = event.get('CallerIDNum') or 'Unknown Caller'
+        
+        async with get_session() as session:
+            call = None
+            
+            # Try finding the call using different methods
+            if uniqueid:
+                call = await session.get(AutodialCall, int(uniqueid))
+                if call:
+                    logger.info(f"Found call in database by Uniqueid: {uniqueid}")
+            
+            if not call and tracking_id:
+                call = await session.get(AutodialCall, int(tracking_id))
+                if call:
+                    logger.info(f"Found call in database by TrackingID: {tracking_id}")
+            
+            if not call and channel:
+                call = await session.get(AutodialCall, int(channel))
+                if call:
+                    logger.info(f"Found call in database by Channel: {channel}")
+            
+            if call:
+                # Get the call details
+                target_number = call.phone_number
+                campaign_id = call.campaign_id
+                agent_id = call.agent_telegram_id
+                
+                # Update the call record with DTMF information
+                call.status = 'dtmf_processed'
+                call.dtmf_digits = (call.dtmf_digits or '') + digit if call.dtmf_digits else digit
+                call.call_metadata = {
+                    **(call.call_metadata or {}),
+                    "dtmf_end": {
+                        "time": datetime.now().isoformat(),
+                        "digit": digit
+                    }
+                }
+                await session.commit()
+                logger.info(f"Updated call {call.call_id} with DTMF digit {digit}")
+
+                # Format the notification
+                campaign_text = f"• Campaign: `{campaign_id}`\n" if campaign_id else ""
+                notification = (
+                    "🔔 *DTMF DIGIT RECEIVED*\n\n"
+                    f"{campaign_text}"
+                    f"• Target: `{target_number}`\n"
+                    f"• CallerID: `{caller_id}`\n"
+                    f"• Digit: `{digit}`\n"
+                    f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
+                )
+
+                # Get application instance from global variable
+                if global_application_instance:
+                    await global_application_instance.bot.send_message(
+                        chat_id=agent_id,
+                        text=notification,
+                        parse_mode='Markdown'
+                    )
+                    logger.info(f"Sent DTMF notification to agent {agent_id}")
+                else:
+                    logger.error("Application instance not found globally. Cannot send DTMF notification.")
+            else:
+                logger.warning(f"Could not find call in database for Channel: {channel} or Uniqueid: {uniqueid}")
+                
+    except Exception as e:
+        logger.error(f"Error processing DTMF event: {e}", exc_info=True)
+
 # Instead of a long-running listener function, we register event callbacks
 
 async def connect_ami(retry_count=3, retry_delay=5):
@@ -1067,6 +1247,8 @@ async def connect_ami(retry_count=3, retry_delay=5):
             # Register event callbacks
             ami_manager.register_event('Hangup', on_hangup_event)
             ami_manager.register_event('UserEvent', on_userevent)
+            ami_manager.register_event('DTMFBegin', on_dtmf_begin)
+            ami_manager.register_event('DTMF', on_dtmf)
             
             # Register handlers for AMI connection events - register each event individually
             ami_manager.register_event('OriginateResponse', on_ami_event)

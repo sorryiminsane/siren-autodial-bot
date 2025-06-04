@@ -378,9 +378,9 @@ async def view_responses_command(update: Update, context: ContextTypes.DEFAULT_T
             select(AutodialCall)
             .where(
                 AutodialCall.agent_telegram_id == user.id,
-                AutodialCall.dtmf_response == '1'
+                AutodialCall.response_digit == '1'
             )
-            .order_by(AutodialCall.end_time.desc())
+            .order_by(AutodialCall.updated_at.desc())
             .limit(100)  # Limit to 100 most recent responses
         )
         calls = calls.scalars().all()
@@ -415,13 +415,13 @@ async def view_responses_command(update: Update, context: ContextTypes.DEFAULT_T
             # Sort by most recent first
             sorted_calls = sorted(
                 campaign_calls,
-                key=lambda x: getattr(x, 'end_time', datetime.now()),
+                key=lambda x: getattr(x, 'updated_at', datetime.now()),
                 reverse=True
             )
             
             # Show up to 5 numbers per campaign
             for call in sorted_calls[:5]:
-                response.append(f"• `{call.target_number}` {getattr(call, 'end_time', datetime.now()).strftime('%b %d %H:%M')}")
+                response.append(f"• `{call.phone_number}` {getattr(call, 'updated_at', datetime.now()).strftime('%b %d %H:%M')}")
             
             if len(sorted_calls) > 5:
                 response.append(f"• ...and {len(sorted_calls) - 5} more")
@@ -797,14 +797,17 @@ async def process_campaign(campaign_id: int, bot=None):
             
             action_id = call.call_id or f"campaign_{campaign_id}_{int(time.time())}_{call.id}"
             
-            # Build variables string - must be comma-separated, not a list
+            # Build variables string to match main bot exactly - must be comma-separated, not a list
             variables = (
-                f'__OriginalTargetNumber={call.phone_number},'
                 f'__AgentTelegramID={campaign.agent_telegram_id},'
                 f'__CallID={action_id},'
                 f'__TrackingID={tracking_id},'
+                f'__SequenceNumber={call.id},'
+                f'__OriginalTargetNumber={call.phone_number},'
+                f'__CallerID={caller_id},'
                 f'__CampaignID={campaign_id},'
-                f'__CALL_RECORD_ID={call.id}'
+                f'__Origin=autodial,'
+                f'__ActionID={action_id}'
             )
             
             originate_action = {
@@ -863,7 +866,7 @@ async def process_campaign(campaign_id: int, bot=None):
         # Send completion notification
         if bot and campaign.agent_telegram_id:
             # Count responses
-            response_count = len([c for c in calls if c.response_digit == '1'])
+            response_count = len([c for c in calls if getattr(c, 'response_digit', '') == '1'])
             completion_message = (
                 f"🎊 *Campaign Complete!*\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -963,24 +966,43 @@ async def on_userevent(manager, event):
                 try:
                     agent_id_int = int(agent_id) if agent_id else None
                     
-                    # Find the call by tracking ID
+                    # Find the call by tracking ID and caller ID (target number)
                     async with get_session() as session:
-                        # Try to find the call using tracking ID first
-                        query = select(AutodialCall).where(AutodialCall.tracking_id == tracking_id)
-                        result = await session.execute(query)
-                        call = result.scalars().first()
+                        call = None
                         
-                        # If not found by tracking ID, try by campaign ID and agent ID
-                        if not call and campaign_id:
+                        # Try to find the call using tracking ID first
+                        if tracking_id:
+                            query = select(AutodialCall).where(AutodialCall.tracking_id == tracking_id)
+                            result = await session.execute(query)
+                            call = result.scalars().first()
+                            if call:
+                                logger.info(f"Found call by tracking_id: {tracking_id}")
+                        
+                        # If not found by tracking ID, try by phone number (caller_id) and campaign
+                        if not call and caller_id and campaign_id:
                             query = select(AutodialCall).where(
-                                AutodialCall.campaign_id == int(campaign_id) if campaign_id and campaign_id.isdigit() else None
+                                AutodialCall.phone_number == caller_id,
+                                AutodialCall.campaign_id == int(campaign_id) if campaign_id.isdigit() else None
                             ).order_by(AutodialCall.last_attempt_time.desc()).limit(1)
                             result = await session.execute(query)
                             call = result.scalars().first()
+                            if call:
+                                logger.info(f"Found call by phone_number and campaign_id: {caller_id}, {campaign_id}")
+                        
+                        # If still not found, try by phone number only (most recent)
+                        if not call and caller_id:
+                            query = select(AutodialCall).where(
+                                AutodialCall.phone_number == caller_id
+                            ).order_by(AutodialCall.last_attempt_time.desc()).limit(1)
+                            result = await session.execute(query)
+                            call = result.scalars().first()
+                            if call:
+                                logger.info(f"Found call by phone_number only: {caller_id}")
                         
                         if call:
                             # Update the call with DTMF response
                             call.response_digit = dtmf
+                            call.status = 'responded'  # Update status to indicate response received
                             await session.commit()
                             
                             # Log success

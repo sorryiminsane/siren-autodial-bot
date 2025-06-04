@@ -923,10 +923,18 @@ async def on_userevent(manager, event):
     # Only handle our AutoDialResponse events
     if getattr(event, 'name', '') != 'UserEvent' or event.get('UserEvent') != 'AutoDialResponse':
         return
-    agent_id_str = event.get('AgentID')
-    caller_id = event.get('CallerID', 'Unknown Caller')
-    pressed_one = event.get('PressedOne')
-    campaign_id = event.get('CampaignID', 'unknown')
+    # Parse AppData string as fallback for custom headers
+    raw_appdata = event.get('AppData') or ''
+    parsed = {}
+    for part in raw_appdata.split('&'):
+        if '=' in part:
+            key, val = part.split('=', 1)
+            parsed[key.strip()] = val.strip()
+    agent_id_str = parsed.get('AgentID') or event.get('AgentID')
+    caller_id = parsed.get('CallerID') or event.get('CallerID', 'Unknown Caller')
+    pressed_one = parsed.get('PressedOne') or event.get('PressedOne')
+    campaign_id = parsed.get('CampaignID') or event.get('CampaignID', 'unknown')
+    tracking_id = parsed.get('TrackingID') or event.get('TrackingID')
     logger.info(f"Processing AutoDialResponse - AgentID: {agent_id_str}, CallerID: {caller_id}, PressedOne: {pressed_one}, CampaignID: {campaign_id}")
     if pressed_one == 'Yes' and agent_id_str:
         try:

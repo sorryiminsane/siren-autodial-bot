@@ -920,21 +920,20 @@ async def on_userevent(manager, event):
         logger.debug(f"UserEvent received: {event}")
         user_event_type = event.get('UserEvent')
         
-        if user_event_type == 'AutoDialResponse':
-            # Extract tracking ID and other variables from the event
-            tracking_id = event.get('TrackingID')
-            campaign_id = event.get('CampaignID')
-            agent_id = event.get('AgentID')
+        if event.get('UserEvent') == 'AutoDialResponse':
+            # Extract variables exactly as bot.py does
+            agent_id_str = event.get('AgentID')
             caller_id = event.get('CallerID', 'Unknown Caller')
             pressed_one = event.get('PressedOne')
-            dtmf = event.get('DTMF') or '1'  # Default to '1' if not specified
+            campaign_id = event.get('CampaignID', 'unknown')
+            tracking_id = event.get('TrackingID')
             
-            logger.info(f"AutoDialResponse event: TrackingID={tracking_id}, CampaignID={campaign_id}, AgentID={agent_id}, CallerID={caller_id}, PressedOne={pressed_one}, DTMF={dtmf}")
+            logger.info(f"Processing AutoDialResponse - AgentID: {agent_id_str}, CallerID: {caller_id}, PressedOne: {pressed_one}, CampaignID: {campaign_id}")
             
             # Only process if someone pressed 1
-            if pressed_one == 'Yes' or dtmf == '1':
+            if pressed_one == 'Yes':
                 try:
-                    agent_id_int = int(agent_id) if agent_id else None
+                    agent_id_int = int(agent_id_str) if agent_id_str else None
                     
                     # Find the call by tracking ID and caller ID (target number)
                     async with get_session() as session:
@@ -1012,14 +1011,14 @@ async def on_userevent(manager, event):
                         else:
                             logger.error("Global application instance not available for notification")
                     else:
-                        logger.warning(f"No valid agent ID found for notification. AgentID from event: {agent_id}")
+                        logger.warning(f"No valid agent ID found for notification. AgentID from event: {agent_id_str}")
                         
                 except ValueError as ve:
                     logger.error(f"Value error processing response: {ve}")
                 except Exception as e:
                     logger.error(f"Failed to process response or send notification: {e}")
             else:
-                logger.info(f"AutoDialResponse for AgentID {agent_id}: Called party did not press 1 (PressedOne: {pressed_one}, DTMF: {dtmf})")
+                logger.info(f"AutoDialResponse for AgentID {agent_id_str}: Called party did not press 1 (PressedOne: {pressed_one})")
                 
     except Exception as e:
         logger.error(f"Error handling user event: {e}", exc_info=True)

@@ -2549,64 +2549,64 @@ async def hangup_event_listener(manager, event):
                     await session.commit()
                     logger.info(f"Call {call.call_id} (Uniqueid: {uniqueid}) marked as completed in database")
                     
-                            # P1 Campaign Integration: Update campaign stats with proper call classification
-        campaign_id = call.campaign_id
-        if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
-            # Determine if this was a failed or completed call based on duration and status
-            call_duration = (call.end_time - call.start_time).total_seconds()
-            was_answered = call.status in ['bridged', 'dtmf_processed', 'dtmf_started'] or call_duration > 10
-            
-            # Decrement active calls first
-            if campaign_states[campaign_id].active_calls > 0:
-                campaign_states[campaign_id].active_calls -= 1
-            
-            # Classify the call outcome
-            if was_answered:
-                # Call was actually connected/answered
-                campaign_states[campaign_id].completed_calls += 1
-                logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED (duration: {call_duration}s)")
-            else:
-                # Call failed to connect (immediate hangup, busy, no answer, carrier block)
-                campaign_states[campaign_id].failed_calls += 1
-                logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED (duration: {call_duration}s, cause: {cause_txt})")
-            
-            logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}, failed={campaign_states[campaign_id].failed_calls}")
-            
-            # Update campaign message in real-time
-            await update_campaign_message(campaign_id)
-            
-            # Send individual notification if enabled (only for completed calls)
-            if was_answered:
-                await send_individual_notification(campaign_id, "call_completed", {
-                    "target_number": call.target_number,
-                    "duration": f"{call_duration:.0f} seconds",
-                    "cause": cause_txt or 'Unknown'
-                })
-        else:
-            # Legacy notification for non-campaign calls
-            if call.agent_telegram_id and application:
-                try:
-                    campaign_display = f"{call.campaign_id}" if call.campaign_id else (call.tracking_id or "Unknown")
-                    
-                    notification = (
-                        f"🔔 *Call Ended*\n\n"
-                        f"#{campaign_display}\n\n"
-                        f"• Target: `{call.target_number}`\n"
-                        f"• Duration: {(call.end_time - call.start_time).total_seconds():.0f} seconds\n"
-                        f"• Status: Completed\n"
-                        f"• Hangup Cause: {cause_txt or 'Unknown'}"
-                    )
-                    
-                    await application.bot.send_message(
-                        chat_id=call.agent_telegram_id,
-                        text=notification,
-                        parse_mode='Markdown'
-                    )
-                    logger.info(f"Sent legacy hangup notification to agent {call.agent_telegram_id}")
-                except Exception as e:
-                    logger.error(f"Failed to send legacy hangup notification: {e}")
-        else:
-            logger.debug(f"No call found in database for Uniqueid: {uniqueid}, Channel: {channel}, CallID: {call_id_from_event}")
+                    # P1 Campaign Integration: Update campaign stats with proper call classification
+                    campaign_id = call.campaign_id
+                    if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
+                        # Determine if this was a failed or completed call based on duration and status
+                        call_duration = (call.end_time - call.start_time).total_seconds()
+                        was_answered = call.status in ['bridged', 'dtmf_processed', 'dtmf_started'] or call_duration > 10
+                        
+                        # Decrement active calls first
+                        if campaign_states[campaign_id].active_calls > 0:
+                            campaign_states[campaign_id].active_calls -= 1
+                        
+                        # Classify the call outcome
+                        if was_answered:
+                            # Call was actually connected/answered
+                            campaign_states[campaign_id].completed_calls += 1
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED (duration: {call_duration}s)")
+                        else:
+                            # Call failed to connect (immediate hangup, busy, no answer, carrier block)
+                            campaign_states[campaign_id].failed_calls += 1
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED (duration: {call_duration}s, cause: {cause_txt})")
+                        
+                        logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}, failed={campaign_states[campaign_id].failed_calls}")
+                        
+                        # Update campaign message in real-time
+                        await update_campaign_message(campaign_id)
+                        
+                        # Send individual notification if enabled (only for completed calls)
+                        if was_answered:
+                            await send_individual_notification(campaign_id, "call_completed", {
+                                "target_number": call.target_number,
+                                "duration": f"{call_duration:.0f} seconds",
+                                "cause": cause_txt or 'Unknown'
+                            })
+                    else:
+                        # Legacy notification for non-campaign calls
+                        if call.agent_telegram_id and application:
+                            try:
+                                campaign_display = f"{call.campaign_id}" if call.campaign_id else (call.tracking_id or "Unknown")
+                                
+                                notification = (
+                                    f"🔔 *Call Ended*\n\n"
+                                    f"#{campaign_display}\n\n"
+                                    f"• Target: `{call.target_number}`\n"
+                                    f"• Duration: {(call.end_time - call.start_time).total_seconds():.0f} seconds\n"
+                                    f"• Status: Completed\n"
+                                    f"• Hangup Cause: {cause_txt or 'Unknown'}"
+                                )
+                                
+                                await application.bot.send_message(
+                                    chat_id=call.agent_telegram_id,
+                                    text=notification,
+                                    parse_mode='Markdown'
+                                )
+                                logger.info(f"Sent legacy hangup notification to agent {call.agent_telegram_id}")
+                            except Exception as e:
+                                logger.error(f"Failed to send legacy hangup notification: {e}")
+                else:
+                    logger.debug(f"No call found in database for Uniqueid: {uniqueid}, Channel: {channel}, CallID: {call_id_from_event}")
     except Exception as e:
         logger.error(f"Error processing hangup event: {e}", exc_info=True)
 

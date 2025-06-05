@@ -1,6 +1,0 @@
-python-telegram-bot==20.8
-sqlalchemy==2.0.27
-psycopg2-binary==2.9.9
-python-dotenv==1.0.1
-asyncpg>=0.20.0 # For SQLAlchemy async with PostgreSQL
-panoramisk>=1.2 # For Asterisk Manager Interface (AMI)

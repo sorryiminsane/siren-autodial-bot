@@ -113,33 +113,23 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     manual_cid = agent.caller_id or "Not Set"
     autodial_cid = agent.autodial_caller_id or "Not Set"
     
-    # Build main action buttons - only CALL button
+    # Build main action buttons for auto-dial only bot
     keyboard = []
-    
-    # Only the CALL button
-    keyboard.append([
-        InlineKeyboardButton("📞 Make a Call", callback_data="make_call")
-    ])
     
     # Auto-Dial button (only if authorized and auto_dial enabled)
     if agent.is_authorized and agent.auto_dial:
         keyboard.append([
-            InlineKeyboardButton("🤖 Auto-Dial", callback_data="auto_dial")
+            InlineKeyboardButton("🤖 Auto-Dial Campaign", callback_data="auto_dial")
         ])
     
-    # Phone Number button
+    # Campaign History button
     keyboard.append([
-        InlineKeyboardButton("📱 My Phone Number", callback_data="phone_number")
+        InlineKeyboardButton("📊 Campaign History", callback_data="campaign_history")
     ])
     
-    # Call History button
+    # Settings button (auto-dial settings only)
     keyboard.append([
-        InlineKeyboardButton("📊 Call History", callback_data="call_history")
-    ])
-    
-    # Settings button
-    keyboard.append([
-        InlineKeyboardButton("⚙️ Settings", callback_data="settings")
+        InlineKeyboardButton("⚙️ Auto-Dial Settings", callback_data="settings")
     ])
     
     # Manage Agents button (admin only)
@@ -150,29 +140,23 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Build the welcome message with help commands section
+    # Build the welcome message for auto-dial only bot
     welcome_message = (
-        "⚡ <b><u>SIREN</u></b>\n\n"
+        "🤖 <b><u>AUTO-DIAL BOT</u></b>\n\n"
         "👤 <b><u>USER</u></b>\n"
         f"└─ {user_display}\n\n"
         "🔐 <b><u>STATUS</u></b>\n"
         f"├─ {auth_color} Authorization: <b>{auth_status}</b>\n"
-        f"├─ 📱 Phone: <code>{phone_status}</code>\n"
-        f"└─ {route_emoji} Route: <b>{route_status}</b>\n\n"
-        "📞 <b><u>CALLER IDS</u></b>\n"
-        f"├─ 📲 Manual: <code>{manual_cid}</code>\n"
-        f"└─ {autodial_emoji} AutoDial: {autodial_trunk_display} • <code>{autodial_cid}</code>\n\n"
+        f"└─ {autodial_emoji} AutoDial: {autodial_trunk_display}\n\n"
+        "📲 <b><u>CAMPAIGN CALLER ID</u></b>\n"
+        f"└─ <code>{autodial_cid}</code>\n\n"
         "~~~\n"
         "Available Commands:\n"
-        "📞 /call - Make an outbound call\n"
-        "🤖 /autodial - Upload numbers for auto-dialing\n"
-        "📱 /setphone - Register your phone number\n"
-        "📲 /setcid - Set manual outbound caller ID\n"
-        "🤖 /setautodialcid - Set Auto-Dial caller ID\n"
-        "🌐 /route - Set your manual call route (M/R/B)\n"
-        "⚙️ /settings - Access settings (Auto-Dial toggle, Trunks, etc.)\n"
-        "📊 /history - View your call history\n"
-        "ℹ️ /help - Show detailed help"
+        "🤖 /autodial - Start auto-dial campaign\n"
+        "🤖 /setautodialcid - Set campaign caller ID\n"
+        "⚙️ /settings - Auto-dial settings (trunk selection)\n"
+        "📊 /history - View campaign history\n"
+        "ℹ️ /help - Show help"
     )
 
     # Send or edit the message
@@ -187,18 +171,16 @@ async def show_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
     current_autodial_trunk = agent.autodial_trunk if agent and agent.autodial_trunk else "Not Set"
 
     keyboard = [
-        [InlineKeyboardButton(f"🌐 Manual Route ({current_manual_route})", callback_data="select_route")],
-        [InlineKeyboardButton(f"📞 Select Auto-Dial Trunk ({current_autodial_trunk})", callback_data="select_autodial_trunk")],
+        [InlineKeyboardButton(f"📞 Auto-Dial Trunk ({current_autodial_trunk})", callback_data="select_autodial_trunk")],
         [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     settings_text = (
-        "⚙️ *Settings*\n\n"
-        "Select an option below:\n\n"
-        "• *Manual Route* - Choose route for /call\n"
+        "⚙️ *Auto-Dial Settings*\n\n"
+        "Configure your auto-dial campaign settings:\n\n"
         f"• *Auto-Dial Trunk* - Choose trunk for campaigns ({current_autodial_trunk})\n"
-        "• More settings coming soon\n"
+        "• Use /setautodialcid to set campaign caller ID\n"
     )
 
     # Edit the message if called from a callback query, otherwise reply
@@ -334,20 +316,18 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.message.edit_text(setup_text, reply_markup=reply_markup, parse_mode='Markdown')
         return MAIN_MENU
 
-    elif query.data == "make_call":
+    elif query.data == "campaign_history":
         await query.message.edit_text(
-            "📞 *Make a Call*\n\n"
-            "To make a call, use the command:\n"
-            "`/call <number>`\n\n"
-            "Example: `/call +1234567890`\n\n"
-            "• Number format: E.164 or US format\n"
-            "• International prefix required\n"
-            "• No spaces or special characters\n\n"
-            "Need help? Use /help for more information.",
+            "📊 *Campaign History*\n\n"
+            "Your campaign history will appear here.\n"
+            "_(Feature coming soon)_\n\n"
+            "• View past campaigns\n"
+            "• Response rates\n"
+            "• Call completion stats",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
             parse_mode='Markdown'
         )
-        return CALL_MENU
+        return MAIN_MENU
     
     elif query.data == "auto_dial":
         async with get_db_session() as session:
@@ -465,32 +445,7 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         )
         return MAIN_MENU
     
-    elif query.data == "phone_number":
-        await query.message.edit_text(
-            "📱 *Phone Number Settings*\n\n"
-            "To set your phone number, use:\n"
-            "`/setphone <your_number>`\n\n"
-            "Example: `/setphone +1234567890`\n\n"
-            "• Use international format\n"
-            "• Include country code\n"
-            "• No spaces or special characters",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
-            parse_mode='Markdown'
-        )
-        return PHONE_SETTINGS
-    
-    elif query.data == "call_history":
-        await query.message.edit_text(
-            "📊 *Call History*\n\n"
-            "Your recent calls will appear here.\n"
-            "_(Feature coming soon)_\n\n"
-            "• View past calls\n"
-            "• Call duration\n"
-            "• Call status",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
-            parse_mode='Markdown'
-        )
-        return MAIN_MENU
+# Removed phone number and call history handlers - auto-dial only
     
     elif query.data == "settings":
         async with get_db_session() as session:
@@ -576,99 +531,7 @@ async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await show_main_menu(update, context, agent) # Use existing show_main_menu with the fetched agent
         return MAIN_MENU
             
-    elif query.data == "select_route":
-        # No DB interaction needed here, just display options
-        keyboard = [
-            [
-                InlineKeyboardButton("🌍 Main Route", callback_data="route_main"),
-                InlineKeyboardButton("🔴 Red Route", callback_data="route_red")
-            ],
-            [InlineKeyboardButton("⚫ Black Route", callback_data="route_black")],
-            [InlineKeyboardButton("🔙 Back", callback_data="back_settings")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.message.edit_text(
-            "🌐 *Route Selection*\n\n"
-            "Please select your preferred route:\n\n"
-            "• 🌍 *Main Route* - Primary Route\n"
-            "• 🔴 *Red Route* - Secondary Route\n"
-            "• ⚫ *Black Route* - Universal Route\n\n"
-            "Select your route:",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-        return SETTINGS
-        
-    elif query.data.startswith("route_") and not query.data.startswith("confirm_route_"): # Avoid double handling
-        route_key = query.data.split("_")[-1]
-        route_map = {"main": "M", "red": "R", "black": "B"}
-        route_display_map = {"main": "Main", "red": "Red", "black": "Black"}
-        route = route_map.get(route_key)
-        route_name = route_display_map.get(route_key)
-        
-        if not route or not route_name:
-            logger.warning(f"Invalid route key: {route_key}")
-            await show_settings_menu(update, context, agent) # Show settings menu again
-            return SETTINGS
-
-        # Confirmation keyboard
-        keyboard = [
-            [
-                InlineKeyboardButton(f"✅ Yes, Switch Route", callback_data=f"confirm_route_{route}"), # Use M/R/B
-                InlineKeyboardButton("❌ Cancel", callback_data="back_settings")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.message.edit_text(
-            f"⚠️ *Confirm Route Change*\n\n"
-            f"Are you sure you want to switch to the *{route_name} Route*?\n"
-            f"All outbound calls will go through this route.",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-        return SETTINGS
-        
-    elif query.data.startswith("confirm_route_"):
-        route = query.data.split("_")[-1] # Should be M, R, or B
-        route_name_map = {"M": "Main", "R": "Red", "B": "Black"}
-        route_name = route_name_map.get(route)
-
-        if not route_name:
-            logger.error(f"Invalid route confirmation data: {query.data}")
-            await show_settings_menu(update, context, agent)
-            return SETTINGS
-
-        async with get_db_session() as session: # <-- New async session for modification
-            try:
-                # Fetch agent again within this transaction
-                result = await session.execute(select(Agent).filter_by(telegram_id=user_id))
-                agent_to_update = result.scalar_one_or_none()
-                if agent_to_update:
-                    agent_to_update.route = route
-                    session.add(agent_to_update) # Add instance to session for update tracking
-                    await session.commit() # Commit the change
-                    agent = agent_to_update # Update the outer 'agent' variable for UI refresh
-                    
-                    keyboard = [[InlineKeyboardButton("🔙 Back to Settings", callback_data="back_settings")]]
-                    reply_markup = InlineKeyboardMarkup(keyboard)
-                    
-                    await query.message.edit_text(
-                        f"✅ *Route Updated Successfully*\n\n"
-                        f"🌐 New Route: *{route_name}*",
-                        reply_markup=reply_markup,
-                        parse_mode='Markdown'
-                    )
-                else:
-                    await query.message.edit_text("Error: Agent not found during route update.")
-
-            except SQLAlchemyError as e:
-                logger.error(f"DB Error confirming route: {e}")
-                await session.rollback() # Rollback on error
-                await query.message.edit_text("Database error updating route.")
-
-        return SETTINGS # Always return SETTINGS after handling route confirmation
+    # Route selection removed for auto-dial only bot
         
     # --- Auto-Dial Trunk Selection --- 
     elif query.data == "select_autodial_trunk":
@@ -1048,155 +911,22 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
     return AGENT_MANAGEMENT
 
 async def set_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Set agent's phone number."""
-    user = update.effective_user
-    if not user:
-        await update.message.reply_text("Could not identify user.")
-        return
-
-    # Fetch agent data
-    async with get_db_session() as session: # <-- Async context
-        # agent = session.query(Agent).filter_by(telegram_id=user.id).first()
-        result = await session.execute(select(Agent).filter_by(telegram_id=user.id)) # <-- Async query
-        agent = result.scalar_one_or_none()
-
-        if not agent:
-            # If agent doesn't exist, create one (similar to /start logic)
-            agent = Agent(
-                telegram_id=user.id,
-                username=user.username,
-                is_authorized=user.id == SUPER_ADMIN_ID
-            )
-            session.add(agent)
-            await session.flush() # Flush to ensure agent object is populated if needed immediately, commit is handled by context manager
-            # session.commit() # No explicit commit needed here
-            
-            # Reload agent might be needed if ID is used immediately after creation
-            # result = await session.execute(select(Agent).filter_by(telegram_id=user.id)) # Re-fetch if needed
-            # agent = result.scalar_one_or_none()
-            # if not agent: # Should not happen, but safety check
-            #      await update.message.reply_text("Error creating agent record.")
-            #      return
-
-        # Argument parsing and validation (no DB change)
-        if not context.args:
-            await update.message.reply_text(
-                "📱 *Set Phone Number*\n\n"
-                "Please provide your phone number in E.164 format:\n"
-                "`/setphone +1234567890`\n\n"
-                "• Must include country code\n"
-                "• Only numbers and + symbol allowed",
-                parse_mode='Markdown'
-            )
-            return
-        
-        phone_number = context.args[0]
-        
-        if not validate_phone_number(phone_number):
-            await update.message.reply_text(
-                "❌ Invalid phone number format.\n\n"
-                "Please use E.164 format:\n"
-                "Example: `/setphone +1234567890`",
-                parse_mode='Markdown'
-            )
-            return
-
-        # Update phone number on the agent object
-        # No need to fetch agent again if creation path wasn't taken or if re-fetched after creation
-        if agent: # Ensure agent exists before updating
-             agent.phone_number = phone_number
-             # session.add(agent) # Not strictly needed if object came from the session
-             # await session.commit() # Commit handled by context manager
-             await update.message.reply_text(
-                 "✅ Phone number updated successfully!\n\n"
-                 f"📱 New number: `{phone_number}`",
-                 parse_mode='Markdown'
-             )
-        else:
-             # This case should be rare given the creation logic above
-             logger.error(f"Agent not found or created properly for user {user.id} in set_phone")
-             await update.message.reply_text("Error updating phone number. Agent record issue.")
+    """Phone number registration disabled for auto-dial only bot."""
+    await update.message.reply_text(
+        "📱 *Phone Registration Disabled*\n\n"
+        "Phone number registration is not required for auto-dial campaigns.\n\n"
+        "Use /autodial to start a campaign directly.",
+        parse_mode='Markdown'
+    )
 
 async def set_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Set agent's outbound caller ID."""
-    user = update.effective_user
-    if not user:
-        await update.message.reply_text("Could not identify user.")
-        return
-
-    # Fetch agent data
-    async with get_db_session() as session: # <-- Async context
-        # agent = session.query(Agent).filter_by(telegram_id=user.id).first()
-        result = await session.execute(select(Agent).filter_by(telegram_id=user.id)) # <-- Async query
-        agent = result.scalar_one_or_none()
-
-        if not agent:
-            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
-            return
-
-        # Argument parsing and validation (no DB change)
-        if not context.args:
-            await update.message.reply_text(
-                "📲 *Set Outbound CallerID*\n\n"
-                "Please provide a phone number in E.164 format:\n"
-                "`/setcid +1234567890`\n\n"
-                "• Must include country code\n"
-                "• Only numbers and + symbol allowed\n"
-                "• If not set, uses registered phone",
-                parse_mode='Markdown'
-            )
-            return
-
-        caller_id = context.args[0]
-        
-        if not validate_phone_number(caller_id):
-            await update.message.reply_text(
-                "❌ Invalid phone number format.\n\n"
-                "Please use E.164 format:\n"
-                "Example: `/setcid +1234567890`",
-                parse_mode='Markdown'
-            )
-            return
-
-        # Agent already fetched within this session
-        try:
-            if not agent.is_authorized:
-                await update.message.reply_text("❌ Error: You are not authorized to set a caller ID.")
-                return
-            
-            # Store old caller_id for history
-            old_caller_id = agent.caller_id
-            
-            # Update caller_id
-            agent.caller_id = caller_id
-            session.add(agent) # Add agent for update tracking
-            
-            # Add to history
-            from models import CallerIDHistory # Ensure import is available
-            history = CallerIDHistory(
-                agent_id=agent.id, # Assumes agent.id is populated (should be if fetched)
-                old_caller_id=old_caller_id,
-                new_caller_id=caller_id
-            )
-            session.add(history) # Add history object
-            
-            # await session.commit() # Commit handled by context manager
-            
-            await update.message.reply_text(
-                "✅ CallerID updated successfully!\n\n"
-                f"📲 New CallerID: `{caller_id}`",
-                parse_mode='Markdown'
-            )
-            
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in set_caller_id: {str(e)}")
-            # Rollback is handled by context manager
-            # await session.rollback()
-            await update.message.reply_text("❌ Error updating caller ID. Please try again later.")
-        except AttributeError:
-             # Catch potential error if agent.id isn't available (e.g., object not flushed/committed properly before history creation)
-             logger.error(f"AttributeError likely agent.id missing for user {user.id} in set_caller_id")
-             await update.message.reply_text("❌ Error accessing agent data for history. Please try again.")
+    """Manual caller ID disabled - use auto-dial caller ID only."""
+    await update.message.reply_text(
+        "📲 *Manual Caller ID Disabled*\n\n"
+        "Manual caller ID is not used in auto-dial campaigns.\n\n"
+        "Use /setautodialcid to set the caller ID for campaigns.",
+        parse_mode='Markdown'
+    )
 
 async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's outbound caller ID specifically for Auto-Dial campaigns."""
@@ -1265,81 +995,13 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text("❌ Error updating Auto-Dial caller ID. Please try again later.")
 
 async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Set agent's route."""
-    user = update.effective_user
-    if not user:
-        await update.message.reply_text("Could not identify user.")
-        return
-
-    # Fetch agent data
-    async with get_db_session() as session: # <-- Async context
-        # agent = session.query(Agent).filter_by(telegram_id=user.id).first()
-        result = await session.execute(select(Agent).filter_by(telegram_id=user.id)) # <-- Async query
-        agent = result.scalar_one_or_none()
-
-        if not agent:
-            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
-            return
-
-        # Argument parsing and validation (no DB change)
-        if not context.args:
-            await update.message.reply_text(
-                "🌐 *Set Route*\n\n"
-                "Please specify your route:\n"
-                "`/route M`, `/route R`, or `/route B`\n"
-                "`/route Main`, `/route Red`, or `/route Black`\n\n"
-                "• M/Main = Main Route\n"
-                "• R/Red = Red Route\n"
-                "• B/Black = Black Route",
-                parse_mode='Markdown'
-            )
-            return
-
-        route_arg = context.args[0].lower()
-        route = None # Initialize route
-        
-        # Convert input to proper route value (no DB change)
-        if route_arg in ['m', 'main']:
-            route = 'M'
-        elif route_arg in ['r', 'red']:
-            route = 'R'
-        elif route_arg in ['b', 'black']:
-            route = 'B'
-        else:
-            await update.message.reply_text(
-                "❌ Invalid route.\n\n"
-                "Please use:\n"
-                "• `/route M` or `/route Main` for Main Route\n"
-                "• `/route R` or `/route Red` for Red Route\n"
-                "• `/route B` or `/route Black` for Black Route",
-                parse_mode='Markdown'
-            )
-            return
-
-        # Agent already fetched within this session
-        try:
-            if not agent.is_authorized:
-                await update.message.reply_text("❌ Error: You are not authorized to set a route.")
-                return
-            
-            # Update route
-            agent.route = route
-            session.add(agent) # Add for update tracking
-            # await session.commit() # Commit handled by context manager
-            
-            route_name_map = {"M": "Main", "R": "Red", "B": "Black"}
-            route_name = route_name_map.get(route)
-            
-            await update.message.reply_text(
-                f"✅ Route updated successfully!\n\n"
-                f"🌐 New Route: *{route_name}*",
-                parse_mode='Markdown'
-            )
-            
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in set_route: {str(e)}")
-            # await session.rollback() # Rollback handled by context manager
-            await update.message.reply_text("❌ Error updating route. Please try again later.")
+    """Route selection disabled for auto-dial only bot."""
+    await update.message.reply_text(
+        "🌐 *Route Selection Disabled*\n\n"
+        "Route selection is not used in auto-dial campaigns.\n\n"
+        "Campaigns use the configured auto-dial trunk settings.",
+        parse_mode='Markdown'
+    )
 
 async def check_ami_status(context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Check if AMI is connected and working."""
@@ -1465,219 +1127,16 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
 
-async def originate_call(context: ContextTypes.DEFAULT_TYPE, agent_number: str, target_number: str, trunk: str, caller_id: str = None) -> dict:
-    """Originate a call through Asterisk AMI."""
-    ami_manager = context.application.bot_data.get("ami_manager")
-    
-    if not ami_manager:
-        logger.error("AMI not connected")
-        return {'success': False, 'message': 'AMI not connected'}
-        
-    try:
-        # Use full E.164 format for all numbers
-        agent_dial = agent_number
-        target_dial = target_number
-        
-        # Only use the explicitly set caller_id, never fallback to agent number
-        if not caller_id:
-            logger.error("No caller ID configured")
-            return {'success': False, 'message': 'No caller ID configured'}
-        
-        # Build variables string for two-stage dialing
-        variables = (
-            f'AGENT_NUMBER={agent_dial},'
-            f'TARGET_NUMBER={target_dial},'
-            f'CALLER_ID="{caller_id}" <{caller_id}>'
-        )
-        
-        # Send originate action
-        response = await ami_manager.send_action({
-            'Action': 'Originate',
-            'Channel': f'PJSIP/{agent_dial}@{trunk}',
-            'Context': f'from-{trunk}',
-            'Exten': 'outbound',
-            'Priority': 1,
-            'Callerid': f'"{caller_id}" <{caller_id}>',
-            'Async': 'true',
-            'Variable': variables,
-            'Timeout': 30000
-        })
-        
-        # Handle response properly - it's a list of events
-        if isinstance(response, list):
-            # Check for error in any of the events
-            for event in response:
-                if isinstance(event, dict) and event.get('Response') == 'Error':
-                    logger.error(f"AMI Error: {event.get('Message', 'Unknown error')}")
-                    return {'success': False, 'message': event.get('Message', 'Unknown error')}
-            # If we got here, assume success
-            return {'success': True}
-        else:
-            # Single response
-            logger.info(f"Call originate response: {response}")
-            return {'success': True}
-            
-    except Exception as e:
-        logger.error(f"Error originating call: {str(e)}")
-        return {'success': False, 'message': str(e)}
+# Manual calling functionality removed - auto-dial only bot
 
 async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Make an outbound call."""
-    user = update.effective_user
-    if not user:
-        await update.message.reply_text("Could not identify user.")
-        return
-
-    # Fetch agent data
-    agent = None # Initialize agent
-    async with get_db_session() as session: # <-- Async context
-        # agent = session.query(Agent).filter_by(telegram_id=user.id).first()
-        result = await session.execute(select(Agent).filter_by(telegram_id=user.id)) # <-- Async query
-        agent = result.scalar_one_or_none()
-        if not agent:
-            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
-            return
-
-        # Now we have the agent object, continue with the rest of the logic
-        # Argument parsing and validation (no DB change)
-        if not context.args:
-            await update.message.reply_text(
-                "📞 *Make a Call*\n\n"
-                "Please provide the number to call:\n"
-                "`/call +1234567890`\n\n"
-                "• Must be in E.164 format\n"
-                "• Include country code\n"
-                "• No spaces or special characters",
-                parse_mode='Markdown'
-            )
-            return
-
-        target_number = context.args[0]
-        
-        if not validate_phone_number(target_number):
-            await update.message.reply_text(
-                "❌ Invalid phone number format.\n\n"
-                "Please use E.164 format:\n"
-                "Example: `/call +1234567890`",
-                parse_mode='Markdown'
-            )
-            return
-
-        # Use the fetched agent object for checks and call parameters
-        try:
-            if not agent.is_authorized:
-                await update.message.reply_text("❌ Error: You are not authorized to make calls.")
-                return
-                
-            if not agent.phone_number:
-                await update.message.reply_text(
-                    "❌ Error: Please set your phone number first using /setphone"
-                )
-                return
-                
-            if not agent.route:
-                await update.message.reply_text(
-                    "❌ Error: Please select a route first using /route or the Settings menu."
-                )
-                return
-            
-            # Check AMI connection first (this helper should be async if it does async work, but it seems to call ami_manager which is async)
-            # Assuming check_ami_status is already async as per previous structure
-            if not await check_ami_status(context):
-                await update.message.reply_text(
-                    "❌ Error: AMI connection is not available. Please try again later."
-                )
-                return
-            
-            # Determine trunk based on route
-            if agent.route == "M":
-                trunk = "main-trunk"
-            elif agent.route == "R":
-                trunk = "red-trunk"
-            else:  # Black route
-                trunk = "black-trunk"
-            
-            # Send initial status
-            status_message = await update.message.reply_text(
-                "📞 *Initiating Call*\n\n"
-                f"• *Agent:* `{agent.phone_number}`\n"
-                f"• *Target:* `{target_number}`\n"
-                f"• *Route:* {agent.route} Route\n"
-                f"• *Status:* Calling your number...\n\n"
-                "_Please answer your phone when it rings._",
-                parse_mode='Markdown'
-            )
-            
-            # Use caller_id if set, otherwise use agent's phone number
-            caller_id = agent.caller_id or agent.phone_number
-            
-            # Initiate the call (originate_call helper needs to be async)
-            # Assuming originate_call is already async
-            response = await originate_call(
-                context,
-                agent_number=agent.phone_number,
-                target_number=target_number,
-                trunk=trunk,
-                caller_id=caller_id
-            )
-            
-            if not response['success']:
-                await status_message.edit_text(
-                    "❌ *Call Failed*\n\n"
-                    f"Error: {response.get('message', 'Unknown error')}\n\n"
-                    "Please try again later.",
-                    parse_mode='Markdown'
-                )
-                return
-            
-            # Update status for successful initiation
-            updated_message = await status_message.edit_text(
-                "📞 *Call Status*\n\n"
-                f"• *Agent:* `{agent.phone_number}`\n"
-                f"• *Target:* `{target_number}`\n"
-                f"• *Route:* {agent.route} Route\n"
-                f"• *Status:* Connecting...\n\n"
-                "_Step 1: Calling your number_\n"
-                "_Step 2: When you answer, we'll call the target_\n\n"
-                "Please answer your phone when it rings.",
-                parse_mode='Markdown'
-            )
-            
-            # Store the message ID in the call record for later updates
-            # We need to find the call record that was created by originate_call
-            async with get_async_db_session() as session:
-                # Find the most recent call for this agent and target
-                result = await session.execute(
-                    select(Call)
-                    .filter_by(agent_telegram_id=user.id, target_number=target_number)
-                    .order_by(Call.start_time.desc())
-                )
-                call = result.scalar_one_or_none()
-                
-                if call:
-                    # Store the message ID and chat ID for later updates
-                    call.call_metadata = {
-                        **(call.call_metadata or {}),
-                        "status_message_id": updated_message.message_id,
-                        "status_chat_id": user.id
-                    }
-                    await session.commit()
-                    logger.info(f"Stored status message ID {updated_message.message_id} for call {call.call_id}")
-                else:
-                    logger.warning(f"Could not find call record for agent {user.id} and target {target_number}")
-            
-        except Exception as e:
-            logger.error(f"Error in call command: {str(e)}")
-            # Make sure status_message exists before trying to edit it
-            error_text = "❌ An error occurred. Please try again later."
-            if 'status_message' in locals() and status_message:
-                try:
-                     await status_message.edit_text(error_text)
-                except Exception as edit_e:
-                     logger.error(f"Failed to edit status message on error: {edit_e}")
-                     await update.message.reply_text(error_text) # Fallback reply
-            else:
-                 await update.message.reply_text(error_text)
+    """Manual calling disabled - use auto-dial campaigns only."""
+    await update.message.reply_text(
+        "📞 *Manual Calling Disabled*\n\n"
+        "This bot now focuses exclusively on auto-dial campaigns.\n\n"
+        "Use /autodial to start a campaign instead.",
+        parse_mode='Markdown'
+    )
 
 async def post_init(application: Application) -> None:
     global global_application_instance
@@ -2521,13 +1980,8 @@ async def bridge_event_listener(manager, event):
                         
                         logger.info(f"Updated status message with ICM for call {refreshed_call.call_id}")
                     else:
-                        # No stored message ID, fall back to creating a new ICM
-                        logger.warning(f"No status message ID found for call {refreshed_call.call_id}, creating new ICM")
-                        await show_interactive_call_menu(application, refreshed_call)
-                        
-                        # Mark that the ICM has been displayed
-                        refreshed_call.call_metadata["icm_displayed"] = True
-                        await new_session.commit()
+                        # No stored message ID, but ICM not needed for auto-dial campaigns
+                        logger.info(f"No status message ID found for call {refreshed_call.call_id}, ICM not needed for auto-dial")
                 except Exception as e:
                     logger.error(f"Error updating status message: {str(e)}", exc_info=True)
             else:
@@ -3299,72 +2753,7 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 active_campaigns = {}  # campaign_id: [target_numbers]
 active_calls = {}      # call_id: {"campaign_id": x, "target_number": y, ...}
 
-async def show_interactive_call_menu(application, call):
-    """Display the Interactive Call Menu (ICM) with call control buttons.
-    
-    This is only for manual calls placed via /call command, not for auto-dial campaigns.
-    Only called by bridge_event_listener when target actually answers the call.
-    """
-    if not call or not call.agent_telegram_id:
-        logger.warning("Cannot show ICM: Missing call or agent_telegram_id")
-        return None
-    
-    # Only show ICM for manual calls (not from campaigns) or calls from main trunk
-    if call.campaign_id is not None and 'from-main-trunk' not in (call.call_metadata or {}).get('asterisk_context', ''):
-        logger.info(f"Skipping ICM for campaign call {call.call_id}")
-        return None
-    
-    # Check if ICM has already been displayed to avoid duplication
-    if call.call_metadata and call.call_metadata.get('icm_displayed', False):
-        logger.info(f"ICM already displayed for call {call.call_id}, not showing again")
-        return None
-    
-    try:
-        # Format the call information
-        call_info = (
-            f"📞 *Call Connected*\n\n"
-            f"• *To:* `{call.target_number or 'Unknown'}`\n"
-            f"• *Duration:* 00:00\n"
-            f"• *Status:* Connected\n"
-        )
-        
-        # Create inline keyboard with call control buttons
-        keyboard = [
-            [
-                InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_call_{call.call_id}"),
-                InlineKeyboardButton("❌ Hangup", callback_data=f"hangup_call_{call.call_id}")
-            ],
-            [
-                InlineKeyboardButton("🔇 Mute", callback_data=f"mute_call_{call.call_id}"),
-                InlineKeyboardButton("🔈 Unmute", callback_data=f"unmute_call_{call.call_id}")
-            ],
-            [
-                InlineKeyboardButton("⏸ Hold", callback_data=f"hold_call_{call.call_id}"),
-                InlineKeyboardButton("▶ Resume", callback_data=f"resume_call_{call.call_id}")
-            ],
-            [
-                InlineKeyboardButton("📤 Transfer", callback_data=f"transfer_call_{call.call_id}"),
-                InlineKeyboardButton("🔢 DTMF", callback_data=f"dtmf_call_{call.call_id}")
-            ]
-        ]
-        
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        # Send the ICM message
-        message = await application.bot.send_message(
-            chat_id=call.agent_telegram_id,
-            text=call_info,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-        
-        # No need to update the call object - this is done by the caller
-        logger.info(f"Displayed ICM for call {call.call_id} to agent {call.agent_telegram_id}")
-        return message
-        
-    except Exception as e:
-        logger.error(f"Error showing ICM: {str(e)}", exc_info=True)
-        return None
+# Interactive Call Menu (ICM) removed - auto-dial only bot does not need call control
 
 
 def update_call_status(call_id, status, end_time=None):

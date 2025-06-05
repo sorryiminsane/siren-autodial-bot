@@ -53,7 +53,138 @@ uniqueid_to_call_id = {}
 channel_to_call_id = {}
 active_campaigns = {}
 
+# P1 Production Campaign Management
+campaign_states = {}  # campaign_id: CampaignState
+campaign_messages = {}  # campaign_id: {"chat_id": int, "message_id": int}
+notification_queue = []  # Rate-limited notification queue
+
+class CampaignState:
+    """Track real-time campaign statistics and settings."""
+    def __init__(self, campaign_id: int, user_id: int, total_calls: int):
+        self.campaign_id = campaign_id
+        self.user_id = user_id
+        self.total_calls = total_calls
+        self.completed_calls = 0
+        self.active_calls = 0
+        self.failed_calls = 0
+        self.dtmf_responses = 0
+        self.is_paused = False
+        self.individual_notifications = False  # Toggleable setting
+        self.start_time = datetime.now()
+        self.last_update = datetime.now()
+        
+    def get_progress_bar(self, width=10):
+        """Generate progress bar for campaign."""
+        if self.total_calls == 0:
+            return "▱" * width
+        progress = (self.completed_calls + self.failed_calls) / self.total_calls
+        filled = int(progress * width)
+        return "▰" * filled + "▱" * (width - filled)
+        
+    def get_completion_percentage(self):
+        """Get completion percentage."""
+        if self.total_calls == 0:
+            return 0
+        return int(((self.completed_calls + self.failed_calls) / self.total_calls) * 100)
+
 global_application_instance = None # Declare global variable for application instance
+
+async def update_campaign_message(campaign_id: int):
+    """Update the campaign status message in real-time."""
+    if campaign_id not in campaign_states or campaign_id not in campaign_messages:
+        return
+        
+    campaign = campaign_states[campaign_id]
+    message_info = campaign_messages[campaign_id]
+    
+    # Calculate duration
+    duration = datetime.now() - campaign.start_time
+    duration_str = f"{int(duration.total_seconds() // 60)}m {int(duration.total_seconds() % 60)}s"
+    
+    # Build status message
+    status_text = (
+        f"🤖 **P1 Campaign #{campaign_id}**\n\n"
+        f"📊 **Progress** {campaign.get_completion_percentage()}%\n"
+        f"{campaign.get_progress_bar()} ({campaign.completed_calls + campaign.failed_calls}/{campaign.total_calls})\n\n"
+        f"📞 **Call Stats**\n"
+        f"├─ ✅ Completed: {campaign.completed_calls}\n"
+        f"├─ 🔄 Active: {campaign.active_calls}\n"
+        f"├─ ❌ Failed: {campaign.failed_calls}\n"
+        f"└─ 🔔 DTMF Responses: {campaign.dtmf_responses}\n\n"
+        f"⏱ **Duration:** {duration_str}\n"
+        f"⚡ **Status:** {'⏸ Paused' if campaign.is_paused else '🚀 Running'}"
+    )
+    
+    # Campaign control buttons
+    keyboard = []
+    if campaign.is_paused:
+        keyboard.append([InlineKeyboardButton("▶️ Resume", callback_data=f"resume_campaign_{campaign_id}")])
+    else:
+        keyboard.append([InlineKeyboardButton("⏸ Pause", callback_data=f"pause_campaign_{campaign_id}")])
+    
+    keyboard.extend([
+        [
+            InlineKeyboardButton("📊 Details", callback_data=f"campaign_details_{campaign_id}"),
+            InlineKeyboardButton("🔔 Notifications", callback_data=f"campaign_notifications_{campaign_id}")
+        ],
+        [
+            InlineKeyboardButton("🛑 Stop", callback_data=f"stop_campaign_{campaign_id}"),
+            InlineKeyboardButton("🔙 Menu", callback_data="back_main")
+        ]
+    ])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    try:
+        await global_application_instance.bot.edit_message_text(
+            chat_id=message_info["chat_id"],
+            message_id=message_info["message_id"],
+            text=status_text,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        campaign.last_update = datetime.now()
+    except Exception as e:
+        logger.error(f"Failed to update campaign message {campaign_id}: {e}")
+
+async def send_individual_notification(campaign_id: int, notification_type: str, data: dict):
+    """Send individual notification if enabled for campaign."""
+    if campaign_id not in campaign_states:
+        return
+        
+    campaign = campaign_states[campaign_id]
+    if not campaign.individual_notifications:
+        return
+        
+    user_id = campaign.user_id
+    
+    if notification_type == "dtmf_response":
+        message = (
+            f"🔔 **DTMF Response**\n\n"
+            f"Campaign #{campaign_id}\n"
+            f"📱 {data.get('target_number', 'Unknown')}\n"
+            f"🔘 Pressed: {data.get('digit', '?')}\n"
+            f"⏰ {datetime.now().strftime('%H:%M:%S')}"
+        )
+    elif notification_type == "call_completed":
+        message = (
+            f"📞 **Call Completed**\n\n"
+            f"Campaign #{campaign_id}\n"
+            f"📱 {data.get('target_number', 'Unknown')}\n"
+            f"⏱ Duration: {data.get('duration', 'Unknown')}\n"
+            f"⏰ {datetime.now().strftime('%H:%M:%S')}"
+        )
+    else:
+        return
+        
+    try:
+        await global_application_instance.bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"Failed to send individual notification: {e}")
 
 def validate_phone_number(number: str) -> bool:
     """Validate phone number in E.164 format."""
@@ -506,6 +637,80 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
             parse_mode='Markdown'
         )
+        return MAIN_MENU
+
+    # P1 Campaign Control Handlers
+    elif query.data.startswith("pause_campaign_"):
+        campaign_id = int(query.data.split("_")[-1])
+        if campaign_id in campaign_states:
+            campaign_states[campaign_id].is_paused = True
+            await update_campaign_message(campaign_id)
+            await query.answer("⏸ Campaign paused")
+        return MAIN_MENU
+    
+    elif query.data.startswith("resume_campaign_"):
+        campaign_id = int(query.data.split("_")[-1])
+        if campaign_id in campaign_states:
+            campaign_states[campaign_id].is_paused = False
+            await update_campaign_message(campaign_id)
+            await query.answer("▶️ Campaign resumed")
+        return MAIN_MENU
+    
+    elif query.data.startswith("stop_campaign_"):
+        campaign_id = int(query.data.split("_")[-1])
+        if campaign_id in campaign_states:
+            # Clean up campaign state
+            del campaign_states[campaign_id]
+            if campaign_id in campaign_messages:
+                del campaign_messages[campaign_id]
+            await query.message.edit_text(
+                f"🛑 **Campaign #{campaign_id} Stopped**\n\n"
+                "Campaign has been terminated and removed from memory.",
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_main")]])
+            )
+            await query.answer("🛑 Campaign stopped")
+        return MAIN_MENU
+    
+    elif query.data.startswith("campaign_notifications_"):
+        campaign_id = int(query.data.split("_")[-1])
+        if campaign_id in campaign_states:
+            # Toggle individual notifications
+            campaign_states[campaign_id].individual_notifications = not campaign_states[campaign_id].individual_notifications
+            status = "enabled" if campaign_states[campaign_id].individual_notifications else "disabled"
+            await update_campaign_message(campaign_id)
+            await query.answer(f"🔔 Individual notifications {status}")
+        return MAIN_MENU
+    
+    elif query.data.startswith("campaign_details_"):
+        campaign_id = int(query.data.split("_")[-1])
+        if campaign_id in campaign_states:
+            campaign = campaign_states[campaign_id]
+            details_text = (
+                f"📊 **Campaign #{campaign_id} Details**\n\n"
+                f"**Statistics:**\n"
+                f"├─ Total Calls: {campaign.total_calls}\n"
+                f"├─ Completed: {campaign.completed_calls}\n"
+                f"├─ Active: {campaign.active_calls}\n"
+                f"├─ Failed: {campaign.failed_calls}\n"
+                f"└─ DTMF Responses: {campaign.dtmf_responses}\n\n"
+                f"**Settings:**\n"
+                f"├─ Individual Notifications: {'✅ On' if campaign.individual_notifications else '❌ Off'}\n"
+                f"├─ Status: {'⏸ Paused' if campaign.is_paused else '🚀 Running'}\n"
+                f"└─ Started: {campaign.start_time.strftime('%H:%M:%S')}\n\n"
+                f"**Response Rate:** {(campaign.dtmf_responses / max(campaign.completed_calls, 1) * 100):.1f}%"
+            )
+            await query.message.edit_text(
+                details_text,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Campaign", callback_data=f"back_campaign_{campaign_id}")]])
+            )
+        return MAIN_MENU
+    
+    elif query.data.startswith("back_campaign_"):
+        campaign_id = int(query.data.split("_")[-1])
+        if campaign_id in campaign_states:
+            await update_campaign_message(campaign_id)
         return MAIN_MENU
 
     # Fallback for unknown callback data
@@ -1853,25 +2058,41 @@ async def dtmf_event_listener(manager, event):
             display_tracking_id = tracking_id
             logger.info(f"Using tracking ID from event: {display_tracking_id}")
         
-        # Format campaign display - use campaign_id if available, otherwise use tracking_id
-        campaign_display = f"{campaign_id}" if campaign_id else display_tracking_id
-        
-        notification = (
-            f"🔔 *DTMF PRESS DETECTED*\n\n"
-            f"#{campaign_display}\n\n"
-            f"• Target: `{target_number}`\n"
-            f"• CallerID: `{caller_id}`\n"
-            f"• Digit: `{digit}`\n"
-            f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
-        )
-        
-        await application.bot.send_message(
-            chat_id=agent_id,
-            text=notification,
-            parse_mode='Markdown'
-        )
-        
-        logger.info(f"Sent DTMF notification to agent {agent_id}")
+        # P1 Campaign Integration: Update campaign state and send notifications
+        if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
+            # Update campaign statistics
+            campaign_states[campaign_id].dtmf_responses += 1
+            logger.info(f"Updated campaign {campaign_id} DTMF responses: {campaign_states[campaign_id].dtmf_responses}")
+            
+            # Update campaign message in real-time
+            await update_campaign_message(campaign_id)
+            
+            # Send individual notification if enabled
+            await send_individual_notification(campaign_id, "dtmf_response", {
+                "target_number": target_number,
+                "digit": digit,
+                "caller_id": caller_id
+            })
+        else:
+            # Legacy notification for non-campaign calls or unknown campaigns
+            campaign_display = f"{campaign_id}" if campaign_id else display_tracking_id
+            
+            notification = (
+                f"🔔 *DTMF PRESS DETECTED*\n\n"
+                f"#{campaign_display}\n\n"
+                f"• Target: `{target_number}`\n"
+                f"• CallerID: `{caller_id}`\n"
+                f"• Digit: `{digit}`\n"
+                f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
+            )
+            
+            await application.bot.send_message(
+                chat_id=agent_id,
+                text=notification,
+                parse_mode='Markdown'
+            )
+            
+            logger.info(f"Sent legacy DTMF notification to agent {agent_id}")
         
     except Exception as e:
         logger.error(f"Error processing DTMF event: {e}", exc_info=True)
@@ -2129,29 +2350,49 @@ async def hangup_event_listener(manager, event):
                     await session.commit()
                     logger.info(f"Call {call.call_id} (Uniqueid: {uniqueid}) marked as completed in database")
                     
-                    # Optional: Send notification to agent that call has ended
-                    if call.agent_telegram_id and application:
-                        try:
-                            # Format campaign display - use campaign_id if available, otherwise use tracking_id
-                            campaign_display = f"{call.campaign_id}" if call.campaign_id else (call.tracking_id or "Unknown")
-                            
-                            notification = (
-                                f"🔔 *Call Ended*\n\n"
-                                f"#{campaign_display}\n\n"
-                                f"• Target: `{call.target_number}`\n"
-                                f"• Duration: {(call.end_time - call.start_time).total_seconds():.0f} seconds\n"
-                                f"• Status: Completed\n"
-                                f"• Hangup Cause: {cause_txt or 'Unknown'}"
-                            )
-                            
-                            await application.bot.send_message(
-                                chat_id=call.agent_telegram_id,
-                                text=notification,
-                                parse_mode='Markdown'
-                            )
-                            logger.info(f"Sent hangup notification to agent {call.agent_telegram_id}")
-                        except Exception as e:
-                            logger.error(f"Failed to send hangup notification: {e}")
+                    # P1 Campaign Integration: Update campaign stats instead of individual notifications
+                    campaign_id = call.campaign_id
+                    if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
+                        # Update campaign statistics
+                        campaign_states[campaign_id].completed_calls += 1
+                        if campaign_states[campaign_id].active_calls > 0:
+                            campaign_states[campaign_id].active_calls -= 1
+                        
+                        logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}")
+                        
+                        # Update campaign message in real-time
+                        await update_campaign_message(campaign_id)
+                        
+                        # Send individual notification if enabled
+                        duration = (call.end_time - call.start_time).total_seconds()
+                        await send_individual_notification(campaign_id, "call_completed", {
+                            "target_number": call.target_number,
+                            "duration": f"{duration:.0f} seconds",
+                            "cause": cause_txt or 'Unknown'
+                        })
+                    else:
+                        # Legacy notification for non-campaign calls
+                        if call.agent_telegram_id and application:
+                            try:
+                                campaign_display = f"{call.campaign_id}" if call.campaign_id else (call.tracking_id or "Unknown")
+                                
+                                notification = (
+                                    f"🔔 *Call Ended*\n\n"
+                                    f"#{campaign_display}\n\n"
+                                    f"• Target: `{call.target_number}`\n"
+                                    f"• Duration: {(call.end_time - call.start_time).total_seconds():.0f} seconds\n"
+                                    f"• Status: Completed\n"
+                                    f"• Hangup Cause: {cause_txt or 'Unknown'}"
+                                )
+                                
+                                await application.bot.send_message(
+                                    chat_id=call.agent_telegram_id,
+                                    text=notification,
+                                    parse_mode='Markdown'
+                                )
+                                logger.info(f"Sent legacy hangup notification to agent {call.agent_telegram_id}")
+                            except Exception as e:
+                                logger.error(f"Failed to send legacy hangup notification: {e}")
                 else:
                     logger.debug(f"No call found in database for Uniqueid: {uniqueid}, Channel: {channel}, CallID: {call_id_from_event}")
     except Exception as e:
@@ -2191,24 +2432,12 @@ async def originate_autodial_call_from_record(context: ContextTypes.DEFAULT_TYPE
             call.status = "initiated"
             await session.commit()
         
-        # Build variables string for Asterisk using double underscores for persistence across contexts
-        variables = (
-            f'__AgentTelegramID={agent_telegram_id},'  # Double underscore ensures persistence
-            f'__CallID={call_id},'  # Original call ID
-            f'__TrackingID={tracking_id},'  # Our tracking ID (e.g., JKD1.1)
-            f'__SequenceNumber={sequence_number or 0},'  # Position in the campaign
-            f'__OriginalTargetNumber={target_number},'  # Will persist in all contexts
-            f'__CallerID={caller_id},'  # Will persist in all contexts
-            f'__CampaignID={campaign_id or ""},'  # Will persist in all contexts
-            f'__Origin=autodial,'  # Will persist in all contexts
-            f'__ActionID={action_id}'  # Will persist in all contexts
-        )
-        
+        # Build proper AMI action with individual Setvar headers
         logger.info(f"Originating call to {target_number} via {trunk} (Campaign: {campaign_id or 'N/A'})")
-        logger.debug(f"Call variables: {variables}")
+        logger.debug(f"Call variables: AgentTelegramID={agent_telegram_id}, CallID={call_id}, TrackingID={tracking_id}, CampaignID={campaign_id}")
             
-        # Send originate action
-        response = await ami_manager.send_action({
+        # Send originate action with proper variable setting
+        ami_action = {
             'Action': 'Originate',
             'ActionID': action_id,
             'Channel': channel,
@@ -2217,10 +2446,23 @@ async def originate_autodial_call_from_record(context: ContextTypes.DEFAULT_TYPE
             'Priority': 1,
             'CallerID': f'"{caller_id}" <{caller_id}>',
             'Async': 'true',
-            'Variable': variables,
             'Timeout': 45000,  # 45 seconds timeout
-            'ChannelId': call_id  # Use call_id as ChannelId for easier tracking
-        })
+            'ChannelId': call_id,  # Use call_id as ChannelId for easier tracking
+            # Individual variables for better compatibility
+            'Setvar': [
+                f'__AgentTelegramID={agent_telegram_id}',
+                f'__CallID={call_id}',
+                f'__TrackingID={tracking_id}',
+                f'__SequenceNumber={sequence_number or 0}',
+                f'__OriginalTargetNumber={target_number}',
+                f'__CallerID={caller_id}',
+                f'__CampaignID={campaign_id or ""}',
+                f'__Origin=autodial',
+                f'__ActionID={action_id}'
+            ]
+        }
+        
+        response = await ami_manager.send_action(ami_action)
         
         logger.info(f"Auto-dial originate action sent for {target_number} via {trunk}. Response: {response}")
         
@@ -2331,26 +2573,13 @@ async def originate_autodial_call(context: ContextTypes.DEFAULT_TYPE, target_num
             await session.commit()
             logger.info(f"Created call record in database: {call_id}")
         
-        # Build variables string for Asterisk using double underscores for persistence across contexts
-        # These variables will be available in the dialplan and DTMF events
-        variables = (
-            f'__AgentTelegramID={agent_telegram_id},'  # Double underscore ensures persistence
-            f'__CallID={call_id},'  # Original call ID
-            f'__TrackingID={tracking_id},'  # Our new primary tracking ID (e.g., JKD1.1)
-            f'__SequenceNumber={sequence_number or 0},'  # Position in the campaign
-            f'__OriginalTargetNumber={target_number},'  # Will persist in all contexts
-            f'__CallerID={caller_id},'  # Will persist in all contexts
-            f'__CampaignID={campaign_id or ""},'  # Will persist in all contexts
-            f'__Origin=autodial,'  # Will persist in all contexts
-            f'__ActionID={action_id}'  # Will persist in all contexts
-        )
-        
+        # Build proper AMI action with individual Setvar headers  
         logger.info(f"Originating call to {target_number} via {trunk} (Campaign: {campaign_id or 'N/A'})")
-        logger.debug(f"Call variables: {variables}")
+        logger.debug(f"Call variables: AgentTelegramID={agent_telegram_id}, CallID={call_id}, TrackingID={tracking_id}, CampaignID={campaign_id}")
             
-        # Send originate action
+        # Send originate action with proper variable setting
         # The call goes directly to the target number into the IVR context
-        response = await ami_manager.send_action({
+        ami_action = {
             'Action': 'Originate',
             'ActionID': action_id,
             'Channel': channel,
@@ -2359,10 +2588,23 @@ async def originate_autodial_call(context: ContextTypes.DEFAULT_TYPE, target_num
             'Priority': 1,
             'CallerID': f'"{caller_id}" <{caller_id}>',
             'Async': 'true',
-            'Variable': variables,
             'Timeout': 45000,  # 45 seconds timeout
-            'ChannelId': call_id  # Use call_id as ChannelId for easier tracking
-        })
+            'ChannelId': call_id,  # Use call_id as ChannelId for easier tracking
+            # Individual variables for better compatibility
+            'Setvar': [
+                f'__AgentTelegramID={agent_telegram_id}',
+                f'__CallID={call_id}',
+                f'__TrackingID={tracking_id}',
+                f'__SequenceNumber={sequence_number or 0}',
+                f'__OriginalTargetNumber={target_number}',
+                f'__CallerID={caller_id}',
+                f'__CampaignID={campaign_id or ""}',
+                f'__Origin=autodial',
+                f'__ActionID={action_id}'
+            ]
+        }
+        
+        response = await ami_manager.send_action(ami_action)
         
         logger.info(f"Auto-dial originate action sent for {target_number} via {trunk}. Response: {response}")
         
@@ -2713,11 +2955,6 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return MAIN_MENU
             
     elif query.data == "start_autodial_campaign":
-        await query.message.edit_text("🔄 Initializing Auto-Dial campaign...", parse_mode='Markdown')
-
-        # Get campaign name if provided, or generate a default one with timestamp
-        campaign_name = context.user_data.get('autodial_campaign_name', f"Campaign {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-
         # Get the campaign ID from pre-created records
         campaign_id = context.user_data.get('autodial_campaign_id')
         pre_created_calls = context.user_data.get('autodial_pre_created_calls', [])
@@ -2729,6 +2966,31 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]])
             )
             return MAIN_MENU
+        
+        # P1 Campaign State Initialization
+        total_calls = len(pre_created_calls)
+        campaign_states[campaign_id] = CampaignState(
+            campaign_id=campaign_id,
+            user_id=user_id,
+            total_calls=total_calls
+        )
+        
+        # Create the campaign monitoring message
+        campaign_message = await query.message.edit_text(
+            f"🤖 **P1 Campaign #{campaign_id}**\n\n"
+            f"📊 **Initializing...**\n"
+            f"Total calls: {total_calls}\n\n"
+            f"⏱ **Status:** 🚀 Starting",
+            parse_mode='Markdown'
+        )
+        
+        # Store message info for future updates
+        campaign_messages[campaign_id] = {
+            "chat_id": user_id,
+            "message_id": campaign_message.message_id
+        }
+        
+        logger.info(f"Initialized P1 campaign {campaign_id} with {total_calls} calls")
         
         # Initialize counters
         successful_originations = 0
@@ -2774,13 +3036,19 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                     tracking_id=tracking_id
                 )
                 
-                # Check result
+                # Check result and update campaign state
                 if result.get('success', False):
                     successful_originations += 1
+                    # Update campaign state
+                    if campaign_id in campaign_states:
+                        campaign_states[campaign_id].active_calls += 1
                     logger.info(f"Successfully initiated call to {target_number} (sequence {sequence_number})")
                     return True
                 else:
                     failed_originations += 1
+                    # Update campaign state  
+                    if campaign_id in campaign_states:
+                        campaign_states[campaign_id].failed_calls += 1
                     logger.error(f"Failed to initiate call to {target_number}: {result.get('message', 'Unknown error')}")
                     return False
                     
@@ -2802,45 +3070,28 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             # Update progress
             processed = batch_end
             
+            # Update campaign message after each batch
+            if campaign_id in campaign_states:
+                await update_campaign_message(campaign_id)
+            
             # Small delay between batches
             if processed < total_calls:
                 await asyncio.sleep(0.5)  # Half-second delay between batches
         
-        # Clear the list from user_data
-        if 'autodial_numbers' in context.user_data:
-            del context.user_data['autodial_numbers']
-        if 'autodial_pre_created_calls' in context.user_data:
-            del context.user_data['autodial_pre_created_calls']
-        if 'autodial_campaign_id' in context.user_data:
-            del context.user_data['autodial_campaign_id']
+        # Clear the setup data from user_data
+        context.user_data.pop('autodial_numbers', None)
+        context.user_data.pop('autodial_pre_created_calls', None)
+        context.user_data.pop('autodial_campaign_id', None)
         
-        final_message = (
-            "🚀 *Auto-Dial Campaign Started!*\n\n"
-            "📊 *Campaign Summary*\n"
-            f"• 📞 Attempted Calls: {successful_originations + failed_originations}\n"
-            f"• ✅ Successful Initiations: {successful_originations}\n"
-            f"• ❌ Failed Initiations: {failed_originations}\n\n"
-            "🔔 *Next Steps*\n"
-            "• You'll receive a notification when someone presses '1' during a call\n"
-            "• Check back here for campaign updates\n"
-            "• Use /status to check campaign progress\n\n"
-            "_Processing calls in the background..._"
-        )
-        await context.bot.send_message(chat_id=user_id, text=final_message, parse_mode='Markdown')
+        # Final campaign message update with startup summary
+        if campaign_id in campaign_states:
+            campaign_states[campaign_id].last_update = datetime.now()
+            await update_campaign_message(campaign_id)
         
-        # After campaign, show main menu
-        # Need to fetch agent again as the previous session is closed
-        async with get_db_session() as session_after_campaign: # <-- New async context
-            # agent_after_campaign = session_after_campaign.query(Agent).filter_by(telegram_id=user_id).first()
-            result_after = await session_after_campaign.execute(select(Agent).filter_by(telegram_id=user_id)) # <-- Async query
-            agent_after_campaign = result_after.scalar_one_or_none()
-            if agent_after_campaign:
-                 await show_main_menu(update, context, agent_after_campaign) # <-- Await helper
-            else:
-                 logger.error(f"Could not find agent {user_id} after campaign to show main menu.")
-                 # Perhaps send a simple text message if menu can't be shown?
-                 await context.bot.send_message(chat_id=user_id, text="Campaign finished. Use /start to see the menu.")
-                 return ConversationHandler.END # End conversation if agent gone
+        logger.info(f"P1 Campaign {campaign_id} launched: {successful_originations} successful, {failed_originations} failed initiations")
+        
+        # Campaign is now self-managing via real-time message updates
+        # User can control it via the campaign message buttons
         return MAIN_MENU
             
     logger.warning(f"Unhandled callback data in AUTO_DIAL state: {query.data}")

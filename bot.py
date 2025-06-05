@@ -2582,31 +2582,31 @@ async def hangup_event_listener(manager, event):
                     "duration": f"{call_duration:.0f} seconds",
                     "cause": cause_txt or 'Unknown'
                 })
-                    else:
-                        # Legacy notification for non-campaign calls
-                        if call.agent_telegram_id and application:
-                            try:
-                                campaign_display = f"{call.campaign_id}" if call.campaign_id else (call.tracking_id or "Unknown")
-                                
-                                notification = (
-                                    f"🔔 *Call Ended*\n\n"
-                                    f"#{campaign_display}\n\n"
-                                    f"• Target: `{call.target_number}`\n"
-                                    f"• Duration: {(call.end_time - call.start_time).total_seconds():.0f} seconds\n"
-                                    f"• Status: Completed\n"
-                                    f"• Hangup Cause: {cause_txt or 'Unknown'}"
-                                )
-                                
-                                await application.bot.send_message(
-                                    chat_id=call.agent_telegram_id,
-                                    text=notification,
-                                    parse_mode='Markdown'
-                                )
-                                logger.info(f"Sent legacy hangup notification to agent {call.agent_telegram_id}")
-                            except Exception as e:
-                                logger.error(f"Failed to send legacy hangup notification: {e}")
-                else:
-                    logger.debug(f"No call found in database for Uniqueid: {uniqueid}, Channel: {channel}, CallID: {call_id_from_event}")
+        else:
+            # Legacy notification for non-campaign calls
+            if call.agent_telegram_id and application:
+                try:
+                    campaign_display = f"{call.campaign_id}" if call.campaign_id else (call.tracking_id or "Unknown")
+                    
+                    notification = (
+                        f"🔔 *Call Ended*\n\n"
+                        f"#{campaign_display}\n\n"
+                        f"• Target: `{call.target_number}`\n"
+                        f"• Duration: {(call.end_time - call.start_time).total_seconds():.0f} seconds\n"
+                        f"• Status: Completed\n"
+                        f"• Hangup Cause: {cause_txt or 'Unknown'}"
+                    )
+                    
+                    await application.bot.send_message(
+                        chat_id=call.agent_telegram_id,
+                        text=notification,
+                        parse_mode='Markdown'
+                    )
+                    logger.info(f"Sent legacy hangup notification to agent {call.agent_telegram_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send legacy hangup notification: {e}")
+        else:
+            logger.debug(f"No call found in database for Uniqueid: {uniqueid}, Channel: {channel}, CallID: {call_id_from_event}")
     except Exception as e:
         logger.error(f"Error processing hangup event: {e}", exc_info=True)
 

@@ -116,8 +116,8 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     # Build main action buttons for auto-dial only bot
     keyboard = []
     
-    # Auto-Dial button (only if authorized and auto_dial enabled)
-    if agent.is_authorized and agent.auto_dial:
+    # Auto-Dial button (only if authorized - auto-enable if authorized)
+    if agent.is_authorized:
         keyboard.append([
             InlineKeyboardButton("🤖 Auto-Dial Campaign", callback_data="auto_dial")
         ])
@@ -333,10 +333,20 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         async with get_db_session() as session:
             result = await session.execute(select(Agent).filter_by(telegram_id=update.effective_user.id))
             agent = result.scalar_one_or_none()
-            if not agent or not agent.is_authorized or not agent.auto_dial:
+            if not agent or not agent.is_authorized:
                 await query.message.edit_text(
                     "❌ You are not authorized to use the Auto-Dial feature. "
-                    "Please enable it in Settings or contact an administrator.",
+                    "Please contact an administrator for authorization.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
+                    parse_mode='Markdown'
+                )
+                return MAIN_MENU
+            
+            if not agent.route:
+                await query.message.edit_text(
+                    "❌ No route configured. Please set your route first:\n\n"
+                    "`/route one` or `/route two`\n\n"
+                    "Route selection determines which trunk will be used for campaigns.",
                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]]),
                     parse_mode='Markdown'
                 )
@@ -995,13 +1005,70 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text("❌ Error updating Auto-Dial caller ID. Please try again later.")
 
 async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Route selection disabled for auto-dial only bot."""
-    await update.message.reply_text(
-        "🌐 *Route Selection Disabled*\n\n"
-        "Route selection is not used in auto-dial campaigns.\n\n"
-        "Campaigns use the configured auto-dial trunk settings.",
-        parse_mode='Markdown'
-    )
+    """Set agent's route (one or two) for auto-dial campaigns."""
+    user = update.effective_user
+    if not user:
+        await update.message.reply_text("Could not identify user.")
+        return
+
+    async with get_db_session() as session:
+        result = await session.execute(select(Agent).filter_by(telegram_id=user.id))
+        agent = result.scalar_one_or_none()
+
+        if not agent:
+            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+            return
+
+        if not agent.is_authorized:
+            await update.message.reply_text("❌ Error: You are not authorized to set route.")
+            return
+
+        if not context.args:
+            current_route = agent.route or "Not set"
+            await update.message.reply_text(
+                f"🌐 *Set Route*\n\n"
+                f"Current Route: `{current_route}`\n\n"
+                "Please specify which route to use:\n"
+                "`/route one` - Use Route One\n"
+                "`/route two` - Use Route Two\n\n"
+                "• Required for auto-dial campaigns\n"
+                "• Determines which trunk will be used",
+                parse_mode='Markdown'
+            )
+            return
+
+        route_arg = context.args[0].lower()
+        
+        if route_arg not in ['one', 'two']:
+            await update.message.reply_text(
+                "❌ Invalid route. Please use:\n"
+                "`/route one` or `/route two`",
+                parse_mode='Markdown'
+            )
+            return
+
+        try:
+            # Update route
+            agent.route = route_arg
+            # Auto-enable autodial when route is set
+            agent.auto_dial = True
+            # Set corresponding autodial trunk
+            agent.autodial_trunk = route_arg
+            session.add(agent)
+            await session.commit()
+            
+            await update.message.reply_text(
+                f"✅ Route updated successfully!\n\n"
+                f"🌐 Route: `{route_arg.title()}`\n"
+                f"🤖 Auto-Dial: `Enabled`\n"
+                f"📞 Trunk: `autodial-{route_arg}`\n\n"
+                "You can now start auto-dial campaigns!",
+                parse_mode='Markdown'
+            )
+            
+        except SQLAlchemyError as e:
+            logger.error(f"Database error in set_route: {str(e)}")
+            await update.message.reply_text("❌ Error updating route. Please try again later.")
 
 async def check_ami_status(context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Check if AMI is connected and working."""
@@ -2372,11 +2439,11 @@ async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_
         result = await session.execute(select(Agent).filter_by(telegram_id=user.id)) # <-- Async Query
         agent = result.scalar_one_or_none()
 
-        if not agent or not agent.is_authorized or not agent.auto_dial:
+        if not agent or not agent.is_authorized:
              if update.message: # Check if update.message exists
                 await update.message.reply_text(
                     "❌ You are not authorized to use the Auto-Dial feature. "
-                    "Please enable it in Settings or contact an administrator."
+                    "Please contact an administrator for authorization."
                 )
              # Attempt to show main menu if agent exists (even if unauthorized for autodial)
              try:
@@ -2387,6 +2454,21 @@ async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_
              except Exception as e:
                  logger.error(f"Error trying to show main menu after failed auth in /autodial: {e}")
                  return ConversationHandler.END # Fallback on error showing menu
+
+        # Check if route is configured
+        if not agent.route:
+            if update.message:
+                await update.message.reply_text(
+                    "❌ No route configured. Please set your route first:\n\n"
+                    "`/route one` or `/route two`\n\n"
+                    "Route selection determines which trunk will be used for campaigns."
+                )
+            try:
+                await show_main_menu(update, context, agent)
+                return MAIN_MENU
+            except Exception as e:
+                logger.error(f"Error showing main menu after route check in /autodial: {e}")
+                return ConversationHandler.END
 
     # If authorized, proceed to prompt for file
     if update.message: # Check if update.message exists
@@ -2416,7 +2498,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
         result = await session.execute(select(Agent).filter_by(telegram_id=user.id)) # <-- Async Query
         agent = result.scalar_one_or_none()
 
-        if not agent or not agent.is_authorized or not agent.auto_dial:
+        if not agent or not agent.is_authorized:
             if update.message: await update.message.reply_text("❌ You are not authorized to use the Auto-Dial feature.")
             # Maybe show main menu?
             if agent: # If agent exists (but isn't authorized for autodial), show their menu
@@ -2429,6 +2511,20 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                  if update.message: await update.message.reply_text("Agent record not found.")
                  return ConversationHandler.END # Or MAIN_MENU?
             return MAIN_MENU # Go to main menu if not authorized here
+
+        # Check if route is configured
+        if not agent.route:
+            if update.message: 
+                await update.message.reply_text(
+                    "❌ No route configured. Please set your route first:\n\n"
+                    "`/route one` or `/route two`"
+                )
+            try:
+                await show_main_menu(update, context, agent)
+                return MAIN_MENU
+            except Exception as e:
+                logger.error(f"Error showing main menu after route check in file handler: {e}")
+                return ConversationHandler.END
 
     # If authorized, continue with file processing (no more DB interactions in this part)
     if not update.message or not update.message.document:
@@ -2505,11 +2601,12 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                 await session.commit()
                 logger.info(f"Created new autodial campaign with ID {campaign_id} for user {user.id}")
                 
-                # Get agent info for caller ID
+                # Get agent info for caller ID and trunk
                 result = await session.execute(select(Agent).filter_by(telegram_id=user.id))
                 agent = result.scalar_one_or_none()
                 caller_id = agent.autodial_caller_id if agent and agent.autodial_caller_id else None
-                trunk = f"autodial-{agent.autodial_trunk}" if agent and agent.autodial_trunk else "autodial-one"
+                # Use route to determine trunk
+                trunk = f"autodial-{agent.route}" if agent and agent.route else "autodial-one"
                 
                 # Create a call record for each number
                 timestamp = int(time.time())

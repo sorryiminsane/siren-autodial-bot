@@ -2681,7 +2681,9 @@ async def originate_autodial_call_from_record(context: ContextTypes.DEFAULT_TYPE
         logger.info(f"Originating call to {target_number} via {trunk} (Campaign: {campaign_id or 'N/A'})")
         logger.debug(f"Call variables: AgentTelegramID={agent_telegram_id}, CallID={call_id}, TrackingID={tracking_id}, CampaignID={campaign_id}")
             
-        # Send originate action with proper variable setting
+        # Send originate action with proper variable setting using Variable format
+        variables = f"__AgentTelegramID={agent_telegram_id},__CallID={call_id},__TrackingID={tracking_id},__SequenceNumber={sequence_number or 0},__OriginalTargetNumber={target_number},__CallerID={caller_id},__CampaignID={campaign_id or ''},__Origin=autodial,__ActionID={action_id}"
+        
         ami_action = {
             'Action': 'Originate',
             'ActionID': action_id,
@@ -2693,18 +2695,7 @@ async def originate_autodial_call_from_record(context: ContextTypes.DEFAULT_TYPE
             'Async': 'true',
             'Timeout': 45000,  # 45 seconds timeout
             'ChannelId': call_id,  # Use call_id as ChannelId for easier tracking
-            # Individual variables for better compatibility
-            'Setvar': [
-                f'__AgentTelegramID={agent_telegram_id}',
-                f'__CallID={call_id}',
-                f'__TrackingID={tracking_id}',
-                f'__SequenceNumber={sequence_number or 0}',
-                f'__OriginalTargetNumber={target_number}',
-                f'__CallerID={caller_id}',
-                f'__CampaignID={campaign_id or ""}',
-                f'__Origin=autodial',
-                f'__ActionID={action_id}'
-            ]
+            'Variable': variables  # Use Variable string format instead of Setvar array
         }
         
         response = await ami_manager.send_action(ami_action)
@@ -2822,8 +2813,10 @@ async def originate_autodial_call(context: ContextTypes.DEFAULT_TYPE, target_num
         logger.info(f"Originating call to {target_number} via {trunk} (Campaign: {campaign_id or 'N/A'})")
         logger.debug(f"Call variables: AgentTelegramID={agent_telegram_id}, CallID={call_id}, TrackingID={tracking_id}, CampaignID={campaign_id}")
             
-        # Send originate action with proper variable setting
+        # Send originate action with proper variable setting using Variable format
         # The call goes directly to the target number into the IVR context
+        variables = f"__AgentTelegramID={agent_telegram_id},__CallID={call_id},__TrackingID={tracking_id},__SequenceNumber={sequence_number or 0},__OriginalTargetNumber={target_number},__CallerID={caller_id},__CampaignID={campaign_id or ''},__Origin=autodial,__ActionID={action_id}"
+        
         ami_action = {
             'Action': 'Originate',
             'ActionID': action_id,
@@ -2835,18 +2828,7 @@ async def originate_autodial_call(context: ContextTypes.DEFAULT_TYPE, target_num
             'Async': 'true',
             'Timeout': 45000,  # 45 seconds timeout
             'ChannelId': call_id,  # Use call_id as ChannelId for easier tracking
-            # Individual variables for better compatibility
-            'Setvar': [
-                f'__AgentTelegramID={agent_telegram_id}',
-                f'__CallID={call_id}',
-                f'__TrackingID={tracking_id}',
-                f'__SequenceNumber={sequence_number or 0}',
-                f'__OriginalTargetNumber={target_number}',
-                f'__CallerID={caller_id}',
-                f'__CampaignID={campaign_id or ""}',
-                f'__Origin=autodial',
-                f'__ActionID={action_id}'
-            ]
+            'Variable': variables  # Use Variable string format instead of Setvar array
         }
         
         response = await ami_manager.send_action(ami_action)

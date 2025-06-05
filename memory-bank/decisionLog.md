@@ -31,6 +31,17 @@ This file records architectural and implementation decisions using a list format
 - Distinguish between failed calls (< 10 seconds, no bridge) and completed calls
 - Fix active call tracking to increment on successful initiation
 
+**2025-01-05 21:00:00** - Unify DTMF Notification System
+- Remove DTMFBegin notifications to eliminate spam
+- Use only DTMFEnd events which contain actual pressed digits
+- Standardize all notifications to "🎯 NEW VICTIM RESPONSE" format
+
+**2025-01-05 21:15:00** - Implement Group Chat Authorization
+- Add silent failure mode for unauthorized users in groups to prevent spam
+- Maintain error messages for unauthorized users in private chats
+- Implement centralized authorization checking across all handlers
+- Use efficient database lookups for authorization status
+
 ## Rationale
 
 **Memory Bank System**: Required by .cursorrules to maintain separation from built-in memories and ensure project context persistence across sessions.

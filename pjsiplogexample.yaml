@@ -1,0 +1,165 @@
+
+
+<--- Received SIP response (591 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 100 Trying
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj1cd96f75-99f8-4c9a-abc3-46f84f6da47f;received=91.200.14.36;rport=5060
+From: "+16023457748" <sip:+16023457748@91.200.14.36>;tag=9a0f20e5-74fd-41f1-92c0-a6b385db437c
+To: <sip:+16197248434@139.59.76.222>
+Call-ID: 426f0749-8971-4058-92b7-393c7a7751db
+CSeq: 30060 INVITE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Session-Expires: 1800;refresher=uas
+Contact: <sip:+16197248434@139.59.76.222:5060>
+Content-Length: 0
+
+
+<--- Received SIP response (590 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 100 Trying
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj5489b8b5-846c-43f6-99c9-f6b210baa077;received=91.200.14.36;rport=5060
+From: "+16023457748" <sip:+16023457748@91.200.14.36>;tag=0706ba75-f6e9-430b-8c16-80b49eba923d
+To: <sip:+14804855848@139.59.76.222>
+Call-ID: fa6fab7a-328a-41cf-bfcd-da7dc54fa78f
+CSeq: 2383 INVITE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Session-Expires: 1800;refresher=uas
+Contact: <sip:+14804855848@139.59.76.222:5060>
+Content-Length: 0
+
+
+<--- Received SIP response (606 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 180 Ringing
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjb199a8d9-ef99-4cc0-9115-39bca59986b8;received=91.200.14.36;rport=5060
+From: "+16023457748" <sip:+16023457748@91.200.14.36>;tag=0d32e011-e6d7-4384-887f-b97cf6cdb3e5
+To: <sip:+14802569373@139.59.76.222>;tag=as271558dc
+Call-ID: cefc5d67-32ea-45cb-912f-efb3e4d30a60
+CSeq: 1830 INVITE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Session-Expires: 1800;refresher=uas
+Contact: <sip:+14802569373@139.59.76.222:5060>
+Content-Length: 0
+
+
+    -- PJSIP/autodial-one-00000019 is ringing
+<--- Received SIP response (942 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 183 Session Progress
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj5489b8b5-846c-43f6-99c9-f6b210baa077;received=91.200.14.36;rport=5060
+From: "+16023457748" <sip:+16023457748@91.200.14.36>;tag=0706ba75-f6e9-430b-8c16-80b49eba923d
+To: <sip:+14804855848@139.59.76.222>;tag=as7c54e16a
+Call-ID: fa6fab7a-328a-41cf-bfcd-da7dc54fa78f
+CSeq: 2383 INVITE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Session-Expires: 1800;refresher=uas
+Contact: <sip:+14804855848@139.59.76.222:5060>
+Content-Type: application/sdp
+Require: timer
+Content-Length: 278
+
+v=0
+o=root 2115959511 2115959511 IN IP4 139.59.76.222
+s=Asterisk PBX 13.38.3
+c=IN IP4 139.59.76.222
+t=0 0
+m=audio 16358 RTP/AVP 8 0 101
+a=rtpmap:8 PCMA/8000
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=ptime:20
+a=maxptime:150
+a=sendrecv
+
+       > 0x7f88d4009b70 -- Strict RTP learning after remote address set to: 139.59.76.222:16358
+    -- PJSIP/autodial-one-0000001b is making progress
+       > 0x7f88d4009b70 -- Strict RTP switching to RTP target address 139.59.76.222:16358 as source
+<--- Received SIP response (943 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 183 Session Progress
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj1cd96f75-99f8-4c9a-abc3-46f84f6da47f;received=91.200.14.36;rport=5060
+From: "+16023457748" <sip:+16023457748@91.200.14.36>;tag=9a0f20e5-74fd-41f1-92c0-a6b385db437c
+To: <sip:+16197248434@139.59.76.222>;tag=as7cb15c07
+Call-ID: 426f0749-8971-4058-92b7-393c7a7751db
+CSeq: 30060 INVITE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Session-Expires: 1800;refresher=uas
+Contact: <sip:+16197248434@139.59.76.222:5060>
+Content-Type: application/sdp
+Require: timer
+Content-Length: 278
+
+v=0
+o=root 2074988280 2074988280 IN IP4 139.59.76.222
+s=Asterisk PBX 13.38.3
+c=IN IP4 139.59.76.222
+t=0 0
+m=audio 16666 RTP/AVP 8 0 101
+a=rtpmap:8 PCMA/8000
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=ptime:20
+a=maxptime:150
+a=sendrecv
+
+       > 0x7f88d800a6e0 -- Strict RTP learning after remote address set to: 139.59.76.222:16666
+    -- PJSIP/autodial-one-0000001c is making progress
+       > 0x7f88d800a6e0 -- Strict RTP switching to RTP target address 139.59.76.222:16666 as source
+<--- Received SIP response (607 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 180 Ringing
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj0b69f460-5671-4c4e-96ff-0c2aea35f170;received=91.200.14.36;rport=5060
+From: "+16023457748" <sip:+16023457748@91.200.14.36>;tag=480a4d83-ef03-483d-b726-20b0afdca2b5
+To: <sip:+15018301282@139.59.76.222>;tag=as28ac40fc
+Call-ID: be70f0d1-f813-4b91-abba-64eeae8006a6
+CSeq: 28356 INVITE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Session-Expires: 1800;refresher=uas
+Contact: <sip:+15018301282@139.59.76.222:5060>
+Content-Length: 0
+
+
+<--- Received SIP response (941 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 183 Session Progress
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj0b69f460-5671-4c4e-96ff-0c2aea35f170;received=91.200.14.36;rport=5060
+From: "+16023457748" <sip:+16023457748@91.200.14.36>;tag=480a4d83-ef03-483d-b726-20b0afdca2b5
+To: <sip:+15018301282@139.59.76.222>;tag=as28ac40fc
+Call-ID: be70f0d1-f813-4b91-abba-64eeae8006a6
+CSeq: 28356 INVITE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Session-Expires: 1800;refresher=uas
+Contact: <sip:+15018301282@139.59.76.222:5060>
+Content-Type: application/sdp
+Require: timer
+Content-Length: 276
+
+v=0
+o=root 724549861 724549861 IN IP4 139.59.76.222
+s=Asterisk PBX 13.38.3
+c=IN IP4 139.59.76.222
+t=0 0
+m=audio 19192 RTP/AVP 8 0 101
+a=rtpmap:8 PCMA/8000
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=ptime:20
+a=maxptime:150
+a=sendrecv
+
+    -- PJSIP/autodial-one-0000001a is ringing
+       > 0x7f886400c290 -- Strict RTP learning after remote address set to: 139.59.76.222:19192
+    -- PJSIP/autodial-one-0000001a is making progress
+       > 0x7f886400c290 -- Strict RTP switching to RTP target address 139.59.76.222:19192 as source
+<--- Received SIP response (927 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 200 OK

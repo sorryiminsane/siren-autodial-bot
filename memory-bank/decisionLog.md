@@ -2,7 +2,60 @@
 
 This file records architectural and implementation decisions using a list format.
 
-"2024-12-19 15:30:00" - Initial decision log created during memory bank implementation.
+"YYYY-MM-DD HH:MM:SS" - Log of updates made.
+
+## Decision
+
+**2024-12-19 15:30:00** - Implement Memory Bank System
+- Use dedicated memory-bank/ directory for project context persistence
+- Separate from Cursor's built-in memory system per .cursorrules requirements
+- Maintain project state across sessions through structured markdown files
+
+**2024-12-19 15:35:00** - Transform to Pure Auto-Dial Bot
+- Remove all manual calling functionality to focus on marketing campaigns
+- Eliminate agent callback system and two-stage dialing complexity
+- Streamline to campaign-only operations with direct-to-target calling
+
+**2025-01-05 19:45:00** - Implement Real-Time SIP State Tracking
+- Use AMI Newstate, DialEnd, and BridgeEnter events for accurate call progression
+- Cross-reference by uniqueid to maintain existing tracking consistency
+- Detect fake carrier responses by monitoring for missing BridgeEnter events
+
+**2025-01-05 20:15:00** - Correct Notification System Understanding
+- Confirmed notifications are properly routed to campaign launcher, not hardcoded
+- System correctly tracks campaign ownership via agent_telegram_id
+- No changes needed to notification delivery mechanism
+
+**2025-01-05 20:30:00** - Fix Call Classification Logic
+- Implement duration and status-based classification in hangup event listener
+- Distinguish between failed calls (< 10 seconds, no bridge) and completed calls
+- Fix active call tracking to increment on successful initiation
+
+## Rationale
+
+**Memory Bank System**: Required by .cursorrules to maintain separation from built-in memories and ensure project context persistence across sessions.
+
+**Pure Auto-Dial Focus**: Simplifies codebase, reduces complexity, and aligns with primary use case of marketing/survey campaigns rather than manual call center operations.
+
+**Real-Time SIP State Tracking**: Current hangup-only approach cannot distinguish between real connections and fake carrier responses, leading to inaccurate campaign metrics and poor user experience.
+
+**Notification System Correction**: Previous assumption about hardcoded agent ID was incorrect - testing confirmed proper dynamic routing based on campaign ownership.
+
+**Call Classification Fix**: Existing logic marked all hangups as "completed" regardless of actual call outcome, making campaign statistics misleading and unusable for optimization.
+
+## Implementation Details
+
+**Memory Bank Structure**: Five core files (activeContext.md, decisionLog.md, systemPatterns.md, progress.md, productContext.md) with timestamped updates.
+
+**Auto-Dial Simplification**: Remove manual calling commands, ICM controls, agent phone registration, and two-stage dialing logic while preserving all campaign functionality.
+
+**SIP State Tracking**: Add AMI event listeners for Newstate and DialEnd events, implement timeout-based fake response detection, and update campaign statistics in real-time based on actual call progression.
+
+**Notification Routing**: Maintain existing agent_telegram_id-based routing, confirmed working correctly through multi-account testing.
+
+**Call Classification**: Use call duration (< 10 seconds) and bridge status (bridged, dtmf_processed, dtmf_started) to distinguish failed from completed calls in hangup event handler.
+
+---
 
 ## Decision
 

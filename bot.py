@@ -3589,7 +3589,7 @@ def main():
     
     # --- Define Handlers to be separated ---
 
-    setcid_handler = CommandHandler("setcid", set_caller_id)
+
     setautodialcid_handler = CommandHandler("setautodialcid", set_autodial_caller_id)
     route_handler = CommandHandler("route", set_route)
 
@@ -3628,7 +3628,6 @@ def main():
         },
         fallbacks=[
             CommandHandler("start", start),
-            CommandHandler("setcid", set_caller_id),
             CommandHandler("route", set_route),
         ],
         allow_reentry=True
@@ -3637,7 +3636,7 @@ def main():
 
     # --- Add separated command handlers directly (for use outside conversation) ---
 
-    application.add_handler(setcid_handler)
+
     application.add_handler(setautodialcid_handler)
     application.add_handler(route_handler)
 

@@ -504,7 +504,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
         keyboard.append([
             InlineKeyboardButton("🤖 Auto-Dial Campaign", callback_data="auto_dial")
         ])
-    
+        
         # Campaign History button
         keyboard.append([
             InlineKeyboardButton("📊 Campaign History", callback_data="campaign_history")
@@ -572,7 +572,7 @@ async def show_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
             await update.callback_query.message.edit_text(
                 settings_text,
                 reply_markup=reply_markup,
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
         except Exception as e:
              logger.error(f"Error editing message in show_settings_menu: {e}")
@@ -587,10 +587,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         user = update.effective_user
         
-        # Check authorization first
-        if not await check_authorization(update, context, silent_fail=False):
-            return ConversationHandler.END
-        
         async with get_db_session() as session:
             try:
                 result = await session.execute(select(Agent).filter_by(telegram_id=user.id))
@@ -604,6 +600,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                     )
                     session.add(agent)
                     await session.commit()
+                
+                # Check authorization AFTER creating/finding agent record
+                if not agent.is_authorized:
+                    await update.message.reply_text(
+                        "❌ You are not authorized to use this bot. Please contact an administrator.\n\n"
+                        "Your account has been registered and is pending authorization."
+                    )
+                    return ConversationHandler.END
                 
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
@@ -640,10 +644,6 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     """Handle main menu button presses."""
     query = update.callback_query
     await query.answer()
-    
-    # Check authorization for all menu interactions
-    if not await check_authorization(update, context, silent_fail=True):
-        return ConversationHandler.END
         
     agent = None # Initialize agent
 
@@ -781,7 +781,7 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                     [InlineKeyboardButton("⚙️ Configure Settings", callback_data="settings")],
                     [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
                 ]),
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
         return MAIN_MENU
 
@@ -1015,10 +1015,6 @@ async def handle_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     query = update.callback_query
     await query.answer()
     
-    # Check authorization
-    if not await check_authorization(update, context, silent_fail=True):
-        return ConversationHandler.END
-    
     user_id = update.effective_user.id
     agent = None # Define agent outside to potentially use in else block
     
@@ -1204,10 +1200,6 @@ async def handle_agent_management(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
     
-    # Check authorization first
-    if not await check_authorization(update, context, silent_fail=True):
-        return ConversationHandler.END
-    
     if query.data == "back_main":
         # Need to fetch agent to show main menu
         async with get_db_session() as session:
@@ -1308,9 +1300,6 @@ async def handle_agent_management(update: Update, context: ContextTypes.DEFAULT_
 
 async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle agent ID input for authorization/deauthorization."""
-    # Check authorization first
-    if not await check_authorization(update, context, silent_fail=True):
-        return ConversationHandler.END
     
     # Handle callback queries (buttons) first
     if update.callback_query:
@@ -1365,9 +1354,9 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
         agent = result.scalar_one_or_none()
         
         if not agent:
-    await update.message.reply_text(
+            await update.message.reply_text(
                 f"❌ Agent with ID `{agent_id}` not found. The agent must use the bot at least once.",
-        parse_mode='Markdown',
+                parse_mode='Markdown',
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")],
                     [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
@@ -1389,10 +1378,10 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
             agent.is_authorized = True
             await session.commit()
             
-    await update.message.reply_text(
+            await update.message.reply_text(
                 f"✅ Agent @{agent.username or agent_id} has been successfully authorized!",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")]]),
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
             
         elif action == "deauthorize":
@@ -1417,10 +1406,10 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
             agent.is_authorized = False
             await session.commit()
             
-    await update.message.reply_text(
+            await update.message.reply_text(
                 f"❌ Agent @{agent.username or agent_id} has been deauthorized.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]]),
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
     
     return AGENT_MANAGEMENT
@@ -1432,10 +1421,6 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
     if not user:
         return
 
-    # Check authorization first
-    if not await check_authorization(update, context, silent_fail=False):
-        return
-
     # Fetch agent data
     async with get_db_session() as session: # <-- Async context
         # agent = session.query(Agent).filter_by(telegram_id=user.id).first()
@@ -1443,20 +1428,25 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
         agent = result.scalar_one_or_none()
 
         if not agent:
-    await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+            return
+            
+        # Check authorization AFTER finding agent
+        if not agent.is_authorized:
+            await update.message.reply_text("❌ You are not authorized to use this bot. Please contact an administrator.")
             return
 
         # Argument parsing (no DB change)
         if not context.args:
             current_cid = agent.autodial_caller_id or "Not set"
-    await update.message.reply_text(
+            await update.message.reply_text(
                 f"🤖 *Set Auto-Dial CallerID*\n\n"
                 f"Current Auto-Dial CID: `{current_cid}`\n\n"
                 "Please provide the phone number to use for Auto-Dial campaigns:\n"
                 "`/setautodialcid +1234567890`\n\n"
                 "• Must be E.164 format\n"
                 "• If not set, Auto-Dial may fail or use a default.", # Add clarification
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
             return
 
@@ -1464,11 +1454,11 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
         
         # Validation (no DB change)
         if not validate_phone_number(autodial_caller_id):
-    await update.message.reply_text(
+            await update.message.reply_text(
                 "❌ Invalid phone number format.\n\n"
                 "Please use E.164 format:\n"
                 "Example: `/setautodialcid +1234567890`",
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
             return
 
@@ -1479,16 +1469,16 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
             session.add(agent) # Add for update tracking
             # await session.commit() # Commit handled by context manager
             
-    await update.message.reply_text(
+            await update.message.reply_text(
                 "✅ Auto-Dial CallerID updated successfully!\n\n"
                 f"🤖 New Auto-Dial CID: `{autodial_caller_id}`",
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
             
         except SQLAlchemyError as e:
             logger.error(f"Database error in set_autodial_caller_id: {str(e)}")
             # await session.rollback() # Rollback handled by context manager
-    await update.message.reply_text("❌ Error updating Auto-Dial caller ID. Please try again later.")
+            await update.message.reply_text("❌ Error updating Auto-Dial caller ID. Please try again later.")
 
 async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's route (one or two) for auto-dial campaigns."""
@@ -1496,21 +1486,22 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not user:
         return
 
-    # Check authorization first
-    if not await check_authorization(update, context, silent_fail=False):
-        return
-
     async with get_db_session() as session:
         result = await session.execute(select(Agent).filter_by(telegram_id=user.id))
         agent = result.scalar_one_or_none()
 
         if not agent:
-    await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+            return
+            
+        # Check authorization AFTER finding agent
+        if not agent.is_authorized:
+            await update.message.reply_text("❌ You are not authorized to use this bot. Please contact an administrator.")
             return
 
         if not context.args:
             current_route = agent.route or "Not set"
-    await update.message.reply_text(
+            await update.message.reply_text(
                 f"🌐 *Set Route*\n\n"
                 f"Current Route: `{current_route}`\n\n"
                 "Please specify which route to use:\n"
@@ -1518,17 +1509,17 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "`/route two` - Use Route Two\n\n"
                 "• Required for auto-dial campaigns\n"
                 "• Determines which trunk will be used",
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
             return
 
         route_arg = context.args[0].lower()
         
         if route_arg not in ['one', 'two']:
-    await update.message.reply_text(
+            await update.message.reply_text(
                 "❌ Invalid route. Please use:\n"
                 "`/route one` or `/route two`",
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
             return
 
@@ -1542,18 +1533,18 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session.add(agent)
             await session.commit()
             
-    await update.message.reply_text(
+            await update.message.reply_text(
                 f"✅ Route updated successfully!\n\n"
                 f"🌐 Route: `{route_arg.title()}`\n"
                 f"🤖 Auto-Dial: `Enabled`\n"
                 f"📞 Trunk: `autodial-{route_arg}`\n\n"
                 "You can now start auto-dial campaigns!",
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
             
         except SQLAlchemyError as e:
             logger.error(f"Database error in set_route: {str(e)}")
-    await update.message.reply_text("❌ Error updating route. Please try again later.")
+            await update.message.reply_text("❌ Error updating route. Please try again later.")
 
 async def check_ami_status(context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Check if AMI is connected and working."""
@@ -1604,11 +1595,12 @@ async def get_asterisk_status(context: ContextTypes.DEFAULT_TYPE) -> dict:
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show system status - Admin only command."""
-    # Check authorization first
-    if not await check_authorization(update, context, silent_fail=False):
+    user = update.effective_user
+    if not user:
         return
         
-    if update.effective_user.id != SUPER_ADMIN_ID:
+    # Check if user is super admin directly
+    if user.id != SUPER_ADMIN_ID:
         await update.message.reply_text(
             "❌ *Unauthorized Access*\n\n"
             "This command is only available to administrators.",
@@ -1687,12 +1679,12 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Manual calling disabled - use auto-dial campaigns only."""
-    await update.message.reply_text(
+            await update.message.reply_text(
         "📞 *Manual Calling Disabled*\n\n"
         "This bot now focuses exclusively on auto-dial campaigns.\n\n"
         "Use /autodial to start a campaign instead.",
-        parse_mode='Markdown'
-    )
+                parse_mode='Markdown'
+            )
 
 async def post_init(application: Application) -> None:
     global global_application_instance
@@ -1717,7 +1709,7 @@ async def post_init(application: Application) -> None:
             await application.bot.send_message(
                 chat_id=test_user_id,
                 text=test_message,
-        parse_mode='Markdown'
+                parse_mode='Markdown'
             )
             logger.info(f"Test notification sent to user {test_user_id}")
         except Exception as e:
@@ -3096,19 +3088,21 @@ async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_
     if not user:
         return ConversationHandler.END
 
-    # Check authorization first
-    if not await check_authorization(update, context, silent_fail=False):
-        return ConversationHandler.END
-
     async with get_db_session() as session: # <-- Async context
         # agent = session.query(Agent).filter_by(telegram_id=user.id).first()
         result = await session.execute(select(Agent).filter_by(telegram_id=user.id)) # <-- Async Query
         agent = result.scalar_one_or_none()
 
         if not agent:
-             if update.message: # Check if update.message exists
+            if update.message: # Check if update.message exists
                 await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
-             return ConversationHandler.END
+            return ConversationHandler.END
+            
+        # Check authorization AFTER finding agent
+        if not agent.is_authorized:
+            if update.message:
+                await update.message.reply_text("❌ You are not authorized to use this bot. Please contact an administrator.")
+            return ConversationHandler.END
 
         # Check if route is configured
         if not agent.route:
@@ -3118,7 +3112,7 @@ async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_
                     "`/route one` or `/route two`\n\n"
                     "Route selection determines which trunk will be used for campaigns."
                 )
-            try:
+             try:
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
              except Exception as e:
@@ -3145,10 +3139,6 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
     if not user:
         return ConversationHandler.END
 
-    # Check authorization first
-    if not await check_authorization(update, context, silent_fail=False):
-        return ConversationHandler.END
-
     agent = None # Initialize agent
     # Get agent data
     async with get_db_session() as session: # <-- Async context
@@ -3160,6 +3150,12 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
             if update.message: 
                 await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
             return ConversationHandler.END
+            
+        # Check authorization AFTER finding agent
+        if not agent.is_authorized:
+            if update.message:
+                await update.message.reply_text("❌ You are not authorized to use this bot. Please contact an administrator.")
+            return ConversationHandler.END
 
         # Check if route is configured
         if not agent.route:
@@ -3168,7 +3164,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                     "❌ No route configured. Please set your route first:\n\n"
                                         "`/route one` or `/route two`"
                 )
-            try:
+                 try:
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
                  except Exception as e:
@@ -3353,7 +3349,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
         
         except Exception as e:
             logger.error(f"Error pre-creating call records: {e}")
-    await update.message.reply_text(
+            await update.message.reply_text(
                 "⚠️ There was an error preparing the campaign. Please try again.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]])
             )
@@ -3400,10 +3396,6 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return AUTO_DIAL 
         
     await query.answer()
-    
-    # Check authorization
-    if not await check_authorization(update, context, silent_fail=True):
-        return ConversationHandler.END
     
     if query.data == "back_main":
         async with get_db_session() as session: # <-- Async context

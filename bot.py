@@ -1530,10 +1530,31 @@ async def post_init(application: Application) -> None:
                 if call_id and call_id in active_calls:
                     update_call_status(call_id, 'dtmf_received')
             
-            # UserEvent handling - no longer needed for classification
+            # Handle UserEvent for IVR timeout detection
             elif getattr(event, 'name', '') == 'UserEvent':
                 user_event_type = event.get('UserEvent')
-                logger.debug(f"UserEvent received: {user_event_type}")
+                if user_event_type == 'AutoDialResponse':
+                    # This indicates IVR timeout with no DTMF response
+                    logger.info(f"IVR timeout detected - marking call as potentially blocked")
+                    # Mark this call for blocked classification in hangup event
+                    uniqueid = event.get('Uniqueid')
+                    if uniqueid:
+                        # Store IVR timeout flag for hangup processing
+                        try:
+                            async with get_async_db_session() as session:
+                                call = await Call.find_by_uniqueid(session, uniqueid)
+                                if call:
+                                    call.call_metadata = {
+                                        **(call.call_metadata or {}),
+                                        "ivr_timeout": True,
+                                        "ivr_timeout_time": datetime.now().isoformat()
+                                    }
+                                await session.commit()
+                                    logger.info(f"Marked call {call.call_id} with IVR timeout flag")
+                        except Exception as e:
+                            logger.error(f"Error marking IVR timeout: {e}")
+                    else:
+                    logger.debug(f"UserEvent received: {user_event_type}")
         
         # Newchannel event listener to map Uniqueid to call_id using database
         async def new_channel_event_listener(manager, event):
@@ -1835,7 +1856,7 @@ async def dial_begin_event_listener(manager, event):
         logger.error(f"Error processing DialBegin event: {e}", exc_info=True)
 
 async def dial_end_event_listener(manager, event):
-    """Handle DialEnd events to get definitive dial results and detect fake responses."""
+    """Handle DialEnd events to track dial status for classification."""
     event_dict = dict(event)
     logger.debug(f"DialEnd Event: {event_dict}")
     
@@ -1854,7 +1875,7 @@ async def dial_end_event_listener(manager, event):
                 call = await Call.find_by_uniqueid(session, dest_uniqueid)
                 
             if call:
-                # Update call metadata with dial end information
+                # Store dial status in metadata for hangup event classification
                 current_metadata = call.call_metadata or {}
                 call.call_metadata = {
                     **current_metadata,
@@ -1862,22 +1883,26 @@ async def dial_end_event_listener(manager, event):
                         "time": datetime.now().isoformat(),
                         "dial_status": dial_status,
                         "dest_uniqueid": dest_uniqueid
-                    }
+                    },
+                    "dial_status": dial_status  # Store for easy access in hangup
                 }
                 
-                # Store dial status for hangup event processing
-                campaign_id = call.campaign_id
-                if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
-                    logger.info(f"Campaign {campaign_id}: Call {call.call_id} DialEnd - Status: {dial_status}")
-                    # Classification will be done in hangup_event_listener using both DialEnd and Hangup data
-                        
-                # Update call status based on dial result
-                if dial_status == 'ANSWER':
-                    call.status = 'answered'
-                elif dial_status in ['NOANSWER', 'BUSY', 'CONGESTION', 'CHANUNAVAIL']:
+                # Handle immediate failures (legitimate carrier rejections)
+                if dial_status in ['NOANSWER', 'BUSY', 'CONGESTION', 'CHANUNAVAIL']:
                     call.status = 'failed'
-                elif dial_status == 'CANCEL':
-                    call.status = 'cancelled'
+                    
+                    # Update campaign state for immediate failures
+                    campaign_id = call.campaign_id
+                    if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
+                        if campaign_states[campaign_id].active_calls > 0:
+                            campaign_states[campaign_id].active_calls -= 1
+                        campaign_states[campaign_id].failed_calls += 1
+                        logger.info(f"Campaign {campaign_id}: Call {call.call_id} marked as FAILED - {dial_status}")
+                        await update_campaign_message(campaign_id)
+                
+                elif dial_status == 'ANSWER':
+                    call.status = 'answered'
+                    logger.info(f"Call {call.call_id} answered - waiting for hangup to determine final classification")
                 
                 await session.commit()
                 logger.info(f"Updated call {call.call_id} with DialEnd status: {dial_status}")
@@ -2424,7 +2449,7 @@ async def bridge_event_listener(manager, event):
 
 
 async def hangup_event_listener(manager, event):
-    """Handle Hangup events from calls using database for tracking."""
+    """Handle Hangup events from calls using AMI event-based classification."""
     # Retrieve application instance from global variable (if needed for future use)
     global application
     application = global_application_instance
@@ -2438,8 +2463,9 @@ async def hangup_event_listener(manager, event):
     call_id_from_event = event.get('CallID')  # Fallback identifier
     cause = event.get('Cause')
     cause_txt = event.get('Cause-txt')
+    hangup_cause = event.get('X-Asterisk-HangupCause')  # Key indicator for blocked calls
 
-    logger.info(f"Hangup Event: Uniqueid={uniqueid}, Channel={channel}, TrackingID={tracking_id}, CallID={call_id_from_event}, Cause={cause}, Cause-txt={cause_txt}")
+    logger.info(f"Hangup Event: Uniqueid={uniqueid}, Channel={channel}, TrackingID={tracking_id}, CallID={call_id_from_event}, Cause={cause}, Cause-txt={cause_txt}, HangupCause={hangup_cause}")
 
     try:
         if tracking_id or uniqueid or channel or call_id_from_event:
@@ -2477,7 +2503,6 @@ async def hangup_event_listener(manager, event):
                 
                 if call:
                     # Update the call status to completed and record end time
-                    call.status = 'completed'
                     call.end_time = datetime.now()
                     
                     # Update call_metadata with hangup information
@@ -2487,53 +2512,56 @@ async def hangup_event_listener(manager, event):
                             "time": datetime.now().isoformat(),
                             "cause": cause,
                             "cause_txt": cause_txt,
+                            "hangup_cause": hangup_cause,
                             "channel": channel
                         }
                     }
                     
-                    await session.commit()
-                    logger.info(f"Call {call.call_id} (Uniqueid: {uniqueid}) marked as completed in database")
-                    
-                    # P1 Campaign Integration: AMI event-based call classification
+                    # AMI EVENT-BASED CLASSIFICATION LOGIC
                     campaign_id = call.campaign_id
                     if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
                         call_metadata = call.call_metadata or {}
-                        
-                        # Get AMI event data for classification
-                        dial_status = call_metadata.get('dial_end', {}).get('dial_status')
-                        hangup_cause = call_metadata.get('hangup', {}).get('cause_txt')
+                        dial_status = call_metadata.get('dial_status')
                         had_dtmf = call.status in ['dtmf_processed', 'dtmf_started']
                         
                         # Decrement active calls first
                         if campaign_states[campaign_id].active_calls > 0:
                             campaign_states[campaign_id].active_calls -= 1
                         
-                        # AMI event-based call classification
+                        # NEW AMI EVENT-BASED CLASSIFICATION
                         if dial_status in ['NOANSWER', 'BUSY', 'CONGESTION', 'CHANUNAVAIL']:
-                            # Legitimate carrier rejection
-                            campaign_states[campaign_id].failed_calls += 1
+                            # Legitimate carrier rejection - already handled in dial_end_event_listener
                             classification = "FAILED"
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - DialStatus: {dial_status}")
+                            call.status = 'failed'
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - {dial_status}")
+                            
                         elif dial_status == 'ANSWER' and had_dtmf:
-                            # Real human interaction with DTMF response
+                            # Real human answered and pressed buttons
                             campaign_states[campaign_id].completed_calls += 1
                             classification = "COMPLETED"
+                            call.status = 'completed'
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED - DTMF received")
-                        elif dial_status == 'ANSWER' and hangup_cause == 'Unallocated (unassigned) number' and not had_dtmf:
-                            # Carrier fake response: shows ANSWER but hangup cause reveals truth
+                            
+                        elif dial_status == 'ANSWER' and hangup_cause == "Unallocated (unassigned) number":
+                            # Carrier fake response - showed ANSWER but number doesn't exist
                             campaign_states[campaign_id].blocked_calls += 1
                             classification = "BLOCKED"
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as BLOCKED - carrier fake response (DialStatus: ANSWER, HangupCause: {hangup_cause})")
+                            call.status = 'blocked'
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as BLOCKED - carrier fake response (unallocated number)")
+                            
                         elif dial_status == 'ANSWER' and not had_dtmf:
-                            # Real answer but no DTMF response - still a failure for our purposes
+                            # Call answered but no DTMF - treat as failed (no value)
                             campaign_states[campaign_id].failed_calls += 1
                             classification = "FAILED"
+                            call.status = 'failed'
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - answered but no DTMF response")
+                            
                         else:
-                            # Default to failed for unclear cases
+                            # Fallback case
                             campaign_states[campaign_id].failed_calls += 1
                             classification = "FAILED"
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - unclear outcome (DialStatus: {dial_status}, HangupCause: {hangup_cause})")
+                            call.status = 'failed'
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - unknown case (DialStatus: {dial_status})")
                         
                         logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}, failed={campaign_states[campaign_id].failed_calls}, blocked={campaign_states[campaign_id].blocked_calls}")
                         
@@ -2541,17 +2569,22 @@ async def hangup_event_listener(manager, event):
                         await update_campaign_message(campaign_id)
                         
                         # Send individual notification if enabled (based on classification)
+                        call_duration = (call.end_time - call.start_time).total_seconds()
                         if classification == "COMPLETED":
                             await send_individual_notification(campaign_id, "call_completed", {
                                 "target_number": call.target_number,
-                                "cause": cause_txt or 'DTMF Response'
+                                "duration": f"{call_duration:.0f} seconds",
+                                "cause": cause_txt or 'Unknown'
                             })
                         elif classification == "BLOCKED":
                             await send_individual_notification(campaign_id, "call_blocked", {
                                 "target_number": call.target_number,
-                                "cause": f"Carrier blocked/fake response: {hangup_cause}"
+                                "duration": f"{call_duration:.0f} seconds",
+                                "cause": "Carrier blocked/fake response"
                             })
-                    # Legacy "Call Ended" notifications removed - campaign system handles all notifications now
+                    
+                    await session.commit()
+                    logger.info(f"Call {call.call_id} (Uniqueid: {uniqueid}) processed with classification")
                 else:
                     logger.debug(f"No call found in database for Uniqueid: {uniqueid}, Channel: {channel}, CallID: {call_id_from_event}")
     except Exception as e:

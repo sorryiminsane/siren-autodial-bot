@@ -102,20 +102,20 @@ async def update_campaign_message(campaign_id: int):
     duration = datetime.now() - campaign.start_time
     duration_str = f"{int(duration.total_seconds() // 60)}m {int(duration.total_seconds() % 60)}s"
     
-            # Build status message
-        status_text = (
-            f"🤖 **P1 Campaign #{campaign_id}**\n\n"
-            f"📊 **Progress** {campaign.get_completion_percentage()}%\n"
-            f"{campaign.get_progress_bar()} ({campaign.completed_calls + campaign.failed_calls + campaign.blocked_calls}/{campaign.total_calls})\n\n"
-            f"📞 **Call Stats**\n"
-            f"├─ ✅ Completed: {campaign.completed_calls}\n"
-            f"├─ 🔄 Active: {campaign.active_calls}\n"
-            f"├─ ❌ Failed: {campaign.failed_calls}\n"
-            f"├─ 🚫 Blocked: {campaign.blocked_calls}\n"
-            f"└─ 🔔 DTMF Responses: {campaign.dtmf_responses}\n\n"
-            f"⏱ **Duration:** {duration_str}\n"
-            f"⚡ **Status:** {'⏸ Paused' if campaign.is_paused else '🚀 Running'}"
-        )
+    # Build status message
+    status_text = (
+        f"🤖 **P1 Campaign #{campaign_id}**\n\n"
+        f"📊 **Progress** {campaign.get_completion_percentage()}%\n"
+        f"{campaign.get_progress_bar()} ({campaign.completed_calls + campaign.failed_calls + campaign.blocked_calls}/{campaign.total_calls})\n\n"
+        f"📞 **Call Stats**\n"
+        f"├─ ✅ Completed: {campaign.completed_calls}\n"
+        f"├─ 🔄 Active: {campaign.active_calls}\n"
+        f"├─ ❌ Failed: {campaign.failed_calls}\n"
+        f"├─ 🚫 Blocked: {campaign.blocked_calls}\n"
+        f"└─ 🔔 DTMF Responses: {campaign.dtmf_responses}\n\n"
+        f"⏱ **Duration:** {duration_str}\n"
+        f"⚡ **Status:** {'⏸ Paused' if campaign.is_paused else '🚀 Running'}"
+    )
     
     # Campaign control buttons
     keyboard = []

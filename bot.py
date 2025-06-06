@@ -1245,7 +1245,10 @@ async def handle_agent_management(update: Update, context: ContextTypes.DEFAULT_
             for agent in agents:
                 status = "✅ Authorized" if agent.is_authorized else "❌ Unauthorized"
                 phone = f"`{agent.phone_number}`" if agent.phone_number else "Not set"
-                agent_list += f"*ID:* `{agent.telegram_id}`\n*Username:* @{agent.username or 'None'}\n*Status:* {status}\n*Phone:* {phone}\n\n"
+                username = agent.username or 'None'
+                # Escape markdown characters in username
+                username_escaped = username.replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace(']', '\\]').replace('(', '\\(').replace(')', '\\)').replace('~', '\\~').replace('`', '\\`').replace('>', '\\>').replace('#', '\\#').replace('+', '\\+').replace('-', '\\-').replace('=', '\\=').replace('|', '\\|').replace('{', '\\{').replace('}', '\\}').replace('.', '\\.').replace('!', '\\!')
+                agent_list += f"*ID:* `{agent.telegram_id}`\n*Username:* @{username_escaped}\n*Status:* {status}\n*Phone:* {phone}\n\n"
             
             # Add a back button
             keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="manage_agents")]]
@@ -1355,8 +1358,7 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
         
         if not agent:
             await update.message.reply_text(
-                f"❌ Agent with ID `{agent_id}` not found. The agent must use the bot at least once.",
-                parse_mode='Markdown',
+                f"❌ Agent with ID {agent_id} not found. The agent must use the bot at least once.",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")],
                     [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
@@ -1368,29 +1370,29 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
         if action == "authorize":
             # Don't change if already authorized
             if agent.is_authorized:
+                username_display = agent.username or str(agent_id)
                 await update.message.reply_text(
-                    f"ℹ️ Agent @{agent.username or agent_id} is already authorized.",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="manage_agents")]]),
-                    parse_mode='Markdown'
+                    f"ℹ️ Agent @{username_display} is already authorized.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="manage_agents")]])
                 )
                 return AGENT_MANAGEMENT
             
             agent.is_authorized = True
             await session.commit()
             
+            username_display = agent.username or str(agent_id)
             await update.message.reply_text(
-                f"✅ Agent @{agent.username or agent_id} has been successfully authorized!",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")]]),
-                parse_mode='Markdown'
+                f"✅ Agent @{username_display} has been successfully authorized!",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")]])
             )
             
         elif action == "deauthorize":
             # Don't change if already unauthorized
             if not agent.is_authorized:
+                username_display = agent.username or str(agent_id)
                 await update.message.reply_text(
-                    f"ℹ️ Agent @{agent.username or agent_id} is already unauthorized.",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]]),
-                    parse_mode='Markdown'
+                    f"ℹ️ Agent @{username_display} is already unauthorized.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]])
                 )
                 return AGENT_MANAGEMENT
             
@@ -1398,18 +1400,17 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
             if agent.telegram_id == SUPER_ADMIN_ID:
                 await update.message.reply_text(
                     "❌ Cannot deauthorize the super admin!",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]]),
-                    parse_mode='Markdown'
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]])
                 )
                 return AGENT_MANAGEMENT
             
             agent.is_authorized = False
             await session.commit()
             
+            username_display = agent.username or str(agent_id)
             await update.message.reply_text(
-                f"❌ Agent @{agent.username or agent_id} has been deauthorized.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]]),
-                parse_mode='Markdown'
+                f"❌ Agent @{username_display} has been deauthorized.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]])
             )
     
     return AGENT_MANAGEMENT

@@ -361,7 +361,10 @@ async def send_individual_notification(campaign_id: int, notification_type: str,
     if not campaign.individual_notifications:
         return
         
-    user_id = campaign.user_id
+    # Get the chat_id where the campaign was initiated
+    chat_id = campaign.user_id  # Default fallback
+    if campaign_id in campaign_messages:
+        chat_id = campaign_messages[campaign_id]["chat_id"]
     
     if notification_type == "dtmf_response":
         message = (
@@ -393,7 +396,7 @@ async def send_individual_notification(campaign_id: int, notification_type: str,
         
     try:
         await global_application_instance.bot.send_message(
-            chat_id=user_id,
+            chat_id=chat_id,
             text=message,
             parse_mode='HTML'
         )
@@ -2425,8 +2428,13 @@ async def dtmf_event_listener(manager, event):
         
         notification += f"\n<b>⏰ Time:</b> {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
         
+        # Send to the chat where the campaign was initiated, not user's DM
+        target_chat_id = agent_id  # Default fallback
+        if campaign_id and campaign_id in campaign_messages:
+            target_chat_id = campaign_messages[campaign_id]["chat_id"]
+        
         await application.bot.send_message(
-            chat_id=agent_id,
+            chat_id=target_chat_id,
             text=notification,
             parse_mode='HTML'
         )
@@ -3434,9 +3442,9 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             parse_mode='Markdown'
         )
         
-        # Store message info for future updates
+        # Store message info for future updates - use the actual chat_id where campaign was started
         campaign_messages[campaign_id] = {
-            "chat_id": user_id,
+            "chat_id": update.effective_chat.id,
             "message_id": campaign_message.message_id
         }
         

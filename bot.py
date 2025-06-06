@@ -298,13 +298,13 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     # Auto-Dial button (only if authorized - auto-enable if authorized)
     if agent.is_authorized:
-    keyboard.append([
-            InlineKeyboardButton("🤖 Auto-Dial Campaign", callback_data="auto_dial")
-    ])
-    
-    # Campaign History button
         keyboard.append([
-        InlineKeyboardButton("📊 Campaign History", callback_data="campaign_history")
+            InlineKeyboardButton("🤖 Auto-Dial Campaign", callback_data="auto_dial")
+        ])
+    
+        # Campaign History button
+        keyboard.append([
+            InlineKeyboardButton("📊 Campaign History", callback_data="campaign_history")
         ])
     
     # Settings button (auto-dial settings only)
@@ -1199,21 +1199,21 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def set_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Phone number registration disabled for auto-dial only bot."""
-            await update.message.reply_text(
+    await update.message.reply_text(
         "📱 *Phone Registration Disabled*\n\n"
         "Phone number registration is not required for auto-dial campaigns.\n\n"
         "Use /autodial to start a campaign directly.",
-                parse_mode='Markdown'
-            )
+        parse_mode='Markdown'
+    )
 
 async def set_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manual caller ID disabled - use auto-dial caller ID only."""
-            await update.message.reply_text(
+    await update.message.reply_text(
         "📲 *Manual Caller ID Disabled*\n\n"
         "Manual caller ID is not used in auto-dial campaigns.\n\n"
         "Use /setautodialcid to set the caller ID for campaigns.",
-                parse_mode='Markdown'
-            )
+        parse_mode='Markdown'
+    )
 
 async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's outbound caller ID specifically for Auto-Dial campaigns."""
@@ -1233,7 +1233,7 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
 
         if not agent:
             await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
-             return
+            return
 
         # Argument parsing (no DB change)
         if not context.args:
@@ -2923,7 +2923,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
             try:
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
-                 except Exception as e:
+            except Exception as e:
                 logger.error(f"Error showing main menu after route check in file handler: {e}")
                 return ConversationHandler.END
 
@@ -3009,11 +3009,13 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
             else:
                 # Simple phone number format
                 normalized = re.sub(r'[^0-9+]', '', original_line)
-            if not normalized.startswith('+'):
-                if len(normalized) == 11 and normalized.startswith('1'):
+                if not normalized.startswith('+'):
+                    if len(normalized) == 11 and normalized.startswith('1'):
                         phone_number = '+' + normalized
-                elif len(normalized) == 10:
+                    elif len(normalized) == 10:
                         phone_number = '+1' + normalized
+                    else:
+                        phone_number = normalized
                 else:
                     phone_number = normalized
                 

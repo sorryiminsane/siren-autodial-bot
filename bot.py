@@ -1476,12 +1476,12 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manual calling disabled - use auto-dial campaigns only."""
-            await update.message.reply_text(
+    await update.message.reply_text(
         "📞 *Manual Calling Disabled*\n\n"
         "This bot now focuses exclusively on auto-dial campaigns.\n\n"
         "Use /autodial to start a campaign instead.",
-                parse_mode='Markdown'
-            )
+        parse_mode='Markdown'
+    )
 
 async def post_init(application: Application) -> None:
     global global_application_instance
@@ -1550,11 +1550,11 @@ async def post_init(application: Application) -> None:
                                         "ivr_timeout_time": datetime.now().isoformat()
                                     }
                                 await session.commit()
-                                    logger.info(f"Marked call {call.call_id} with IVR timeout flag")
+                                logger.info(f"Marked call {call.call_id} with IVR timeout flag")
                         except Exception as e:
                             logger.error(f"Error marking IVR timeout: {e}")
                     else:
-                    logger.debug(f"UserEvent received: {user_event_type}")
+                        logger.debug(f"UserEvent received: {user_event_type}")
         
         # Newchannel event listener to map Uniqueid to call_id using database
         async def new_channel_event_listener(manager, event):
@@ -2873,7 +2873,7 @@ async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_
             try:
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
-             except Exception as e:
+            except Exception as e:
                 logger.error(f"Error showing main menu after route check in /autodial: {e}")
                 return ConversationHandler.END
 

@@ -3103,10 +3103,10 @@ async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_
                     "`/route one` or `/route two`\n\n"
                     "Route selection determines which trunk will be used for campaigns."
                 )
-             try:
+            try:
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
-             except Exception as e:
+            except Exception as e:
                 logger.error(f"Error showing main menu after route check in /autodial: {e}")
                 return ConversationHandler.END
 
@@ -3155,10 +3155,10 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                     "❌ No route configured. Please set your route first:\n\n"
                                         "`/route one` or `/route two`"
                 )
-                 try:
+            try:
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
-                 except Exception as e:
+            except Exception as e:
                 logger.error(f"Error showing main menu after route check in file handler: {e}")
                 return ConversationHandler.END
 
@@ -3176,8 +3176,8 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
         file = await context.bot.get_file(document.file_id)
         # Limit download size to prevent abuse (e.g., 1MB)
         if file.file_size > 1 * 1024 * 1024:
-             await update.message.reply_text("❌ File is too large (max 1MB). Please upload a smaller file.")
-             return AUTO_DIAL
+            await update.message.reply_text("❌ File is too large (max 1MB). Please upload a smaller file.")
+            return AUTO_DIAL
              
         file_content_bytes = await file.download_as_bytearray()
         file_content = file_content_bytes.decode('utf-8')
@@ -3241,13 +3241,13 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                     # Extract address (anything after phone number that contains digits/address-like content)
                     elif phone_found and not lead_data.get('address') and (any(char.isdigit() for char in part) or any(word in part.lower() for word in ['st', 'ave', 'rd', 'dr', 'blvd', 'lane', 'way', 'court', 'place'])):
                         lead_data['address'] = part
-                        else:
+            else:
                 # Simple phone number format
                 normalized = re.sub(r'[^0-9+]', '', original_line)
-            if not normalized.startswith('+'):
-                if len(normalized) == 11 and normalized.startswith('1'):
+                if not normalized.startswith('+'):
+                    if len(normalized) == 11 and normalized.startswith('1'):
                         phone_number = '+' + normalized
-                elif len(normalized) == 10:
+                    elif len(normalized) == 10:
                         phone_number = '+1' + normalized
                     else:
                         phone_number = normalized
@@ -3265,11 +3265,11 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                 invalid_lines.append((line_num, original_line))
 
         if not valid_leads:
-             await update.message.reply_text(
+            await update.message.reply_text(
                 f"❌ Processed {processed_count} lines, but found no valid phone numbers."
                 " Please check the file format and try again."
             )
-             return AUTO_DIAL
+            return AUTO_DIAL
         
         # Pre-create call records for each valid number
         # This will make parallel dialing more reliable by having records ready before calls are made

@@ -42,6 +42,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Admin/Logging Configuration
+LOG_GROUP_ID = -4865417097  # Log group for failure notifications
+MAX_RETRY_ATTEMPTS = 3      # Maximum retry attempts per call
+RETRY_DELAY_SECONDS = 90    # Delay between retry attempts
+
 # Conversation states
 (MAIN_MENU, SETTINGS, PHONE_SETTINGS, 
  CALL_MENU, AGENT_MANAGEMENT, AUTO_DIAL, AGENT_ID_INPUT) = range(7)
@@ -66,13 +71,17 @@ class CampaignState:
         self.total_calls = total_calls
         self.completed_calls = 0
         self.active_calls = 0
+        # HIDDEN from users - tracked internally for admin/retry logic
         self.failed_calls = 0
-        self.blocked_calls = 0  # NEW: Track blocked/fake calls separately
+        self.blocked_calls = 0
         self.dtmf_responses = 0
         self.is_paused = False
         self.individual_notifications = False  # Toggleable setting
         self.start_time = datetime.now()
         self.last_update = datetime.now()
+        # Retry system
+        self.retry_queue = []  # List of calls to retry: [{"call_id": str, "target_number": str, "retry_count": int, "last_attempt": datetime}]
+        self.total_retries_processed = 0
         
     def get_progress_bar(self, width=10):
         """Generate progress bar for campaign."""
@@ -83,7 +92,14 @@ class CampaignState:
         return "▰" * filled + "▱" * (width - filled)
         
     def get_completion_percentage(self):
-        """Get completion percentage."""
+        """Get completion percentage (user-facing - only completed calls)."""
+        if self.total_calls == 0:
+            return 0
+        # Only count completed calls for user-facing percentage
+        return int((self.completed_calls / self.total_calls) * 100)
+    
+    def get_actual_completion_percentage(self):
+        """Get actual completion percentage including failed/blocked (admin-only)."""
         if self.total_calls == 0:
             return 0
         return int(((self.completed_calls + self.failed_calls + self.blocked_calls) / self.total_calls) * 100)
@@ -102,16 +118,15 @@ async def update_campaign_message(campaign_id: int):
     duration = datetime.now() - campaign.start_time
     duration_str = f"{int(duration.total_seconds() // 60)}m {int(duration.total_seconds() % 60)}s"
     
-    # Build status message
+    # Build status message (user-facing - clean metrics only)
+    processed_calls = campaign.completed_calls + campaign.failed_calls + campaign.blocked_calls
     status_text = (
         f"🤖 **P1 Campaign #{campaign_id}**\n\n"
         f"📊 **Progress** {campaign.get_completion_percentage()}%\n"
-        f"{campaign.get_progress_bar()} ({campaign.completed_calls + campaign.failed_calls + campaign.blocked_calls}/{campaign.total_calls})\n\n"
+        f"{campaign.get_progress_bar()} ({processed_calls}/{campaign.total_calls})\n\n"
         f"📞 **Call Stats**\n"
         f"├─ ✅ Completed: {campaign.completed_calls}\n"
         f"├─ 🔄 Active: {campaign.active_calls}\n"
-        f"├─ ❌ Failed: {campaign.failed_calls}\n"
-        f"├─ 🚫 Blocked: {campaign.blocked_calls}\n"
         f"└─ 🔔 DTMF Responses: {campaign.dtmf_responses}\n\n"
         f"⏱ **Duration:** {duration_str}\n"
         f"⚡ **Status:** {'⏸ Paused' if campaign.is_paused else '🚀 Running'}"
@@ -148,6 +163,194 @@ async def update_campaign_message(campaign_id: int):
         campaign.last_update = datetime.now()
     except Exception as e:
         logger.error(f"Failed to update campaign message {campaign_id}: {e}")
+
+async def queue_call_for_retry(campaign_id: int, call, retry_count: int, failure_type: str, failure_reason: str):
+    """Queue a failed call for retry with delay."""
+    if campaign_id not in campaign_states:
+        return
+        
+    campaign = campaign_states[campaign_id]
+    
+    # Add to retry queue
+    retry_entry = {
+        "call_id": call.call_id,
+        "target_number": call.target_number,
+        "retry_count": retry_count,
+        "last_attempt": datetime.now(),
+        "failure_type": failure_type,
+        "failure_reason": failure_reason,
+        "call_metadata": call.call_metadata or {}
+    }
+    
+    campaign.retry_queue.append(retry_entry)
+    
+    # Send admin notification about retry being queued
+    await send_admin_failure_log(campaign_id, "retry_queued", {
+        "target_number": call.target_number,
+        "retry_count": retry_count,
+        "failure_reason": failure_reason
+    })
+    
+    logger.info(f"Campaign {campaign_id}: Queued {call.target_number} for retry {retry_count}/{MAX_RETRY_ATTEMPTS} (reason: {failure_reason})")
+
+async def process_retry_queue():
+    """Process retry queues for all active campaigns."""
+    for campaign_id, campaign in campaign_states.items():
+        if campaign.is_paused or not campaign.retry_queue:
+            continue
+            
+        # Check for calls ready to retry (90 seconds have passed)
+        ready_to_retry = []
+        current_time = datetime.now()
+        
+        for retry_entry in campaign.retry_queue[:]:  # Copy list to avoid modification during iteration
+            time_since_last = (current_time - retry_entry["last_attempt"]).total_seconds()
+            
+            if time_since_last >= RETRY_DELAY_SECONDS:
+                ready_to_retry.append(retry_entry)
+                campaign.retry_queue.remove(retry_entry)
+        
+        # Process ready retries
+        for retry_entry in ready_to_retry:
+            await execute_retry_call(campaign_id, retry_entry)
+
+async def retry_queue_processor():
+    """Background task to continuously process retry queues."""
+    logger.info("Starting retry queue processor")
+    
+    while True:
+        try:
+            await process_retry_queue()
+            # Check every 30 seconds for retry opportunities
+            await asyncio.sleep(30)
+        except Exception as e:
+            logger.error(f"Error in retry queue processor: {e}")
+            # Continue running even if there's an error
+            await asyncio.sleep(30)
+
+async def execute_retry_call(campaign_id: int, retry_entry: dict):
+    """Execute a retry call attempt."""
+    try:
+        # Get campaign state
+        campaign = campaign_states[campaign_id]
+        target_number = retry_entry["target_number"]
+        retry_count = retry_entry["retry_count"]
+        
+        # Get agent info for the call
+        async with get_async_db_session() as session:
+            result = await session.execute(select(Agent).filter_by(telegram_id=campaign.user_id))
+            agent = result.scalar_one_or_none()
+            
+            if not agent:
+                logger.error(f"Agent not found for retry call in campaign {campaign_id}")
+                return
+                
+            caller_id = agent.autodial_caller_id if agent.autodial_caller_id else None
+            trunk = f"autodial-{agent.route}" if agent.route else "autodial-one"
+            
+            # Create new call record for retry
+            timestamp = int(time.time())
+            microseconds = datetime.now().microsecond
+            new_call_id = f"retry_{campaign_id}_{timestamp}_{retry_count}_{microseconds}"
+            tracking_id = f"JKD1.R{retry_count}.{timestamp % 1000}"
+            
+            # Copy original call metadata and add retry info
+            call_metadata = retry_entry.get("call_metadata", {})
+            call_metadata.update({
+                "retry_count": retry_count,
+                "original_call_id": retry_entry["call_id"],
+                "retry_reason": retry_entry["failure_reason"],
+                "retry_timestamp": datetime.now().isoformat()
+            })
+            
+            new_call = Call(
+                call_id=new_call_id,
+                campaign_id=campaign_id,
+                tracking_id=tracking_id,
+                agent_telegram_id=campaign.user_id,
+                target_number=target_number,
+                caller_id=caller_id,
+                trunk=trunk,
+                status="queued",
+                start_time=datetime.now(),
+                call_metadata=call_metadata
+            )
+            session.add(new_call)
+            await session.commit()
+            
+            logger.info(f"Created retry call record {new_call_id} for {target_number} (attempt {retry_count})")
+        
+        # Originate the retry call
+        result = await originate_autodial_call_from_record(
+            context=global_application_instance,
+            call_id=new_call_id,
+            tracking_id=tracking_id
+        )
+        
+        if result.get('success', False):
+            # Update campaign state - mark as active
+            campaign.active_calls += 1
+            campaign.total_retries_processed += 1
+            
+            # Update campaign message
+            await update_campaign_message(campaign_id)
+            
+            logger.info(f"Campaign {campaign_id}: Successfully initiated retry call to {target_number} (attempt {retry_count})")
+        else:
+            logger.error(f"Campaign {campaign_id}: Failed to initiate retry call to {target_number}: {result.get('message', 'Unknown error')}")
+            
+    except Exception as e:
+        logger.error(f"Error executing retry call for {retry_entry['target_number']}: {e}")
+
+async def send_admin_failure_log(campaign_id: int, failure_type: str, data: dict):
+    """Send detailed failure information to admin log group."""
+    try:
+        if failure_type == "failed":
+            message = (
+                f"❌ <b>CALL FAILED</b>\n\n"
+                f"<b>Campaign #{campaign_id}</b>\n"
+                f"📱 {data.get('target_number', 'Unknown')}\n"
+                f"⏱ Duration: {data.get('duration', 'Unknown')}\n"
+                f"🔍 Cause: {data.get('cause', 'Unknown')}\n"
+                f"🔄 Retry: {data.get('retry_count', 0)}/{MAX_RETRY_ATTEMPTS}\n"
+                f"⏰ {datetime.now().strftime('%H:%M:%S')}"
+            )
+        elif failure_type == "blocked":
+            message = (
+                f"🚫 <b>CALL BLOCKED</b>\n\n"
+                f"<b>Campaign #{campaign_id}</b>\n"
+                f"📱 {data.get('target_number', 'Unknown')}\n"
+                f"⏱ Duration: {data.get('duration', 'Unknown')}\n"
+                f"🛡️ Cause: {data.get('cause', 'Carrier blocked')}\n"
+                f"🔄 Retry: {data.get('retry_count', 0)}/{MAX_RETRY_ATTEMPTS}\n"
+                f"⏰ {datetime.now().strftime('%H:%M:%S')}"
+            )
+        elif failure_type == "retry_queued":
+            message = (
+                f"🔄 <b>RETRY QUEUED</b>\n\n"
+                f"<b>Campaign #{campaign_id}</b>\n"
+                f"📱 {data.get('target_number', 'Unknown')}\n"
+                f"🔄 Attempt: {data.get('retry_count', 0)}/{MAX_RETRY_ATTEMPTS}\n"
+                f"⏰ Next attempt in {RETRY_DELAY_SECONDS}s"
+            )
+        elif failure_type == "max_retries":
+            message = (
+                f"⛔ <b>MAX RETRIES REACHED</b>\n\n"
+                f"<b>Campaign #{campaign_id}</b>\n"
+                f"📱 {data.get('target_number', 'Unknown')}\n"
+                f"🔄 Final attempt: {MAX_RETRY_ATTEMPTS}/{MAX_RETRY_ATTEMPTS}\n"
+                f"💀 Permanently failed"
+            )
+        else:
+            return
+            
+        await global_application_instance.bot.send_message(
+            chat_id=LOG_GROUP_ID,
+            text=message,
+            parse_mode='HTML'
+        )
+    except Exception as e:
+        logger.error(f"Failed to send admin failure log: {e}")
 
 async def send_individual_notification(campaign_id: int, notification_type: str, data: dict):
     """Send individual notification if enabled for campaign."""
@@ -298,9 +501,9 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     # Auto-Dial button (only if authorized - auto-enable if authorized)
     if agent.is_authorized:
-        keyboard.append([
+    keyboard.append([
             InlineKeyboardButton("🤖 Auto-Dial Campaign", callback_data="auto_dial")
-        ])
+    ])
     
         # Campaign History button
         keyboard.append([
@@ -745,20 +948,45 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         campaign_id = int(query.data.split("_")[-1])
         if campaign_id in campaign_states:
             campaign = campaign_states[campaign_id]
-            details_text = (
-                f"📊 **Campaign #{campaign_id} Details**\n\n"
-                f"**Statistics:**\n"
-                f"├─ Total Calls: {campaign.total_calls}\n"
-                f"├─ Completed: {campaign.completed_calls}\n"
-                f"├─ Active: {campaign.active_calls}\n"
-                f"├─ Failed: {campaign.failed_calls}\n"
-                f"└─ DTMF Responses: {campaign.dtmf_responses}\n\n"
-                f"**Settings:**\n"
-                f"├─ Individual Notifications: {'✅ On' if campaign.individual_notifications else '❌ Off'}\n"
-                f"├─ Status: {'⏸ Paused' if campaign.is_paused else '🚀 Running'}\n"
-                f"└─ Started: {campaign.start_time.strftime('%H:%M:%S')}\n\n"
-                f"**Response Rate:** {(campaign.dtmf_responses / max(campaign.completed_calls, 1) * 100):.1f}%"
-            )
+            
+            # Show different details based on user role
+            if update.effective_user.id == SUPER_ADMIN_ID:
+                # Admin view - show everything including hidden metrics
+                details_text = (
+                    f"🔧 **ADMIN: Campaign #{campaign_id} Details**\n\n"
+                    f"**User-Facing Statistics:**\n"
+                    f"├─ Total Calls: {campaign.total_calls}\n"
+                    f"├─ Completed: {campaign.completed_calls}\n"
+                    f"├─ Active: {campaign.active_calls}\n"
+                    f"└─ DTMF Responses: {campaign.dtmf_responses}\n\n"
+                    f"**Hidden Internal Metrics:**\n"
+                    f"├─ ❌ Failed: {campaign.failed_calls}\n"
+                    f"├─ 🚫 Blocked: {campaign.blocked_calls}\n"
+                    f"├─ 🔄 Retry Queue: {len(campaign.retry_queue)}\n"
+                    f"└─ 📈 Total Retries: {campaign.total_retries_processed}\n\n"
+                    f"**Settings:**\n"
+                    f"├─ Individual Notifications: {'✅ On' if campaign.individual_notifications else '❌ Off'}\n"
+                    f"├─ Status: {'⏸ Paused' if campaign.is_paused else '🚀 Running'}\n"
+                    f"└─ Started: {campaign.start_time.strftime('%H:%M:%S')}\n\n"
+                    f"**Response Rate:** {(campaign.dtmf_responses / max(campaign.completed_calls, 1) * 100):.1f}%\n"
+                    f"**Actual Completion:** {campaign.get_actual_completion_percentage()}%"
+                )
+            else:
+                # User view - clean, stress-free metrics
+                details_text = (
+                    f"📊 **Campaign #{campaign_id} Details**\n\n"
+                    f"**Statistics:**\n"
+                    f"├─ Total Calls: {campaign.total_calls}\n"
+                    f"├─ Completed: {campaign.completed_calls}\n"
+                    f"├─ Active: {campaign.active_calls}\n"
+                    f"└─ DTMF Responses: {campaign.dtmf_responses}\n\n"
+                    f"**Settings:**\n"
+                    f"├─ Individual Notifications: {'✅ On' if campaign.individual_notifications else '❌ Off'}\n"
+                    f"├─ Status: {'⏸ Paused' if campaign.is_paused else '🚀 Running'}\n"
+                    f"└─ Started: {campaign.start_time.strftime('%H:%M:%S')}\n\n"
+                    f"**Response Rate:** {(campaign.dtmf_responses / max(campaign.completed_calls, 1) * 100):.1f}%"
+                )
+            
             await query.message.edit_text(
                 details_text,
                 parse_mode='Markdown',
@@ -1199,21 +1427,21 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def set_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Phone number registration disabled for auto-dial only bot."""
-    await update.message.reply_text(
+            await update.message.reply_text(
         "📱 *Phone Registration Disabled*\n\n"
         "Phone number registration is not required for auto-dial campaigns.\n\n"
         "Use /autodial to start a campaign directly.",
-        parse_mode='Markdown'
-    )
+                parse_mode='Markdown'
+            )
 
 async def set_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manual caller ID disabled - use auto-dial caller ID only."""
-    await update.message.reply_text(
+            await update.message.reply_text(
         "📲 *Manual Caller ID Disabled*\n\n"
         "Manual caller ID is not used in auto-dial campaigns.\n\n"
         "Use /setautodialcid to set the caller ID for campaigns.",
-        parse_mode='Markdown'
-    )
+                parse_mode='Markdown'
+            )
 
 async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's outbound caller ID specifically for Auto-Dial campaigns."""
@@ -1233,7 +1461,7 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
 
         if not agent:
             await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
-            return
+             return
 
         # Argument parsing (no DB change)
         if not context.args:
@@ -1476,12 +1704,12 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manual calling disabled - use auto-dial campaigns only."""
-    await update.message.reply_text(
+            await update.message.reply_text(
         "📞 *Manual Calling Disabled*\n\n"
         "This bot now focuses exclusively on auto-dial campaigns.\n\n"
         "Use /autodial to start a campaign instead.",
-        parse_mode='Markdown'
-    )
+                parse_mode='Markdown'
+            )
 
 async def post_init(application: Application) -> None:
     global global_application_instance
@@ -1734,6 +1962,9 @@ async def post_init(application: Application) -> None:
         # Store in application context for access in handlers
         application.bot_data["ami_manager"] = ami_manager
         global_application_instance = application # Store application instance globally
+        
+        # Start retry queue processor
+        asyncio.create_task(retry_queue_processor())
 
     except Exception as e:
         logger.error(f"Failed to establish AMI connection or register listener: {str(e)}")
@@ -2528,59 +2759,93 @@ async def hangup_event_listener(manager, event):
                         if campaign_states[campaign_id].active_calls > 0:
                             campaign_states[campaign_id].active_calls -= 1
                         
-                        # NEW AMI EVENT-BASED CLASSIFICATION
+                        # Get current retry count for this call
+                        current_retry_count = call.call_metadata.get('retry_count', 0) if call.call_metadata else 0
+                        call_duration = (call.end_time - call.start_time).total_seconds()
+                        
+                        # NEW AMI EVENT-BASED CLASSIFICATION WITH RETRY LOGIC
                         if dial_status in ['NOANSWER', 'BUSY', 'CONGESTION', 'CHANUNAVAIL']:
-                            # Legitimate carrier rejection - already handled in dial_end_event_listener
+                            # Legitimate carrier rejection - queue for retry
                             classification = "FAILED"
                             call.status = 'failed'
+                            campaign_states[campaign_id].failed_calls += 1
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - {dial_status}")
                             
+                            # Queue for retry if under max attempts
+                            if current_retry_count < MAX_RETRY_ATTEMPTS:
+                                await queue_call_for_retry(campaign_id, call, current_retry_count + 1, "failed", dial_status)
+                            else:
+                                await send_admin_failure_log(campaign_id, "max_retries", {
+                                    "target_number": call.target_number,
+                                    "retry_count": current_retry_count
+                                })
+                            
                         elif dial_status == 'ANSWER' and had_dtmf:
-                            # Real human answered and pressed buttons
+                            # Real human answered and pressed buttons - SUCCESS!
                             campaign_states[campaign_id].completed_calls += 1
                             classification = "COMPLETED"
                             call.status = 'completed'
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED - DTMF received")
                             
                         elif dial_status == 'ANSWER' and hangup_cause == "Unallocated (unassigned) number":
-                            # Carrier fake response - showed ANSWER but number doesn't exist
-                            campaign_states[campaign_id].blocked_calls += 1
+                            # Carrier fake response - queue for retry
                             classification = "BLOCKED"
                             call.status = 'blocked'
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as BLOCKED - carrier fake response (unallocated number)")
+                            campaign_states[campaign_id].blocked_calls += 1
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as BLOCKED - carrier fake response")
+                            
+                            # Queue for retry if under max attempts
+                            if current_retry_count < MAX_RETRY_ATTEMPTS:
+                                await queue_call_for_retry(campaign_id, call, current_retry_count + 1, "blocked", "carrier fake response")
+                            else:
+                                await send_admin_failure_log(campaign_id, "max_retries", {
+                                    "target_number": call.target_number,
+                                    "retry_count": current_retry_count
+                                })
                             
                         elif dial_status == 'ANSWER' and not had_dtmf:
-                            # Call answered but no DTMF - treat as failed (no value)
-                            campaign_states[campaign_id].failed_calls += 1
+                            # Call answered but no DTMF - queue for retry
                             classification = "FAILED"
                             call.status = 'failed'
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - answered but no DTMF response")
+                            campaign_states[campaign_id].failed_calls += 1
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - answered but no DTMF")
+                            
+                            # Queue for retry if under max attempts
+                            if current_retry_count < MAX_RETRY_ATTEMPTS:
+                                await queue_call_for_retry(campaign_id, call, current_retry_count + 1, "failed", "no DTMF response")
+                            else:
+                                await send_admin_failure_log(campaign_id, "max_retries", {
+                                    "target_number": call.target_number,
+                                    "retry_count": current_retry_count
+                                })
                             
                         else:
-                            # Fallback case
-                            campaign_states[campaign_id].failed_calls += 1
+                            # Fallback case - queue for retry
                             classification = "FAILED"
                             call.status = 'failed'
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - unknown case (DialStatus: {dial_status})")
+                            campaign_states[campaign_id].failed_calls += 1
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - unknown case")
+                            
+                            # Queue for retry if under max attempts
+                            if current_retry_count < MAX_RETRY_ATTEMPTS:
+                                await queue_call_for_retry(campaign_id, call, current_retry_count + 1, "failed", f"unknown case (DialStatus: {dial_status})")
+                            else:
+                                await send_admin_failure_log(campaign_id, "max_retries", {
+                                    "target_number": call.target_number,
+                                    "retry_count": current_retry_count
+                                })
                         
-                        logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}, failed={campaign_states[campaign_id].failed_calls}, blocked={campaign_states[campaign_id].blocked_calls}")
+                        logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}")
                         
-                        # Update campaign message in real-time
+                        # Update campaign message in real-time (only shows positive metrics to users)
                         await update_campaign_message(campaign_id)
                         
-                        # Send individual notification if enabled (based on classification)
-                        call_duration = (call.end_time - call.start_time).total_seconds()
+                        # Send individual notification ONLY for completed calls (hide failures from users)
                         if classification == "COMPLETED":
                             await send_individual_notification(campaign_id, "call_completed", {
                                 "target_number": call.target_number,
                                 "duration": f"{call_duration:.0f} seconds",
                                 "cause": cause_txt or 'Unknown'
-                            })
-                        elif classification == "BLOCKED":
-                            await send_individual_notification(campaign_id, "call_blocked", {
-                                "target_number": call.target_number,
-                                "duration": f"{call_duration:.0f} seconds",
-                                "cause": "Carrier blocked/fake response"
                             })
                     
                     await session.commit()
@@ -2873,7 +3138,7 @@ async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_
             try:
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
-            except Exception as e:
+             except Exception as e:
                 logger.error(f"Error showing main menu after route check in /autodial: {e}")
                 return ConversationHandler.END
 
@@ -2923,7 +3188,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
             try:
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
-            except Exception as e:
+                 except Exception as e:
                 logger.error(f"Error showing main menu after route check in file handler: {e}")
                 return ConversationHandler.END
 
@@ -3009,10 +3274,10 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
             else:
                 # Simple phone number format
                 normalized = re.sub(r'[^0-9+]', '', original_line)
-                if not normalized.startswith('+'):
-                    if len(normalized) == 11 and normalized.startswith('1'):
+            if not normalized.startswith('+'):
+                if len(normalized) == 11 and normalized.startswith('1'):
                         phone_number = '+' + normalized
-                    elif len(normalized) == 10:
+                elif len(normalized) == 10:
                         phone_number = '+1' + normalized
                     else:
                         phone_number = normalized

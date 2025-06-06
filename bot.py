@@ -1677,15 +1677,6 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Manual calling functionality removed - auto-dial only bot
 
-async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Manual calling disabled - use auto-dial campaigns only."""
-            await update.message.reply_text(
-        "📞 *Manual Calling Disabled*\n\n"
-        "This bot now focuses exclusively on auto-dial campaigns.\n\n"
-        "Use /autodial to start a campaign instead.",
-                parse_mode='Markdown'
-            )
-
 async def post_init(application: Application) -> None:
     global global_application_instance
     """Post initialization hook for the bot to set up AMI connection and listener."""
@@ -3601,7 +3592,7 @@ def main():
     setcid_handler = CommandHandler("setcid", set_caller_id)
     setautodialcid_handler = CommandHandler("setautodialcid", set_autodial_caller_id)
     route_handler = CommandHandler("route", set_route)
-    call_handler = CommandHandler("call", call)
+
     status_handler = CommandHandler("status", status)
 
     # Create a filter for authorized users only
@@ -3640,7 +3631,6 @@ def main():
             CommandHandler("setphone", set_phone),
             CommandHandler("setcid", set_caller_id),
             CommandHandler("route", set_route),
-            CommandHandler("call", call),
         ],
         allow_reentry=True
     )
@@ -3651,7 +3641,7 @@ def main():
     application.add_handler(setcid_handler)
     application.add_handler(setautodialcid_handler)
     application.add_handler(route_handler)
-    application.add_handler(call_handler)
+
     application.add_handler(status_handler)
     
     # Run the bot

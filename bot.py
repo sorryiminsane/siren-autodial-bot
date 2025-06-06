@@ -298,14 +298,14 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     # Auto-Dial button (only if authorized - auto-enable if authorized)
     if agent.is_authorized:
-        keyboard.append([
+    keyboard.append([
             InlineKeyboardButton("🤖 Auto-Dial Campaign", callback_data="auto_dial")
-        ])
+    ])
     
     # Campaign History button
-    keyboard.append([
+        keyboard.append([
         InlineKeyboardButton("📊 Campaign History", callback_data="campaign_history")
-    ])
+        ])
     
     # Settings button (auto-dial settings only)
     keyboard.append([
@@ -1199,21 +1199,21 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def set_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Phone number registration disabled for auto-dial only bot."""
-    await update.message.reply_text(
+            await update.message.reply_text(
         "📱 *Phone Registration Disabled*\n\n"
         "Phone number registration is not required for auto-dial campaigns.\n\n"
         "Use /autodial to start a campaign directly.",
-        parse_mode='Markdown'
-    )
+                parse_mode='Markdown'
+            )
 
 async def set_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manual caller ID disabled - use auto-dial caller ID only."""
-    await update.message.reply_text(
+            await update.message.reply_text(
         "📲 *Manual Caller ID Disabled*\n\n"
         "Manual caller ID is not used in auto-dial campaigns.\n\n"
         "Use /setautodialcid to set the caller ID for campaigns.",
-        parse_mode='Markdown'
-    )
+                parse_mode='Markdown'
+            )
 
 async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's outbound caller ID specifically for Auto-Dial campaigns."""
@@ -1233,7 +1233,7 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
 
         if not agent:
             await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
-            return
+             return
 
         # Argument parsing (no DB change)
         if not context.args:
@@ -1476,12 +1476,12 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manual calling disabled - use auto-dial campaigns only."""
-    await update.message.reply_text(
+            await update.message.reply_text(
         "📞 *Manual Calling Disabled*\n\n"
         "This bot now focuses exclusively on auto-dial campaigns.\n\n"
         "Use /autodial to start a campaign instead.",
-        parse_mode='Markdown'
-    )
+                parse_mode='Markdown'
+            )
 
 async def post_init(application: Application) -> None:
     global global_application_instance
@@ -1530,31 +1530,10 @@ async def post_init(application: Application) -> None:
                 if call_id and call_id in active_calls:
                     update_call_status(call_id, 'dtmf_received')
             
-            # Handle UserEvent for IVR timeout detection
+            # UserEvent handling - no longer needed for classification
             elif getattr(event, 'name', '') == 'UserEvent':
                 user_event_type = event.get('UserEvent')
-                if user_event_type == 'AutoDialResponse':
-                    # This indicates IVR timeout with no DTMF response
-                    logger.info(f"IVR timeout detected - marking call as potentially blocked")
-                    # Mark this call for blocked classification in hangup event
-                    uniqueid = event.get('Uniqueid')
-                    if uniqueid:
-                        # Store IVR timeout flag for hangup processing
-                        try:
-                            async with get_async_db_session() as session:
-                                call = await Call.find_by_uniqueid(session, uniqueid)
-                                if call:
-                                    call.call_metadata = {
-                                        **(call.call_metadata or {}),
-                                        "ivr_timeout": True,
-                                        "ivr_timeout_time": datetime.now().isoformat()
-                                    }
-                                    await session.commit()
-                                    logger.info(f"Marked call {call.call_id} with IVR timeout flag")
-                        except Exception as e:
-                            logger.error(f"Error marking IVR timeout: {e}")
-                else:
-                    logger.debug(f"UserEvent received: {user_event_type}")
+                logger.debug(f"UserEvent received: {user_event_type}")
         
         # Newchannel event listener to map Uniqueid to call_id using database
         async def new_channel_event_listener(manager, event):
@@ -1886,39 +1865,11 @@ async def dial_end_event_listener(manager, event):
                     }
                 }
                 
-                # Update campaign state based on dial result
+                # Store dial status for hangup event processing
                 campaign_id = call.campaign_id
                 if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
-                    
-                    # Analyze dial status for real vs fake responses
-                    if dial_status == 'ANSWER':
-                        logger.info(f"Campaign {campaign_id}: Call {call.call_id} ANSWERED (real connection)")
-                        # This is a legitimate answer - call was actually connected
-                        
-                    elif dial_status in ['NOANSWER', 'BUSY', 'CONGESTION', 'CHANUNAVAIL']:
-                        logger.info(f"Campaign {campaign_id}: Call {call.call_id} FAILED - {dial_status}")
-                        # These are legitimate failures
-                        
-                        # Check if we saw ringing states but got failure - indicates fake response
-                        state_history = current_metadata.get('state_history', [])
-                        had_ringing = any(s.get('state') in ['4', '5'] for s in state_history)
-                        
-                        if had_ringing:
-                            logger.warning(f"Campaign {campaign_id}: FAKE CARRIER RESPONSE detected for {call.call_id} - showed ringing but failed with {dial_status}")
-                            # Mark this as a fake response in metadata
-                            call.call_metadata["fake_carrier_response"] = True
-                            
-                        # Decrement active calls and increment failed calls
-                        if campaign_states[campaign_id].active_calls > 0:
-                            campaign_states[campaign_id].active_calls -= 1
-                        campaign_states[campaign_id].failed_calls += 1
-                        
-                        # Update campaign message
-                        await update_campaign_message(campaign_id)
-                        
-                    elif dial_status == 'CANCEL':
-                        logger.info(f"Campaign {campaign_id}: Call {call.call_id} CANCELLED")
-                        # Call was cancelled - could be timeout or user action
+                    logger.info(f"Campaign {campaign_id}: Call {call.call_id} DialEnd - Status: {dial_status}")
+                    # Classification will be done in hangup_event_listener using both DialEnd and Hangup data
                         
                 # Update call status based on dial result
                 if dial_status == 'ANSWER':
@@ -2543,47 +2494,46 @@ async def hangup_event_listener(manager, event):
                     await session.commit()
                     logger.info(f"Call {call.call_id} (Uniqueid: {uniqueid}) marked as completed in database")
                     
-                    # P1 Campaign Integration: Enhanced call classification with blocked call detection
+                    # P1 Campaign Integration: AMI event-based call classification
                     campaign_id = call.campaign_id
                     if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
-                        # Get call duration and metadata
-                        call_duration = (call.end_time - call.start_time).total_seconds()
                         call_metadata = call.call_metadata or {}
                         
-                        # Check for IVR timeout pattern (blocked call indicator)
-                        ivr_timeout = call_metadata.get('ivr_timeout', False)
+                        # Get AMI event data for classification
+                        dial_status = call_metadata.get('dial_end', {}).get('dial_status')
+                        hangup_cause = call_metadata.get('hangup', {}).get('cause_txt')
                         had_dtmf = call.status in ['dtmf_processed', 'dtmf_started']
                         
                         # Decrement active calls first
                         if campaign_states[campaign_id].active_calls > 0:
                             campaign_states[campaign_id].active_calls -= 1
                         
-                        # Enhanced call classification logic
-                        if call_duration < 3:
-                            # Immediate failure (carrier reject, busy, etc.)
+                        # AMI event-based call classification
+                        if dial_status in ['NOANSWER', 'BUSY', 'CONGESTION', 'CHANUNAVAIL']:
+                            # Legitimate carrier rejection
                             campaign_states[campaign_id].failed_calls += 1
                             classification = "FAILED"
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - immediate disconnect (duration: {call_duration}s)")
-                        elif ivr_timeout and not had_dtmf and 5 <= call_duration <= 8:
-                            # IVR timeout with no DTMF = blocked/fake call
-                            campaign_states[campaign_id].blocked_calls += 1
-                            classification = "BLOCKED"
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as BLOCKED - IVR timeout, no DTMF (duration: {call_duration}s)")
-                        elif had_dtmf:
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - DialStatus: {dial_status}")
+                        elif dial_status == 'ANSWER' and had_dtmf:
                             # Real human interaction with DTMF response
                             campaign_states[campaign_id].completed_calls += 1
                             classification = "COMPLETED"
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED - DTMF received (duration: {call_duration}s)")
-                        elif call_duration > 10:
-                            # Long duration without DTMF - likely real but no response
-                            campaign_states[campaign_id].completed_calls += 1
-                            classification = "COMPLETED"
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED - long duration, no DTMF (duration: {call_duration}s)")
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED - DTMF received")
+                        elif dial_status == 'ANSWER' and hangup_cause == 'Unallocated (unassigned) number' and not had_dtmf:
+                            # Carrier fake response: shows ANSWER but hangup cause reveals truth
+                            campaign_states[campaign_id].blocked_calls += 1
+                            classification = "BLOCKED"
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as BLOCKED - carrier fake response (DialStatus: ANSWER, HangupCause: {hangup_cause})")
+                        elif dial_status == 'ANSWER' and not had_dtmf:
+                            # Real answer but no DTMF response - still a failure for our purposes
+                            campaign_states[campaign_id].failed_calls += 1
+                            classification = "FAILED"
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - answered but no DTMF response")
                         else:
                             # Default to failed for unclear cases
                             campaign_states[campaign_id].failed_calls += 1
                             classification = "FAILED"
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - unclear outcome (duration: {call_duration}s)")
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - unclear outcome (DialStatus: {dial_status}, HangupCause: {hangup_cause})")
                         
                         logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}, failed={campaign_states[campaign_id].failed_calls}, blocked={campaign_states[campaign_id].blocked_calls}")
                         
@@ -2594,14 +2544,12 @@ async def hangup_event_listener(manager, event):
                         if classification == "COMPLETED":
                             await send_individual_notification(campaign_id, "call_completed", {
                                 "target_number": call.target_number,
-                                "duration": f"{call_duration:.0f} seconds",
-                                "cause": cause_txt or 'Unknown'
+                                "cause": cause_txt or 'DTMF Response'
                             })
                         elif classification == "BLOCKED":
                             await send_individual_notification(campaign_id, "call_blocked", {
                                 "target_number": call.target_number,
-                                "duration": f"{call_duration:.0f} seconds",
-                                "cause": "Carrier blocked/fake response"
+                                "cause": f"Carrier blocked/fake response: {hangup_cause}"
                             })
                     # Legacy "Call Ended" notifications removed - campaign system handles all notifications now
                 else:
@@ -2892,7 +2840,7 @@ async def handle_autodial_command(update: Update, context: ContextTypes.DEFAULT_
             try:
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
-            except Exception as e:
+             except Exception as e:
                 logger.error(f"Error showing main menu after route check in /autodial: {e}")
                 return ConversationHandler.END
 
@@ -2942,7 +2890,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
             try:
                 await show_main_menu(update, context, agent)
                 return MAIN_MENU
-            except Exception as e:
+                 except Exception as e:
                 logger.error(f"Error showing main menu after route check in file handler: {e}")
                 return ConversationHandler.END
 
@@ -3028,10 +2976,10 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
             else:
                 # Simple phone number format
                 normalized = re.sub(r'[^0-9+]', '', original_line)
-                if not normalized.startswith('+'):
-                    if len(normalized) == 11 and normalized.startswith('1'):
+            if not normalized.startswith('+'):
+                if len(normalized) == 11 and normalized.startswith('1'):
                         phone_number = '+' + normalized
-                    elif len(normalized) == 10:
+                elif len(normalized) == 10:
                         phone_number = '+1' + normalized
                 else:
                     phone_number = normalized
@@ -3387,7 +3335,7 @@ def main():
         if not update.effective_user:
             return False
         return await is_user_authorized(update.effective_user.id)
-    
+
     # Add conversation handler for menu navigation and multi-step processes
     conv_handler = ConversationHandler(
         entry_points=[

@@ -1,203 +1,387 @@
+Connected to Asterisk certified-18.9-cert9 currently running on 142977 (pid = 1157)
 142977*CLI> pjsip set logger on
 PJSIP Logging enabled
-<--- Received SIP request (692 bytes) from UDP:77.221.140.149:63186 --->
-INVITE sip:00948875658600@91.200.14.36 SIP/2.0
-Via: SIP/2.0/UDP 77.221.140.149:63186;branch=z9hG4bK111296725
-Max-Forwards: 70
-From: <sip:8005@91.200.14.36>;tag=1676029351
-To: <sip:00948875658600@91.200.14.36>
-Call-ID: 1509032684-214565169-216257015
-CSeq: 1 INVITE
-Contact: <sip:8005@77.221.140.149:63186>
-Content-Type: application/sdp
-Content-Length: 208
-Allow: ACK, BYE, CANCEL, INFO, INVITE, MESSAGE, NOTIFY, OPTIONS, PRACK, REFER, REGISTER, SUBSCRIBE, UPDATE, PUBLISH
-
-v=0
-o=8005 16264 18299 IN IP4 192.168.1.83
-s=call
-c=IN IP4 192.168.1.83
-t=0 0
-m=audio 25282 RTP/AVP 0 101
-a=rtpmap:0 pcmu/8000
-a=rtpmap:8 pcma/8000
-a=rtpmap:101 telephone-event/8000
-a=fmtp:101 0-11
-
-[Jun  6 19:47:37] NOTICE[2148]: res_pjsip/pjsip_distributor.c:676 log_failed_request: Request 'INVITE' from '<sip:8005@91.200.14.36>' failed for '77.221.140.149:63186' (callid: 1509032684-214565169-216257015) - No matching endpoint found
-<--- Transmitting SIP response (499 bytes) to UDP:77.221.140.149:63186 --->
-SIP/2.0 401 Unauthorized
-Via: SIP/2.0/UDP 77.221.140.149:63186;rport=63186;received=77.221.140.149;branch=z9hG4bK111296725
-Call-ID: 1509032684-214565169-216257015
-From: <sip:8005@91.200.14.36>;tag=1676029351
-To: <sip:00948875658600@91.200.14.36>;tag=z9hG4bK111296725
-CSeq: 1 INVITE
-WWW-Authenticate: Digest realm="asterisk",nonce="1749239257/b6bbbd5e28f53668ae329360c7ababc1",opaque="6566b09e5ac23c4b",algorithm=md5,qop="auth"
-Server: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
-
-
-142977*CLI> core set verbose 5
-Console verbose was 3 and is now 5.
-142977*CLI> core set debug 10
-Core debug was OFF and is now 10.
-<--- Received SIP request (695 bytes) from UDP:77.221.140.149:54205 --->
-INVITE sip:900148875658600@91.200.14.36 SIP/2.0
-Via: SIP/2.0/UDP 77.221.140.149:54205;branch=z9hG4bK1413441037
-Max-Forwards: 70
-From: <sip:8005@91.200.14.36>;tag=359909645
-To: <sip:900148875658600@91.200.14.36>
-Call-ID: 992703586-1297864522-1034967896
-CSeq: 1 INVITE
-Contact: <sip:8005@77.221.140.149:54205>
-Content-Type: application/sdp
-Content-Length: 208
-Allow: ACK, BYE, CANCEL, INFO, INVITE, MESSAGE, NOTIFY, OPTIONS, PRACK, REFER, REGISTER, SUBSCRIBE, UPDATE, PUBLISH
-
-v=0
-o=8005 16264 18299 IN IP4 192.168.1.83
-s=call
-c=IN IP4 192.168.1.83
-t=0 0
-m=audio 25282 RTP/AVP 0 101
-a=rtpmap:0 pcmu/8000
-a=rtpmap:8 pcma/8000
-a=rtpmap:101 telephone-event/8000
-a=fmtp:101 0-11
-
-[Jun  6 19:47:52] NOTICE[2148]: res_pjsip/pjsip_distributor.c:676 log_failed_request: Request 'INVITE' from '<sip:8005@91.200.14.36>' failed for '77.221.140.149:54205' (callid: 992703586-1297864522-1034967896) - No matching endpoint found
-<--- Transmitting SIP response (502 bytes) to UDP:77.221.140.149:54205 --->
-SIP/2.0 401 Unauthorized
-Via: SIP/2.0/UDP 77.221.140.149:54205;rport=54205;received=77.221.140.149;branch=z9hG4bK1413441037
-Call-ID: 992703586-1297864522-1034967896
-From: <sip:8005@91.200.14.36>;tag=359909645
-To: <sip:900148875658600@91.200.14.36>;tag=z9hG4bK1413441037
-CSeq: 1 INVITE
-WWW-Authenticate: Digest realm="asterisk",nonce="1749239272/e1d9eaee499829a407efbe0d6ac0568c",opaque="2b39e2616745c681",algorithm=md5,qop="auth"
-Server: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
-
-
-142977*CLI>
-Disconnected from Asterisk server
-Asterisk cleanly ending (0).
-Executing last minute cleanups
-root@142977:~# sudo iptables -A INPUT -s 77.221.140.149 -j DROP
-root@142977:~# asterisk -rvvv
-Asterisk certified-18.9-cert9, Copyright (C) 1999 - 2021, Sangoma Technologies Corporation and others.
-Created by Mark Spencer <markster@digium.com>
-Asterisk comes with ABSOLUTELY NO WARRANTY; type 'core show warranty' for details.
-This is free software, with components licensed under the GNU General Public
-License version 2 and other licenses; you are welcome to redistribute it under
-certain conditions. Type 'core show license' for details.
-=========================================================================
-Connected to Asterisk certified-18.9-cert9 currently running on 142977 (pid = 1157)
+142977*CLI> rtp set debug on
+RTP Packet Debugging Enabled
+[Jun  6 20:47:52] DEBUG[2417]: manager.c:7002 process_message: Running action 'Ping'
 142977*CLI> core set debug 10
 Core debug is still 10.
-142977*CLI> core set verbose 5
-Console verbose was 3 and is now 5.
-<--- Received SIP request (534 bytes) from UDP:139.59.24.219:5060 --->
-OPTIONS sip:91.200.14.36 SIP/2.0
-Via: SIP/2.0/UDP 139.59.24.219:5060;branch=z9hG4bK1804a3ce;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@139.59.24.219>;tag=as18ba4ebb
-To: <sip:91.200.14.36>
-Contact: <sip:asterisk@139.59.24.219:5060>
-Call-ID: 318abad62331c9b2360d3ed36e22d57d@139.59.24.219:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Fri, 06 Jun 2025 19:48:10 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
+142977*CLI> core set verbose 10
+Console verbose was 3 and is now 10.
+[Jun  6 20:48:00] DEBUG[1200]: res_pjsip_registrar.c:1376 check_expiration_thread: Woke up at 1749242880  Interval: 30
+[Jun  6 20:48:00] DEBUG[1200]: res_pjsip_registrar.c:1383 check_expiration_thread: Expiring 0 contacts
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:7002 process_message: Running action 'Ping'
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:7002 process_message: Running action 'Originate'
+[Jun  6 20:48:02] DEBUG[3000]: chan_pjsip.c:2672 chan_pjsip_request_with_stream_topology:  +14802569373@autodial-one Topology:  <0:audio-0:audio:sendrecv (slin)>
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:2571 request:  +14802569373@autodial-one
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:3330 ast_sip_session_create_outgoing:  autodial-one +14802569373 Topology:  <0:audio-0:audio:sendrecv (slin)>
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:2954 chan_pjsip_session_begin:  autodial-one
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:2958 chan_pjsip_session_begin:  Direct media no glare mitigation
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session/pjsip_session_caps.c:146 ast_sip_session_create_joint_call_stream: 'autodial-one' Caps for outgoing audio call with pref 'remote_merge' - remote: (slin) local: (ulaw|alaw) joint: (ulaw|alaw)
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:3446 ast_sip_session_create_outgoing:
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:2664 request:
+[Jun  6 20:48:02] DEBUG[3000]: chan_pjsip.c:555 chan_pjsip_new:  autodial-one
+[Jun  6 20:48:02] DEBUG[3000]: channel_internal_api.c:680 ast_channel_nativeformats_set:  <initializing>: Formats: (none)
+[Jun  6 20:48:02] DEBUG[3000]: channel_internal_api.c:692 ast_channel_nativeformats_set:  Channel is being initialized or destroyed
+[Jun  6 20:48:02] DEBUG[3000]: stasis.c:579 stasis_topic_create_with_detail: Creating topic. name: channel:campaign_36_1749242820_1_168989, detail:
+[Jun  6 20:48:02] DEBUG[3000]: stasis.c:613 stasis_topic_create_with_detail: Topic 'channel:campaign_36_1749242820_1_168989': 0x7fcf78000ed0 created
+[Jun  6 20:48:02] DEBUG[3000]: channel.c:945 __ast_channel_alloc_ap: Channel 0x7fcf78001d50 'PJSIP/autodial-one-00000004' allocated
+[Jun  6 20:48:02] DEBUG[3000]: chan_pjsip.c:530 compatible_formats_exist:  Topology:  <0:audio-0:audio:sendrecv (ulaw|alaw)> Formats: (ulaw|alaw)
+[Jun  6 20:48:02] DEBUG[1161]: threadpool.c:535 grow: Increasing threadpool stasis/pool's size by 1
+[Jun  6 20:48:02] DEBUG[3000]: chan_pjsip.c:543 compatible_formats_exist:  Compatible? yes
+[Jun  6 20:48:02] DEBUG[3000]: channel_internal_api.c:680 ast_channel_nativeformats_set:  PJSIP/autodial-one-00000004: MultistreamFormats: (ulaw|alaw)
+[Jun  6 20:48:02] DEBUG[3000]: channel_internal_api.c:702 ast_channel_nativeformats_set:  Set native formats but not topology
+[Jun  6 20:48:02] DEBUG[3000]: channel_internal_api.c:1595 ast_channel_set_stream_topology:  PJSIP/autodial-one-00000004:  <0:audio-0:audio:sendrecv (ulaw|alaw)>
+[Jun  6 20:48:02] DEBUG[3000]: channel_internal_api.c:1616 ast_channel_set_stream_topology:  Used provided topology
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newchannel
+Privilege: call,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
 
 
-<--- Transmitting SIP response (847 bytes) to UDP:139.59.24.219:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 139.59.24.219:5060;rport=5060;received=139.59.24.219;branch=z9hG4bK1804a3ce
-Call-ID: 318abad62331c9b2360d3ed36e22d57d@139.59.24.219:5060
-From: "asterisk" <sip:asterisk@139.59.24.219>;tag=as18ba4ebb
-To: <sip:91.200.14.36>;tag=z9hG4bK1804a3ce
-CSeq: 102 OPTIONS
-Accept: application/pidf+xml, application/xpidf+xml, application/cpim-pidf+xml, application/dialog-info+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, application/sdp, message/sipfrag;version=2.0
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub
-Accept-Encoding: identity
-Accept-Language: en
-Server: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
+[Jun  6 20:48:02] DEBUG[3000]: chan_pjsip.c:675 chan_pjsip_new:
+[Jun  6 20:48:02] DEBUG[3000]: chan_pjsip.c:2692 chan_pjsip_request_with_stream_topology:  Channel: PJSIP/autodial-one-00000004
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: AppDial2
+AppData: (Outgoing Line)
 
 
-142977*CLI> pjsip set logger on
-PJSIP Logging enabled
-<--- Received SIP request (534 bytes) from UDP:139.59.76.222:5060 --->
-OPTIONS sip:91.200.14.36 SIP/2.0
-Via: SIP/2.0/UDP 139.59.76.222:5060;branch=z9hG4bK2557615a;rport
-Max-Forwards: 70
-From: "asterisk" <sip:asterisk@139.59.76.222>;tag=as36f481d8
-To: <sip:91.200.14.36>
-Contact: <sip:asterisk@139.59.76.222:5060>
-Call-ID: 479b2a6f6aedd37e654755c41fde2dd2@139.59.76.222:5060
-CSeq: 102 OPTIONS
-User-Agent: MagnusBilling
-Date: Fri, 06 Jun 2025 19:48:15 GMT
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __ActionID
+Value: originate_campaign_36_1749242820_1_168989
 
 
-<--- Transmitting SIP response (847 bytes) to UDP:139.59.76.222:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 139.59.76.222:5060;rport=5060;received=139.59.76.222;branch=z9hG4bK2557615a
-Call-ID: 479b2a6f6aedd37e654755c41fde2dd2@139.59.76.222:5060
-From: "asterisk" <sip:asterisk@139.59.76.222>;tag=as36f481d8
-To: <sip:91.200.14.36>;tag=z9hG4bK2557615a
-CSeq: 102 OPTIONS
-Accept: application/pidf+xml, application/xpidf+xml, application/cpim-pidf+xml, application/dialog-info+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, application/sdp, message/sipfrag;version=2.0
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub
-Accept-Encoding: identity
-Accept-Language: en
-Server: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __Origin
+Value: autodial
 
 
-<--- Transmitting SIP request (442 bytes) to UDP:139.59.76.222:5060 --->
-OPTIONS sip:139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjbbd10d6f-03e5-4a31-8e03-e86b6e0f4e43
-From: <sip:autodial-one@91.200.14.36>;tag=588f52d8-85a9-4f31-9428-932703bf6f4e
-To: <sip:139.59.76.222>
-Contact: <sip:autodial-one@91.200.14.36:5060>
-Call-ID: b3946ae9-32c7-4df6-8eee-b7aff72e620a
-CSeq: 48558 OPTIONS
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __CampaignID
+Value: 36
 
 
-<--- Received SIP response (522 bytes) from UDP:139.59.76.222:5060 --->
-SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjbbd10d6f-03e5-4a31-8e03-e86b6e0f4e43;received=91.200.14.36;rport=5060
-From: <sip:autodial-one@91.200.14.36>;tag=588f52d8-85a9-4f31-9428-932703bf6f4e
-To: <sip:139.59.76.222>;tag=as3eea0d1c
-Call-ID: b3946ae9-32c7-4df6-8eee-b7aff72e620a
-CSeq: 48558 OPTIONS
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Accept: application/sdp
-Content-Length: 0
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __CallerID
+Value: +18888641321
+
+
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __OriginalTargetNumber
+Value: +14802569373
+
+
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __SequenceNumber
+Value: 1
+
+
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __TrackingID
+Value: JKD1.1
+
+
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __CallID
+Value: campaign_36_1749242820_1_168989
+
+
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __AgentTelegramID
+Value: 7991166259
+
+
+[Jun  6 20:48:02] DEBUG[3002]: chan_pjsip.c:2389 chan_pjsip_call:  PJSIP/autodial-one-00000004 Topology:  <0:audio-0:audio:sendrecv (ulaw|alaw)>
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: NewCallerid
+Privilege: call,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+
+
+[Jun  6 20:48:02] DEBUG[3002]: chan_pjsip.c:2399 chan_pjsip_call:  'call' task pushed
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: NewConnectedLine
+Privilege: call,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
 
 
     -- Called +14802569373@autodial-one
-<--- Transmitting SIP request (1075 bytes) to UDP:139.59.76.222:5060 --->
+[Jun  6 20:48:02] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: DialBegin
+Privilege: call,all
+DestChannel: PJSIP/autodial-one-00000004
+DestChannelState: 0
+DestChannelStateDesc: Down
+DestCallerIDNum: +18888641321
+DestCallerIDName: +18888641321
+DestConnectedLineNum: +18888641321
+DestConnectedLineName: +18888641321
+DestLanguage: en
+DestAccountCode:
+DestContext: from-autodial-one
+DestExten: s
+DestPriority: 1
+DestUniqueid: campaign_36_1749242820_1_168989
+DestLinkedid: campaign_36_1749242820_1_168989
+DialString: +14802569373@autodial-one
+
+
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:2365 call:  PJSIP/autodial-one-00000004 Topology:  <0:audio-0:audio:sendrecv (ulaw|alaw)>
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:2851 ast_sip_session_create_invite:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5122 create_local_sdp:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5159 create_local_sdp:  PJSIP/autodial-one-00000004: Processing streams
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5165 create_local_sdp:  PJSIP/autodial-one-00000004: Processing stream 0:audio-0:audio:sendrecv (ulaw|alaw)
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:495 ast_sip_session_media_state_add:  PJSIP/autodial-one-00000004 Adding position 0
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:541 ast_sip_session_media_state_add:  Creating new media session
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:584 ast_sip_session_media_state_add:  Setting media session as default for audio
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:589 ast_sip_session_media_state_add:  Done
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4998 add_sdp_streams:  PJSIP/autodial-one-00000004 Stream: 0:audio-0:audio:sendrecv (ulaw|alaw)
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_sdp_rtp.c:1742 create_outgoing_sdp_stream:  PJSIP/autodial-one-00000004 Type: audio 0:audio-0:audio:sendrecv (ulaw|alaw)
+[Jun  6 20:48:02] DEBUG[2148]: netsock2.c:170 ast_sockaddr_split_hostport: Splitting '0.0.0.0' into...
+[Jun  6 20:48:02] DEBUG[2148]: netsock2.c:224 ast_sockaddr_split_hostport: ...host '0.0.0.0' and port ''.
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_sdp_rtp.c:260 create_rtp: Transport transport-udp bound to 0.0.0.0: Using it for RTP media.
+[Jun  6 20:48:02] DEBUG[2148]: rtp_engine.c:526 ast_rtp_instance_new: Using engine 'asterisk' for RTP instance '0x7fcf18040fa0'
+[Jun  6 20:48:02] DEBUG[2148]: res_rtp_asterisk.c:3926 rtp_allocate_transport: (0x7fcf18040fa0) RTP allocated port 10636
+[Jun  6 20:48:02] DEBUG[2148]: res_rtp_asterisk.c:3956 rtp_allocate_transport: (0x7fcf18040fa0) ICE creating session 0.0.0.0:10636 (10636)
+[Jun  6 20:48:02] DEBUG[2148]: res_rtp_asterisk.c:3838 ice_create: (0x7fcf18040fa0) ICE create
+[Jun  6 20:48:02] DEBUG[2148]: res_rtp_asterisk.c:3615 rtp_add_candidates_to_ice: (0x7fcf18040fa0) ICE add system candidates
+[Jun  6 20:48:02] DEBUG[2148]: netsock2.c:170 ast_sockaddr_split_hostport: Splitting '91.200.14.36' into...
+[Jun  6 20:48:02] DEBUG[2148]: netsock2.c:224 ast_sockaddr_split_hostport: ...host '91.200.14.36' and port ''.
+[Jun  6 20:48:02] DEBUG[2148]: res_rtp_asterisk.c:1330 ast_rtp_ice_add_cand: (0x7fcf18040fa0) ICE add candidate: 91.200.14.36:10636, 2130706431
+[Jun  6 20:48:02] DEBUG[2148]: rtp_engine.c:543 ast_rtp_instance_new: RTP instance '0x7fcf18040fa0' is setup and ready to go
+[Jun  6 20:48:02] DEBUG[2148]: res_rtp_asterisk.c:919 ast_rtp_ice_stop: (0x7fcf18040fa0) ICE stopped
+[Jun  6 20:48:02] DEBUG[2148]: netsock2.c:170 ast_sockaddr_split_hostport: Splitting '142977.h2.nexus' into...
+[Jun  6 20:48:02] DEBUG[2148]: netsock2.c:224 ast_sockaddr_split_hostport: ...host '142977.h2.nexus' and port ''.
+[Jun  6 20:48:02] DEBUG[2148]: acl.c:885 resolve_first: Multiple addresses. Using the first only
+[Jun  6 20:48:02] DEBUG[2148]: res_rtp_asterisk.c:8492 ast_rtp_prop_set: (0x7fcf18040fa0) RTCP setup on RTP instance
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_sdp_rtp.c:2027 create_outgoing_sdp_stream:  RC: 1
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5028 add_sdp_streams:  Handled
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5197 create_local_sdp:  PJSIP/autodial-one-00000004: Stream 0:audio-0:audio:sendrecv (ulaw|alaw) added
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5210 create_local_sdp:  PJSIP/autodial-one-00000004: Done with 0:audio-0:audio:sendrecv (ulaw|alaw)
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5216 create_local_sdp:  PJSIP/autodial-one-00000004: Adding bundle groups (if available)
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5222 create_local_sdp:  PJSIP/autodial-one-00000004: Copying connection details
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5225 create_local_sdp:  PJSIP/autodial-one-00000004: Processing media 0
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5243 create_local_sdp:  PJSIP/autodial-one-00000004: Media 0 reset
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5266 create_local_sdp:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:2876 ast_sip_session_create_invite:
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4518 handle_outgoing_request:  PJSIP/autodial-one-00000004: Method is INVITE
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4528 handle_outgoing_request:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip/pjsip_resolver.c:479 sip_resolve: Performing SIP DNS resolution of target '139.59.76.222'
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip/pjsip_resolver.c:506 sip_resolve: Transport type for target '139.59.76.222' is 'UDP transport'
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip/pjsip_resolver.c:527 sip_resolve: Target '139.59.76.222' is an IP address, skipping resolution
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip/pjsip_message_filter.c:296 filter_on_tx_message: Re-wrote Contact URI host/port to 91.200.14.36:5060 (this may be re-written again later)
+[Jun  6 20:48:02] DEBUG[2148]: netsock2.c:170 ast_sockaddr_split_hostport: Splitting '91.200.14.36' into...
+[Jun  6 20:48:02] DEBUG[2148]: netsock2.c:224 ast_sockaddr_split_hostport: ...host '91.200.14.36' and port ''.
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:5531 session_outgoing_nat_hook: PJSIP/autodial-one-00000004: Setting external media address to 91.200.14.36
+<--- Transmitting SIP request (1077 bytes) to UDP:139.59.76.222:5060 --->
 INVITE sip:+14802569373@139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjd0de059f-8809-4135-9372-6ef1b006afa1
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
+Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPj5a4a5765-afff-49f5-a238-0a8d59fb9d94
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=cf42bf47-8348-4c05-a27d-b17a9e80449c
 To: <sip:+14802569373@139.59.76.222>
 Contact: <sip:asterisk@91.200.14.36:5060>
-Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
-CSeq: 21400 INVITE
+Call-ID: b192507a-e912-41b1-b528-948ec486fd5d
+CSeq: 25439 INVITE
 Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
 Supported: 100rel, timer, replaces, norefersub, histinfo
 Session-Expires: 1800
@@ -206,14 +390,14 @@ Remote-Party-ID: "+18888641321" <sip:+18888641321@91.200.14.36>;party=calling;pr
 Max-Forwards: 70
 User-Agent: Asterisk PBX certified-18.9-cert9
 Content-Type: application/sdp
-Content-Length:   259
+Content-Length:   261
 
 v=0
-o=- 253792248 253792248 IN IP4 91.200.14.36
+o=- 1554912436 1554912436 IN IP4 91.200.14.36
 s=Asterisk
 c=IN IP4 91.200.14.36
 t=0 0
-m=audio 13992 RTP/AVP 0 8 101
+m=audio 10636 RTP/AVP 0 8 101
 a=rtpmap:0 PCMU/8000
 a=rtpmap:8 PCMA/8000
 a=rtpmap:101 telephone-event/8000
@@ -222,13 +406,34 @@ a=ptime:20
 a=maxptime:150
 a=sendrecv
 
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4652 session_inv_on_state_changed:  PJSIP/autodial-one-00000004 Event: TSX_STATE  Inv State: CALLING
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4390 __print_debug_details: Function session_inv_on_state_changed called on event TSX_STATE
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4404 __print_debug_details: The state change pertains to the endpoint 'autodial-one(PJSIP/autodial-one-00000004)'
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4409 __print_debug_details: The inv session still has an invite_tsx (0x7fcf200327e8)
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4424 __print_debug_details: There is no transaction involved in this state change
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4426 __print_debug_details: The current inv state is CALLING
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4678 session_inv_on_state_changed: PJSIP/autodial-one-00000004: Source of transaction state change is TX_MSG
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4726 session_inv_on_state_changed:
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4770 session_inv_on_tsx_state_changed:  PJSIP/autodial-one-00000004 TSX State: Calling  Inv State: CALLING
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4390 __print_debug_details: Function session_inv_on_tsx_state_changed called on event TSX_STATE
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4404 __print_debug_details: The state change pertains to the endpoint 'autodial-one(PJSIP/autodial-one-00000004)'
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4409 __print_debug_details: The inv session still has an invite_tsx (0x7fcf200327e8)
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4415 __print_debug_details: The UAC INVITE transaction involved in this state change is 0x7fcf200327e8
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4419 __print_debug_details: The current transaction state is Calling
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4421 __print_debug_details: The transaction state change event is TX_MSG
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4426 __print_debug_details: The current inv state is CALLING
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4958 session_inv_on_tsx_state_changed:  Nothing delayed
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4202 session_on_tsx_state:  PJSIP/autodial-one-00000004 TSX State: Calling  Inv State: CALLING
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4206 session_on_tsx_state:  Topology: Pending:  <0:audio-0:audio:sendrecv (ulaw|alaw)>  Active: (null topology)
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4211 session_on_tsx_state:
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:2382 call:  RC: 0
 <--- Received SIP response (591 bytes) from UDP:139.59.76.222:5060 --->
 SIP/2.0 100 Trying
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjd0de059f-8809-4135-9372-6ef1b006afa1;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj5a4a5765-afff-49f5-a238-0a8d59fb9d94;received=91.200.14.36;rport=5060
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=cf42bf47-8348-4c05-a27d-b17a9e80449c
 To: <sip:+14802569373@139.59.76.222>
-Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
-CSeq: 21400 INVITE
+Call-ID: b192507a-e912-41b1-b528-948ec486fd5d
+CSeq: 25439 INVITE
 Server: MagnusBilling
 Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
 Supported: replaces, timer
@@ -237,13 +442,36 @@ Contact: <sip:+14802569373@139.59.76.222:5060>
 Content-Length: 0
 
 
-<--- Received SIP response (927 bytes) from UDP:139.59.76.222:5060 --->
+[Jun  6 20:48:02] DEBUG[1188]: res_pjsip/pjsip_distributor.c:502 distributor: Searching for serializer associated with dialog dlg0x7fcf2001e668 for Response msg 100/INVITE/cseq=25439 (rdata0x7fcea0001fe8)
+[Jun  6 20:48:02] DEBUG[1188]: res_pjsip/pjsip_distributor.c:510 distributor: Found serializer pjsip/outsess/autodial-one-0000005e associated with dialog dlg0x7fcf2001e668
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4225 session_on_rx_response:  PJSIP/autodial-one-00000004 Method: INVITE Status: 100
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4228 session_on_rx_response:
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4770 session_inv_on_tsx_state_changed:  PJSIP/autodial-one-00000004 TSX State: Proceeding  Inv State: CALLING
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4390 __print_debug_details: Function session_inv_on_tsx_state_changed called on event TSX_STATE
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4404 __print_debug_details: The state change pertains to the endpoint 'autodial-one(PJSIP/autodial-one-00000004)'
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4409 __print_debug_details: The inv session still has an invite_tsx (0x7fcf200327e8)
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4415 __print_debug_details: The UAC INVITE transaction involved in this state change is 0x7fcf200327e8
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4419 __print_debug_details: The current transaction state is Proceeding
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4421 __print_debug_details: The transaction state change event is RX_MSG
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4426 __print_debug_details: The current inv state is CALLING
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4487 handle_incoming_response:  PJSIP/autodial-one-00000004: Response is 100 Trying
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:3190 chan_pjsip_incoming_response:  PJSIP/autodial-one-00000004: Status: 100
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:3235 chan_pjsip_incoming_response:  PJSIP/autodial-one-00000004: Not queueing anything
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:3239 chan_pjsip_incoming_response:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:3162 chan_pjsip_incoming_response_update_cause:  PJSIP/autodial-one-00000004: Status: 100
+[Jun  6 20:48:02] DEBUG[2148]: chan_pjsip.c:3183 chan_pjsip_incoming_response_update_cause:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4499 handle_incoming_response:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4958 session_inv_on_tsx_state_changed:  Nothing delayed
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4202 session_on_tsx_state:  PJSIP/autodial-one-00000004 TSX State: Proceeding  Inv State: CALLING
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4206 session_on_tsx_state:  Topology: Pending:  <0:audio-0:audio:sendrecv (ulaw|alaw)>  Active: (null topology)
+[Jun  6 20:48:02] DEBUG[2148]: res_pjsip_session.c:4211 session_on_tsx_state:
+<--- Received SIP response (929 bytes) from UDP:139.59.76.222:5060 --->
 SIP/2.0 200 OK
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjd0de059f-8809-4135-9372-6ef1b006afa1;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
-To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
-Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
-CSeq: 21400 INVITE
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj5a4a5765-afff-49f5-a238-0a8d59fb9d94;received=91.200.14.36;rport=5060
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=cf42bf47-8348-4c05-a27d-b17a9e80449c
+To: <sip:+14802569373@139.59.76.222>;tag=as71d0fab0
+Call-ID: b192507a-e912-41b1-b528-948ec486fd5d
+CSeq: 25439 INVITE
 Server: MagnusBilling
 Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
 Supported: replaces, timer
@@ -251,14 +479,14 @@ Session-Expires: 1800;refresher=uas
 Contact: <sip:+14802569373@139.59.76.222:5060>
 Content-Type: application/sdp
 Require: timer
-Content-Length: 276
+Content-Length: 278
 
 v=0
-o=root 183327431 183327431 IN IP4 139.59.76.222
+o=root 1720171974 1720171974 IN IP4 139.59.76.222
 s=Asterisk PBX 13.38.3
 c=IN IP4 139.59.76.222
 t=0 0
-m=audio 14702 RTP/AVP 8 0 101
+m=audio 18374 RTP/AVP 8 0 101
 a=rtpmap:8 PCMA/8000
 a=rtpmap:0 PCMU/8000
 a=rtpmap:101 telephone-event/8000
@@ -267,49 +495,789 @@ a=ptime:20
 a=maxptime:150
 a=sendrecv
 
-       > 0x7fcf18045340 -- Strict RTP learning after remote address set to: 139.59.76.222:14702
+[Jun  6 20:48:03] DEBUG[1188]: res_pjsip/pjsip_distributor.c:502 distributor: Searching for serializer associated with dialog dlg0x7fcf2001e668 for Response msg 200/INVITE/cseq=25439 (rdata0x7fcea0001fe8)
+[Jun  6 20:48:03] DEBUG[1188]: res_pjsip/pjsip_distributor.c:510 distributor: Found serializer pjsip/outsess/autodial-one-0000005e associated with dialog dlg0x7fcf2001e668
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4225 session_on_rx_response:  PJSIP/autodial-one-00000004 Method: INVITE Status: 200
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4228 session_on_rx_response:
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4652 session_inv_on_state_changed:  PJSIP/autodial-one-00000004 Event: TSX_STATE  Inv State: CONNECTING
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4390 __print_debug_details: Function session_inv_on_state_changed called on event TSX_STATE
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4404 __print_debug_details: The state change pertains to the endpoint 'autodial-one(PJSIP/autodial-one-00000004)'
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4409 __print_debug_details: The inv session still has an invite_tsx (0x7fcf200327e8)
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4424 __print_debug_details: There is no transaction involved in this state change
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4426 __print_debug_details: The current inv state is CONNECTING
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4678 session_inv_on_state_changed: PJSIP/autodial-one-00000004: Source of transaction state change is RX_MSG
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4620 handle_incoming_before_media: PJSIP/autodial-one-00000004: Received response
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4487 handle_incoming_response:  PJSIP/autodial-one-00000004: Response is 200 OK
+[Jun  6 20:48:03] DEBUG[2148]: chan_pjsip.c:3162 chan_pjsip_incoming_response_update_cause:  PJSIP/autodial-one-00000004: Status: 200
+[Jun  6 20:48:03] DEBUG[2148]: chan_pjsip.c:3183 chan_pjsip_incoming_response_update_cause:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4499 handle_incoming_response:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4726 session_inv_on_state_changed:
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:5371 session_inv_on_media_update:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:1068 handle_negotiated_sdp:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:974 handle_negotiated_sdp_session_media:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:1005 handle_negotiated_sdp_session_media: PJSIP/autodial-one-00000004: Applying negotiated SDP media stream 'audio' using audio SDP handler
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_sdp_rtp.c:2085 apply_negotiated_sdp_stream:  PJSIP/autodial-one-00000004 Stream: 0:audio-0:audio:sendrecv (ulaw|alaw)
+[Jun  6 20:48:03] DEBUG[2148]: res_rtp_asterisk.c:8391 ast_rtp_prop_set: (0x7fcf18040fa0) RTCP ignoring duplicate property
+[Jun  6 20:48:03] DEBUG[2148]: netsock2.c:170 ast_sockaddr_split_hostport: Splitting '139.59.76.222' into...
+[Jun  6 20:48:03] DEBUG[2148]: netsock2.c:224 ast_sockaddr_split_hostport: ...host '139.59.76.222' and port ''.
+[Jun  6 20:48:03] DEBUG[2148]: acl.c:1045 ast_ouraddrfor: For destination '139.59.76.222', our source address is '91.200.14.36'.
+[Jun  6 20:48:03] DEBUG[2148]: res_rtp_asterisk.c:8594 ast_rtp_remote_address_set: (0x7fcf18040fa0) RTCP setting address on RTP instance
+       > 0x7fcf1804b1b0 -- Strict RTP learning after remote address set to: 139.59.76.222:18374
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_sdp_rtp.c:500 set_caps:  PJSIP/autodial-one-00000004 ANSWER
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_sdp_rtp.c:328 get_codecs:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:03] DEBUG[2148]: rtp_engine.c:1318 ast_rtp_codecs_payloads_set_m_type: Setting tx payload type 8 based on m type on 0x7fcf941e6f70
+[Jun  6 20:48:03] DEBUG[2148]: rtp_engine.c:1318 ast_rtp_codecs_payloads_set_m_type: Setting tx payload type 0 based on m type on 0x7fcf941e6f70
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_sdp_rtp.c:404 get_codecs:
+[Jun  6 20:48:03] DEBUG[2148]: rtp_engine.c:1204 rtp_codecs_payloads_copy_tx: Copying tx payload mapping 0 (0x7fcf1803d078) from 0x7fcf941e6f70 to 0x7fcf18041178
+[Jun  6 20:48:03] DEBUG[2148]: rtp_engine.c:1204 rtp_codecs_payloads_copy_tx: Copying tx payload mapping 8 (0x7fcf1802a298) from 0x7fcf941e6f70 to 0x7fcf18041178
+[Jun  6 20:48:03] DEBUG[2148]: rtp_engine.c:1204 rtp_codecs_payloads_copy_tx: Copying tx payload mapping 101 (0x7fcf1803d0c8) from 0x7fcf941e6f70 to 0x7fcf18041178
+[Jun  6 20:48:03] DEBUG[2148]: channel_internal_api.c:680 ast_channel_nativeformats_set:  PJSIP/autodial-one-00000004: MultistreamFormats: (ulaw)
+[Jun  6 20:48:03] DEBUG[2148]: channel_internal_api.c:702 ast_channel_nativeformats_set:  Set native formats but not topology
+[Jun  6 20:48:03] DEBUG[2148]: channel.c:5740 set_format: Channel PJSIP/autodial-one-00000004 setting read format path: ulaw -> ulaw
+[Jun  6 20:48:03] DEBUG[2148]: channel.c:5740 set_format: Channel PJSIP/autodial-one-00000004 setting write format path: ulaw -> ulaw
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_sdp_rtp.c:611 set_caps:
+[Jun  6 20:48:03] DEBUG[2148]: res_rtp_asterisk.c:9171 ast_rtp_activate: (0x7fcf18040fa0) DTLS - ast_rtp_activate rtp=0x7fcf1804b1b0 - setup and perform DTLS'
+[Jun  6 20:48:03] DEBUG[2148]: res_rtp_asterisk.c:2549 dtls_perform_handshake: (0x7fcf1804b1b0) DTLS perform handshake - ssl = (nil), setup = 0
+[Jun  6 20:48:03] DEBUG[2148]: res_rtp_asterisk.c:2549 dtls_perform_handshake: (0x7fcf1804b1b0) DTLS perform handshake - ssl = (nil), setup = 0
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_sdp_rtp.c:2234 apply_negotiated_sdp_stream:  Handled
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:1010 handle_negotiated_sdp_session_media: PJSIP/autodial-one-00000004: Applied negotiated SDP media stream 'audio' using audio SDP handler
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:1013 handle_negotiated_sdp_session_media:  PJSIP/autodial-one-00000004: Applied negotiated SDP media stream 'audio' using audio SDP handler
+[Jun  6 20:48:03] DEBUG[2148]: channel_internal_api.c:1595 ast_channel_set_stream_topology:  PJSIP/autodial-one-00000004:  <0:audio-0:audio:sendrecv (ulaw|alaw)>
+[Jun  6 20:48:03] DEBUG[2148]: channel_internal_api.c:1616 ast_channel_set_stream_topology:  Used provided topology
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:1223 handle_negotiated_sdp:
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:5435 session_inv_on_media_update:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip/pjsip_resolver.c:479 sip_resolve: Performing SIP DNS resolution of target '139.59.76.222'
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip/pjsip_resolver.c:506 sip_resolve: Transport type for target '139.59.76.222' is 'UDP transport'
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip/pjsip_resolver.c:527 sip_resolve: Target '139.59.76.222' is an IP address, skipping resolution
 <--- Transmitting SIP request (443 bytes) to UDP:139.59.76.222:5060 --->
 ACK sip:+14802569373@139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPj7dd9d799-d2e3-40a5-9f22-cdbf97e98255
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
-To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
-Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
-CSeq: 21400 ACK
+Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjcf40f159-1bc7-4228-a80b-02e68bd9d3df
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=cf42bf47-8348-4c05-a27d-b17a9e80449c
+To: <sip:+14802569373@139.59.76.222>;tag=as71d0fab0
+Call-ID: b192507a-e912-41b1-b528-948ec486fd5d
+CSeq: 25439 ACK
 Max-Forwards: 70
 User-Agent: Asterisk PBX certified-18.9-cert9
 Content-Length:  0
 
 
-    -- PJSIP/autodial-one-00000000 answered
-    -- Executing [s@autodial-ivr:1] NoOp("PJSIP/autodial-one-00000000", "Starting AutoDial IVR for , initiated by TGID: , CallID: , TrackingID: ") in new stack
-    -- Executing [s@autodial-ivr:2] Answer("PJSIP/autodial-one-00000000", "") in new stack
-    -- Executing [s@autodial-ivr:3] Set("PJSIP/autodial-one-00000000", "__CALLID=") in new stack
-    -- Executing [s@autodial-ivr:4] Set("PJSIP/autodial-one-00000000", "__AGENTID=") in new stack
-    -- Executing [s@autodial-ivr:5] Set("PJSIP/autodial-one-00000000", "__TARGET=") in new stack
-    -- Executing [s@autodial-ivr:6] Set("PJSIP/autodial-one-00000000", "__CAMPAIGN=") in new stack
-    -- Executing [s@autodial-ivr:7] Set("PJSIP/autodial-one-00000000", "__TRACKINGID=") in new stack
-    -- Executing [s@autodial-ivr:8] Set("PJSIP/autodial-one-00000000", "CHANNEL(callid)=") in new stack
-[Jun  6 19:48:33] WARNING[2185][C-00000001]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'callid'
-    -- Executing [s@autodial-ivr:9] Set("PJSIP/autodial-one-00000000", "CHANNEL(trackingid)=") in new stack
-[Jun  6 19:48:33] WARNING[2185][C-00000001]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'trackingid'
-    -- Executing [s@autodial-ivr:10] Set("PJSIP/autodial-one-00000000", "CHANNEL(agentid)=") in new stack
-[Jun  6 19:48:33] WARNING[2185][C-00000001]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'agentid'
-    -- Executing [s@autodial-ivr:11] Set("PJSIP/autodial-one-00000000", "CHANNEL(target)=") in new stack
-[Jun  6 19:48:33] WARNING[2185][C-00000001]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'target'
-    -- Executing [s@autodial-ivr:12] Set("PJSIP/autodial-one-00000000", "CHANNEL(campaignid)=") in new stack
-[Jun  6 19:48:33] WARNING[2185][C-00000001]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'campaignid'
-    -- Executing [s@autodial-ivr:13] Set("PJSIP/autodial-one-00000000", "CALLID=") in new stack
-    -- Executing [s@autodial-ivr:14] Set("PJSIP/autodial-one-00000000", "TRACKINGID=") in new stack
-    -- Executing [s@autodial-ivr:15] Set("PJSIP/autodial-one-00000000", "TARGET=") in new stack
-    -- Executing [s@autodial-ivr:16] Set("PJSIP/autodial-one-00000000", "CAMPAIGNID=") in new stack
-    -- Executing [s@autodial-ivr:17] Wait("PJSIP/autodial-one-00000000", "1") in new stack
-<--- Received SIP response (927 bytes) from UDP:139.59.76.222:5060 --->
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4652 session_inv_on_state_changed:  PJSIP/autodial-one-00000004 Event: TX_MSG  Inv State: CONFIRMED
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4390 __print_debug_details: Function session_inv_on_state_changed called on event TX_MSG
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4404 __print_debug_details: The state change pertains to the endpoint 'autodial-one(PJSIP/autodial-one-00000004)'
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4409 __print_debug_details: The inv session still has an invite_tsx (0x7fcf200327e8)
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4424 __print_debug_details: There is no transaction involved in this state change
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4426 __print_debug_details: The current inv state is CONFIRMED
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4726 session_inv_on_state_changed:
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4770 session_inv_on_tsx_state_changed:  PJSIP/autodial-one-00000004 TSX State: Terminated  Inv State: CONFIRMED
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4390 __print_debug_details: Function session_inv_on_tsx_state_changed called on event TSX_STATE
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4404 __print_debug_details: The state change pertains to the endpoint 'autodial-one(PJSIP/autodial-one-00000004)'
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4412 __print_debug_details: The inv session does NOT have an invite_tsx
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4415 __print_debug_details: The UAC INVITE transaction involved in this state change is 0x7fcf200327e8
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4419 __print_debug_details: The current transaction state is Terminated
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4421 __print_debug_details: The transaction state change event is RX_MSG
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4426 __print_debug_details: The current inv state is CONFIRMED
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4487 handle_incoming_response:  PJSIP/autodial-one-00000004: Response is 200 OK
+[Jun  6 20:48:03] DEBUG[2148]: chan_pjsip.c:3190 chan_pjsip_incoming_response:  PJSIP/autodial-one-00000004: Status: 200
+[Jun  6 20:48:03] DEBUG[2148]: chan_pjsip.c:3231 chan_pjsip_incoming_response:  PJSIP/autodial-one-00000004: Queueing ANSWER
+[Jun  6 20:48:03] DEBUG[2148]: chan_pjsip.c:3239 chan_pjsip_incoming_response:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:03] DEBUG[2148]: chan_pjsip.c:3162 chan_pjsip_incoming_response_update_cause:  PJSIP/autodial-one-00000004: Status: 200
+[Jun  6 20:48:03] DEBUG[2148]: chan_pjsip.c:3183 chan_pjsip_incoming_response_update_cause:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4499 handle_incoming_response:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4958 session_inv_on_tsx_state_changed:  Nothing delayed
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4202 session_on_tsx_state:  PJSIP/autodial-one-00000004 TSX State: Terminated  Inv State: CONFIRMED
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4206 session_on_tsx_state:  Topology: Pending: (null topology)  Active:  <0:audio-0:audio:sendrecv (ulaw|alaw)>
+[Jun  6 20:48:03] DEBUG[2148]: res_pjsip_session.c:4211 session_on_tsx_state:
+    -- PJSIP/autodial-one-00000004 answered
+[Jun  6 20:48:03] DEBUG[1173]: devicestate.c:361 _ast_device_state: No provider found, checking channel drivers for PJSIP - autodial-one
+[Jun  6 20:48:03] DEBUG[1173]: devicestate.c:466 do_state_change: Changing state for PJSIP/autodial-one - state 2 (In use)
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__OriginalTargetNumber' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__AgentTelegramID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__CallID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__TrackingID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'NoOp'
+[Jun  6 20:48:03] DEBUG[1230]: app_queue.c:2606 device_state_cb: Device 'PJSIP/autodial-one' changed to state '2' (In use) but we don't care because they're not a member of any queue.
+    -- Executing [s@autodial-ivr:1] NoOp("PJSIP/autodial-one-00000004", "Starting AutoDial IVR for , initiated by TGID: , CallID: , TrackingID: ") in new stack
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Answer'
+    -- Executing [s@autodial-ivr:2] Answer("PJSIP/autodial-one-00000004", "") in new stack
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__CallID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:3] Set("PJSIP/autodial-one-00000004", "__CALLID=") in new stack
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newstate
+Privilege: call,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: from-autodial-one
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+
+
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__AgentTelegramID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:4] Set("PJSIP/autodial-one-00000004", "__AGENTID=") in new stack
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__OriginalTargetNumber' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:5] Set("PJSIP/autodial-one-00000004", "__TARGET=") in new stack
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__CampaignID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:6] Set("PJSIP/autodial-one-00000004", "__CAMPAIGN=") in new stack
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__TrackingID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:7] Set("PJSIP/autodial-one-00000004", "__TRACKINGID=") in new stack
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__CALLID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:8] Set("PJSIP/autodial-one-00000004", "CHANNEL(callid)=") in new stack
+[Jun  6 20:48:03] WARNING[3002][C-00000005]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'callid'
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__TRACKINGID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:9] Set("PJSIP/autodial-one-00000004", "CHANNEL(trackingid)=") in new stack
+[Jun  6 20:48:03] WARNING[3002][C-00000005]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'trackingid'
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__AGENTID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:10] Set("PJSIP/autodial-one-00000004", "CHANNEL(agentid)=") in new stack
+[Jun  6 20:48:03] WARNING[3002][C-00000005]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'agentid'
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__TARGET' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:11] Set("PJSIP/autodial-one-00000004", "CHANNEL(target)=") in new stack
+[Jun  6 20:48:03] WARNING[3002][C-00000005]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'target'
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__CAMPAIGN' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:12] Set("PJSIP/autodial-one-00000004", "CHANNEL(campaignid)=") in new stack
+[Jun  6 20:48:03] WARNING[3002][C-00000005]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'campaignid'
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__CALLID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:13] Set("PJSIP/autodial-one-00000004", "CALLID=") in new stack
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__TRACKINGID' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:14] Set("PJSIP/autodial-one-00000004", "TRACKINGID=") in new stack
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__TARGET' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:15] Set("PJSIP/autodial-one-00000004", "TARGET=") in new stack
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__CAMPAIGN' is NULL
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:16] Set("PJSIP/autodial-one-00000004", "CAMPAIGNID=") in new stack
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Wait'
+    -- Executing [s@autodial-ivr:17] Wait("PJSIP/autodial-one-00000004", "1") in new stack
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: DialEnd
+Privilege: call,all
+DestChannel: PJSIP/autodial-one-00000004
+DestChannelState: 6
+DestChannelStateDesc: Up
+DestCallerIDNum: +18888641321
+DestCallerIDName: +18888641321
+DestConnectedLineNum: +18888641321
+DestConnectedLineName: +18888641321
+DestLanguage: en
+DestAccountCode:
+DestContext: from-autodial-one
+DestExten: s
+DestPriority: 1
+DestUniqueid: campaign_36_1749242820_1_168989
+DestLinkedid: campaign_36_1749242820_1_168989
+DialStatus: ANSWER
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: DeviceStateChange
+Privilege: call,all
+Device: PJSIP/autodial-one
+State: INUSE
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: NoOp
+AppData: Starting AutoDial IVR for , initiated by TGID: , CallID: , TrackingID:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 2
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Answer
+AppData:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 3
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: __CALLID=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 3
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __CALLID
+Value:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 4
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: __AGENTID=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 4
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __AGENTID
+Value:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 5
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: __TARGET=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 5
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __TARGET
+Value:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 6
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: __CAMPAIGN=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 6
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __CAMPAIGN
+Value:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: OriginateResponse
+Privilege: call,all
+ActionID: originate_campaign_36_1749242820_1_168989
+Response: Success
+Channel: PJSIP/autodial-one-00000004
+Context: autodial-ivr
+Exten: s
+Reason: 4
+Uniqueid: campaign_36_1749242820_1_168989
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 7
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: __TRACKINGID=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 7
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: __TRACKINGID
+Value:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 8
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: CHANNEL(callid)=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 9
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: CHANNEL(trackingid)=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 10
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: CHANNEL(agentid)=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 11
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: CHANNEL(target)=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 12
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: CHANNEL(campaignid)=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 13
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: CALLID=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 13
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: CALLID
+Value:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 14
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: TRACKINGID=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 14
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: TRACKINGID
+Value:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 15
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: TARGET=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 15
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: TARGET
+Value:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 16
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: CAMPAIGNID=
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 16
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: CAMPAIGNID
+Value:
+
+
+[Jun  6 20:48:03] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 17
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Wait
+AppData: 1
+
+
+<--- Received SIP response (929 bytes) from UDP:139.59.76.222:5060 --->
 SIP/2.0 200 OK
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjd0de059f-8809-4135-9372-6ef1b006afa1;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
-To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
-Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
-CSeq: 21400 INVITE
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj5a4a5765-afff-49f5-a238-0a8d59fb9d94;received=91.200.14.36;rport=5060
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=cf42bf47-8348-4c05-a27d-b17a9e80449c
+To: <sip:+14802569373@139.59.76.222>;tag=as71d0fab0
+Call-ID: b192507a-e912-41b1-b528-948ec486fd5d
+CSeq: 25439 INVITE
 Server: MagnusBilling
 Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
 Supported: replaces, timer
@@ -317,14 +1285,14 @@ Session-Expires: 1800;refresher=uas
 Contact: <sip:+14802569373@139.59.76.222:5060>
 Content-Type: application/sdp
 Require: timer
-Content-Length: 276
+Content-Length: 278
 
 v=0
-o=root 183327431 183327431 IN IP4 139.59.76.222
+o=root 1720171974 1720171974 IN IP4 139.59.76.222
 s=Asterisk PBX 13.38.3
 c=IN IP4 139.59.76.222
 t=0 0
-m=audio 14702 RTP/AVP 8 0 101
+m=audio 18374 RTP/AVP 8 0 101
 a=rtpmap:8 PCMA/8000
 a=rtpmap:0 PCMU/8000
 a=rtpmap:101 telephone-event/8000
@@ -333,46 +1301,653 @@ a=ptime:20
 a=maxptime:150
 a=sendrecv
 
+[Jun  6 20:48:03] DEBUG[1188]: res_pjsip/pjsip_distributor.c:502 distributor: Searching for serializer associated with dialog dlg0x7fcf2001e668 for Response msg 200/INVITE/cseq=25439 (rdata0x7fcea0001fe8)
+[Jun  6 20:48:03] DEBUG[1188]: res_pjsip/pjsip_distributor.c:510 distributor: Found serializer pjsip/outsess/autodial-one-0000005e associated with dialog dlg0x7fcf2001e668
 <--- Transmitting SIP request (443 bytes) to UDP:139.59.76.222:5060 --->
 ACK sip:+14802569373@139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPj7dd9d799-d2e3-40a5-9f22-cdbf97e98255
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
-To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
-Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
-CSeq: 21400 ACK
+Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjcf40f159-1bc7-4228-a80b-02e68bd9d3df
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=cf42bf47-8348-4c05-a27d-b17a9e80449c
+To: <sip:+14802569373@139.59.76.222>;tag=as71d0fab0
+Call-ID: b192507a-e912-41b1-b528-948ec486fd5d
+CSeq: 25439 ACK
 Max-Forwards: 70
 User-Agent: Asterisk PBX certified-18.9-cert9
 Content-Length:  0
 
 
-    -- Executing [s@autodial-ivr:18] Set("PJSIP/autodial-one-00000000", "TIMEOUT(digit)=3") in new stack
+       > 0x7fcf1804b1b0 -- Strict RTP switching to RTP target address 139.59.76.222:18374 as source
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014709, ts 000160, len 000160)
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: chan_pjsip.c:882 chan_pjsip_read_stream: Oooh, got a frame with format of alaw on channel 'PJSIP/autodial-one-00000004' when we're sending 'ulaw', switching to match
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: channel_internal_api.c:680 ast_channel_nativeformats_set:  PJSIP/autodial-one-00000004: MultistreamFormats: (alaw)
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: channel_internal_api.c:702 ast_channel_nativeformats_set:  Set native formats but not topology
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: channel.c:5531 ast_set_write_format_path: Channel PJSIP/autodial-one-00000004 setting write format path: ulaw -> alaw
+[Jun  6 20:48:03] DEBUG[3002][C-00000005]: channel.c:5495 ast_set_read_format_path: Channel PJSIP/autodial-one-00000004 setting read format path: ulaw -> alaw
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014710, ts 000320, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014711, ts 000480, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014712, ts 000640, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014713, ts 000800, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014714, ts 000960, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014715, ts 001120, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014716, ts 001280, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014717, ts 001440, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014718, ts 001600, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014719, ts 001760, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014720, ts 001920, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014721, ts 002080, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014722, ts 002240, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014723, ts 002400, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014724, ts 002560, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014725, ts 002720, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014726, ts 002880, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014727, ts 003040, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014728, ts 003200, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014729, ts 003360, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014730, ts 003520, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014731, ts 003680, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014732, ts 003840, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014733, ts 004000, len 000160)
+[Jun  6 20:48:04] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:18] Set("PJSIP/autodial-one-00000004", "TIMEOUT(digit)=3") in new stack
     -- Digit timeout set to 3.000
-    -- Executing [s@autodial-ivr:19] Set("PJSIP/autodial-one-00000000", "TIMEOUT(response)=5") in new stack
+[Jun  6 20:48:04] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Set'
+    -- Executing [s@autodial-ivr:19] Set("PJSIP/autodial-one-00000004", "TIMEOUT(response)=5") in new stack
+[Jun  6 20:48:04] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 18
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: TIMEOUT(digit)=3
+
+
     -- Response timeout set to 5.000
-    -- Executing [s@autodial-ivr:20] Read("PJSIP/autodial-one-00000000", "DTMF_DIGIT,custom/autodial_prompt,1,,1,5") in new stack
+[Jun  6 20:48:04] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'Read'
+    -- Executing [s@autodial-ivr:20] Read("PJSIP/autodial-one-00000004", "DTMF_DIGIT,custom/autodial_prompt,1,,1,5") in new stack
     -- Accepting a maximum of 1 digits.
-    -- <PJSIP/autodial-one-00000000> Playing 'custom/autodial_prompt.slin' (language 'en')
-       > 0x7fcf18045340 -- Strict RTP switching to RTP target address 139.59.76.222:14702 as source
-<--- Transmitting SIP request (442 bytes) to UDP:139.59.24.219:5060 --->
-OPTIONS sip:139.59.24.219:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjacf342b2-e4df-4ecd-b74c-b9a5ab6e9bbb
-From: <sip:autodial-two@91.200.14.36>;tag=90a64eb1-d908-4982-8190-78f5b074ee6a
-To: <sip:139.59.24.219>
-Contact: <sip:autodial-two@91.200.14.36:5060>
-Call-ID: 61efc932-3708-4a9e-8565-435ca1e8ffa1
-CSeq: 12763 OPTIONS
+[Jun  6 20:48:04] DEBUG[3002][C-00000005]: channel.c:5740 set_format: Channel PJSIP/autodial-one-00000004 setting write format path: slin -> alaw
+[Jun  6 20:48:04] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 19
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Set
+AppData: TIMEOUT(response)=5
+
+
+[Jun  6 20:48:04] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 20
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: s
+Application: Read
+AppData: DTMF_DIGIT,custom/autodial_prompt,1,,1,5
+
+
+[Jun  6 20:48:04] DEBUG[3002][C-00000005]: res_rtp_asterisk.c:5428 ast_rtp_write: (0x7fcf18040fa0) RTP ooh, format changed from none to alaw
+[Jun  6 20:48:04] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 20
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: READSTATUS
+Value: ERROR
+
+
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025288, ts 000160, len 000160)
+[Jun  6 20:48:04] DEBUG[3002][C-00000005]: channel.c:3203 ast_settimeout_full: Scheduling timer at (50 requested / 50 actual) timer ticks per second
+    -- <PJSIP/autodial-one-00000004> Playing 'custom/autodial_prompt.slin' (language 'en')
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014734, ts 004160, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014735, ts 004320, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025289, ts 000320, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014736, ts 004480, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025290, ts 000480, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014737, ts 004640, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025291, ts 000640, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014738, ts 004800, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025292, ts 000800, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014739, ts 004960, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025293, ts 000960, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014740, ts 005120, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025294, ts 001120, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014741, ts 005280, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025295, ts 001280, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014742, ts 005440, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025296, ts 001440, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014743, ts 005600, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025297, ts 001600, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014744, ts 005760, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025298, ts 001760, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014745, ts 005920, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025299, ts 001920, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014746, ts 006080, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025300, ts 002080, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014747, ts 006240, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025301, ts 002240, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014748, ts 006400, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025302, ts 002400, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014749, ts 006560, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025303, ts 002560, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014750, ts 006720, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025304, ts 002720, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014751, ts 006880, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025305, ts 002880, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014752, ts 007040, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025306, ts 003040, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014753, ts 007200, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025307, ts 003200, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014754, ts 007360, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025308, ts 003360, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014755, ts 007520, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025309, ts 003520, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014756, ts 007680, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025310, ts 003680, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014757, ts 007840, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025311, ts 003840, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014758, ts 008000, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025312, ts 004000, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014759, ts 008160, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025313, ts 004160, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014760, ts 008320, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025314, ts 004320, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014761, ts 008480, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025315, ts 004480, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014762, ts 008640, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025316, ts 004640, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014763, ts 008800, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025317, ts 004800, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014764, ts 008960, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025318, ts 004960, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014765, ts 009120, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025319, ts 005120, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014766, ts 009280, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025320, ts 005280, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014767, ts 009440, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025321, ts 005440, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014768, ts 009600, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025322, ts 005600, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014769, ts 009760, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025323, ts 005760, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014770, ts 009920, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025324, ts 005920, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014771, ts 010080, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025325, ts 006080, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014772, ts 010240, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025326, ts 006240, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014773, ts 010400, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025327, ts 006400, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014774, ts 010560, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025328, ts 006560, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014775, ts 010720, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025329, ts 006720, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025330, ts 006880, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014776, ts 010880, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014777, ts 011040, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025331, ts 007040, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014778, ts 011200, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025332, ts 007200, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014779, ts 011360, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025333, ts 007360, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014780, ts 011520, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025334, ts 007520, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014781, ts 011680, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025335, ts 007680, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014782, ts 011840, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025336, ts 007840, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014783, ts 012000, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025337, ts 008000, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014784, ts 012160, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025338, ts 008160, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014785, ts 012320, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025339, ts 008320, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014786, ts 012480, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025340, ts 008480, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014787, ts 012640, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025341, ts 008640, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014788, ts 012800, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025342, ts 008800, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014789, ts 012960, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025343, ts 008960, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014790, ts 013120, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025344, ts 009120, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014791, ts 013280, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025345, ts 009280, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014792, ts 013440, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025346, ts 009440, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014793, ts 013600, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025347, ts 009600, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014794, ts 013760, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025348, ts 009760, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014795, ts 013920, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025349, ts 009920, len 000160)
+Got  RTP packet from    139.59.76.222:18374 (type 08, seq 014796, ts 014080, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025350, ts 010080, len 000160)
+Sent RTP packet to      139.59.76.222:18374 (type 08, seq 025351, ts 010240, len 000160)
+<--- Received SIP request (474 bytes) from UDP:139.59.76.222:5060 --->
+BYE sip:asterisk@91.200.14.36:5060 SIP/2.0
+Via: SIP/2.0/UDP 139.59.76.222:5060;branch=z9hG4bK44431bd7;rport
+Max-Forwards: 70
+From: <sip:+14802569373@139.59.76.222>;tag=as71d0fab0
+To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=cf42bf47-8348-4c05-a27d-b17a9e80449c
+Call-ID: b192507a-e912-41b1-b528-948ec486fd5d
+CSeq: 102 BYE
+User-Agent: MagnusBilling
+X-Asterisk-HangupCause: Unallocated (unassigned) number
+X-Asterisk-HangupCauseCode: 1
+Content-Length: 0
+
+
+[Jun  6 20:48:05] DEBUG[1188]: res_pjsip/pjsip_distributor.c:502 distributor: Searching for serializer associated with dialog dlg0x7fcf2001e668 for Request msg BYE/cseq=102 (rdata0x7fcea0001fe8)
+[Jun  6 20:48:05] DEBUG[1188]: res_pjsip/pjsip_distributor.c:510 distributor: Found serializer pjsip/outsess/autodial-one-0000005e associated with dialog dlg0x7fcf2001e668
+<--- Transmitting SIP response (385 bytes) to UDP:139.59.76.222:5060 --->
+SIP/2.0 200 OK
+Via: SIP/2.0/UDP 139.59.76.222:5060;rport=5060;received=139.59.76.222;branch=z9hG4bK44431bd7
+Call-ID: b192507a-e912-41b1-b528-948ec486fd5d
+From: <sip:+14802569373@139.59.76.222>;tag=as71d0fab0
+To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=cf42bf47-8348-4c05-a27d-b17a9e80449c
+CSeq: 102 BYE
+Server: Asterisk PBX certified-18.9-cert9
+Content-Length:  0
+
+
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4770 session_inv_on_tsx_state_changed:  PJSIP/autodial-one-00000004 TSX State: Completed  Inv State: CONFIRMED
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4390 __print_debug_details: Function session_inv_on_tsx_state_changed called on event TSX_STATE
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4404 __print_debug_details: The state change pertains to the endpoint 'autodial-one(PJSIP/autodial-one-00000004)'
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4412 __print_debug_details: The inv session does NOT have an invite_tsx
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4415 __print_debug_details: The UAS BYE transaction involved in this state change is 0x7fcf200327e8
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4419 __print_debug_details: The current transaction state is Completed
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4421 __print_debug_details: The transaction state change event is TX_MSG
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4426 __print_debug_details: The current inv state is CONFIRMED
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4958 session_inv_on_tsx_state_changed:  Nothing delayed
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4202 session_on_tsx_state:  PJSIP/autodial-one-00000004 TSX State: Completed  Inv State: CONFIRMED
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4206 session_on_tsx_state:  Topology: Pending: (null topology)  Active:  <0:audio-0:audio:sendrecv (ulaw|alaw)>
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4211 session_on_tsx_state:
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4652 session_inv_on_state_changed:  PJSIP/autodial-one-00000004 Event: TSX_STATE  Inv State: DISCONNCTD
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4390 __print_debug_details: Function session_inv_on_state_changed called on event TSX_STATE
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4404 __print_debug_details: The state change pertains to the endpoint 'autodial-one(PJSIP/autodial-one-00000004)'
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4412 __print_debug_details: The inv session does NOT have an invite_tsx
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4424 __print_debug_details: There is no transaction involved in this state change
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4426 __print_debug_details: The current inv state is DISCONNCTD
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4678 session_inv_on_state_changed: PJSIP/autodial-one-00000004: Source of transaction state change is RX_MSG
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4620 handle_incoming_before_media: PJSIP/autodial-one-00000004: Received request
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4435 handle_incoming_request:  PJSIP/autodial-one-00000004: Method is BYE
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4445 handle_incoming_request:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4726 session_inv_on_state_changed:
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4770 session_inv_on_tsx_state_changed:  PJSIP/autodial-one-00000004 TSX State: Completed  Inv State: DISCONNCTD
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4390 __print_debug_details: Function session_inv_on_tsx_state_changed called on event TSX_STATE
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4404 __print_debug_details: The state change pertains to the endpoint 'autodial-one(PJSIP/autodial-one-00000004)'
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4412 __print_debug_details: The inv session does NOT have an invite_tsx
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4415 __print_debug_details: The UAS BYE transaction involved in this state change is 0x7fcf200327e8
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4419 __print_debug_details: The current transaction state is Completed
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4421 __print_debug_details: The transaction state change event is RX_MSG
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4426 __print_debug_details: The current inv state is DISCONNCTD
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4958 session_inv_on_tsx_state_changed:  Nothing delayed
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4202 session_on_tsx_state:  PJSIP/autodial-one-00000004 TSX State: Completed  Inv State: DISCONNCTD
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4206 session_on_tsx_state:  Topology: Pending: (null topology)  Active:  <0:audio-0:audio:sendrecv (ulaw|alaw)>
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:4211 session_on_tsx_state:
+[Jun  6 20:48:05] DEBUG[2148]: chan_pjsip.c:2975 chan_pjsip_session_end:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:05] DEBUG[2148]: chan_pjsip.c:2992 chan_pjsip_session_end:
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: channel.c:3203 ast_settimeout_full: Scheduling timer at (0 requested / 0 actual) timer ticks per second
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: channel.c:3203 ast_settimeout_full: Scheduling timer at (0 requested / 0 actual) timer ticks per second
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: channel.c:5740 set_format: Channel PJSIP/autodial-one-00000004 setting write format path: ulaw -> alaw
+[Jun  6 20:48:05] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: HangupRequest
+Privilege: call,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 20
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Cause: 16
+
+
+    -- User disconnected
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: pbx.c:4424 __ast_pbx_run: Extension s, priority 20 returned normally even though call was hung up
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: channel.c:2455 ast_softhangup_nolock: Soft-Hanging (0x10) up channel 'PJSIP/autodial-one-00000004'
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: channel.c:2455 ast_softhangup_nolock: Soft-Hanging (0x80) up channel 'PJSIP/autodial-one-00000004'
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__TARGET' is NULL
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__CALLID' is NULL
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: pbx_variables.c:374 ast_str_retrieve_variable: Result of '__TRACKINGID' is NULL
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'NoOp'
+    -- Executing [h@autodial-ivr:1] NoOp("PJSIP/autodial-one-00000004", "Call ended for , CallID: , TrackingID: ") in new stack
+[Jun  6 20:48:05] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 20
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: DTMF_DIGIT
+Value:
+
+
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: pbx.c:2947 pbx_extension_helper: Launching 'UserEvent'
+    -- Executing [h@autodial-ivr:2] UserEvent("PJSIP/autodial-one-00000004", "CallEnded,") in new stack
+[Jun  6 20:48:05] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: VarSet
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 20
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Variable: READSTATUS
+Value: HANGUP
+
+
+[Jun  6 20:48:05] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: SoftHangupRequest
+Privilege: call,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: s
+Priority: 20
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Cause: 16
+
+
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: channel.c:2545 ast_hangup: Channel 0x7fcf78001d50 'PJSIP/autodial-one-00000004' hanging up.  Refs: 2
+[Jun  6 20:48:05] DEBUG[1182]: cdr.c:1460 cdr_object_finalize: Finalized CDR for PJSIP/autodial-one-00000004 - start 1749242882.855426 answer 1749242883.040301 end 1749242885.306839 dur 2.451 bill 2.266 dispo ANSWERED
+[Jun  6 20:48:05] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: h
+Priority: 1
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: h
+Application: NoOp
+AppData: Call ended for , CallID: , TrackingID:
+
+
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: chan_pjsip.c:2522 chan_pjsip_hangup:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: chan_pjsip.c:2442 hangup_cause2sip: AST hangup cause 16 (no match found in PJSIP)
+[Jun  6 20:48:05] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Newexten
+Privilege: dialplan,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: h
+Priority: 2
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Extension: h
+Application: UserEvent
+AppData: CallEnded,
+
+
+[Jun  6 20:48:05] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: UserEvent
+Privilege: user,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: h
+Priority: 2
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+UserEvent: CallEnded
+
+
+[Jun  6 20:48:05] DEBUG[3002][C-00000005]: chan_pjsip.c:2540 chan_pjsip_hangup:  Cause: 0
+[Jun  6 20:48:05] DEBUG[2148]: chan_pjsip.c:2489 hangup:  PJSIP/autodial-one-00000004
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:3456 ast_sip_session_terminate:  PJSIP/autodial-one-00000004 Response 0
+[Jun  6 20:48:05] DEBUG[2148]: res_rtp_asterisk.c:2874 dtls_srtp_stop_timeout_timer: (0x7fcf18040fa0) DTLS srtp - stopped timeout timer'
+[Jun  6 20:48:05] DEBUG[2148]: res_rtp_asterisk.c:2874 dtls_srtp_stop_timeout_timer: (0x7fcf18040fa0) DTLS srtp - stopped timeout timer'
+[Jun  6 20:48:05] DEBUG[2148]: res_rtp_asterisk.c:2276 ast_rtp_dtls_stop: (0x7fcf18040fa0) DTLS stop
+[Jun  6 20:48:05] DEBUG[2148]: res_rtp_asterisk.c:2874 dtls_srtp_stop_timeout_timer: (0x7fcf18040fa0) DTLS srtp - stopped timeout timer'
+[Jun  6 20:48:05] DEBUG[2148]: res_rtp_asterisk.c:2874 dtls_srtp_stop_timeout_timer: (0x7fcf18040fa0) DTLS srtp - stopped timeout timer'
+[Jun  6 20:48:05] DEBUG[2148]: res_rtp_asterisk.c:4036 rtp_deallocate_transport: (0x7fcf18040fa0) ICE RTP transport deallocating
+[Jun  6 20:48:05] DEBUG[2148]: rtp_engine.c:455 instance_destructor: Destroyed RTP instance '0x7fcf18040fa0'
+[Jun  6 20:48:05] DEBUG[2148]: res_pjsip_session.c:3528 ast_sip_session_terminate:
+[Jun  6 20:48:05] DEBUG[2148]: channel.c:2192 ast_channel_destructor: Channel 0x7fcf78001d50 'PJSIP/autodial-one-00000004' destroying
+[Jun  6 20:48:05] DEBUG[2148]: stasis.c:441 topic_dtor: Destroying topic. name: channel:campaign_36_1749242820_1_168989, detail:
+[Jun  6 20:48:05] DEBUG[2148]: stasis.c:450 topic_dtor: Topic 'channel:campaign_36_1749242820_1_168989': 0x7fcf78000ed0 destroyed
+[Jun  6 20:48:05] DEBUG[2148]: channel_internal_api.c:680 ast_channel_nativeformats_set:  <initializing>: MultistreamFormats: (nothing)
+[Jun  6 20:48:05] DEBUG[2148]: channel_internal_api.c:692 ast_channel_nativeformats_set:  Channel is being initialized or destroyed
+[Jun  6 20:48:05] DEBUG[2148]: chan_pjsip.c:2513 hangup:
+[Jun  6 20:48:05] DEBUG[1173]: devicestate.c:361 _ast_device_state: No provider found, checking channel drivers for PJSIP - autodial-one
+[Jun  6 20:48:05] DEBUG[1173]: devicestate.c:466 do_state_change: Changing state for PJSIP/autodial-one - state 1 (Not in use)
+[Jun  6 20:48:05] DEBUG[1230]: app_queue.c:2606 device_state_cb: Device 'PJSIP/autodial-one' changed to state '1' (Not in use) but we don't care because they're not a member of any queue.
+[Jun  6 20:48:05] DEBUG[1182]: stasis.c:579 stasis_topic_create_with_detail: Creating topic. name: channel:1749242885.9, detail:
+[Jun  6 20:48:05] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: Hangup
+Privilege: call,all
+Channel: PJSIP/autodial-one-00000004
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: +18888641321
+CallerIDName: +18888641321
+ConnectedLineNum: +18888641321
+ConnectedLineName: +18888641321
+Language: en
+AccountCode:
+Context: autodial-ivr
+Exten: h
+Priority: 3
+Uniqueid: campaign_36_1749242820_1_168989
+Linkedid: campaign_36_1749242820_1_168989
+Cause: 16
+Cause-txt: Normal Clearing
+
+
+[Jun  6 20:48:05] DEBUG[1182]: stasis.c:613 stasis_topic_create_with_detail: Topic 'channel:1749242885.9': 0x7fcf380045b0 created
+[Jun  6 20:48:05] DEBUG[1182]: stasis.c:441 topic_dtor: Destroying topic. name: channel:1749242885.9, detail:
+[Jun  6 20:48:05] DEBUG[1182]: stasis.c:450 topic_dtor: Topic 'channel:1749242885.9': 0x7fcf380045b0 destroyed
+[Jun  6 20:48:05] DEBUG[2417]: manager.c:6343 match_filter: Examining AMI event:
+Event: DeviceStateChange
+Privilege: call,all
+Device: PJSIP/autodial-one
+State: NOT_INUSE
+
+
+<--- Received SIP request (474 bytes) from UDP:139.59.76.222:5060 --->
+BYE sip:asterisk@91.200.14.36:5060 SIP/2.0
+Via: SIP/2.0/UDP 139.59.76.222:5060;branch=z9hG4bK44431bd7;rport
+Max-Forwards: 70
+From: <sip:+14802569373@139.59.76.222>;tag=as71d0fab0
+To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=cf42bf47-8348-4c05-a27d-b17a9e80449c
+Call-ID: b192507a-e912-41b1-b528-948ec486fd5d
+CSeq: 102 BYE
+User-Agent: MagnusBilling
+X-Asterisk-HangupCause: Unallocated (unassigned) number
+X-Asterisk-HangupCauseCode: 1
+Content-Length: 0
+
+
+[Jun  6 20:48:05] DEBUG[1188]: res_pjsip/pjsip_distributor.c:502 distributor: Searching for serializer associated with dialog dlg0x7fcf2001e668 for Request msg BYE/cseq=102 (rdata0x7fcea0001fe8)
+[Jun  6 20:48:05] DEBUG[1188]: res_pjsip/pjsip_distributor.c:510 distributor: Found serializer pjsip/outsess/autodial-one-0000005e associated with dialog dlg0x7fcf2001e668
+<--- Transmitting SIP response (385 bytes) to UDP:139.59.76.222:5060 --->
+SIP/2.0 200 OK
+Via: SIP/2.0/UDP 139.59.76.222:5060;rport=5060;received=139.59.76.222;branch=z9hG4bK44431bd7
+Call-ID: b192507a-e912-41b1-b528-948ec486fd5d
+From: <sip:+14802569373@139.59.76.222>;tag=as71d0fab0
+To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=cf42bf47-8348-4c05-a27d-b17a9e80449c
+CSeq: 102 BYE
+Server: Asterisk PBX certified-18.9-cert9
+Content-Length:  0
+
+
+[Jun  6 20:48:12] DEBUG[2417]: manager.c:7002 process_message: Running action 'Ping'
+<--- Received SIP request (534 bytes) from UDP:139.59.24.219:5060 --->
+OPTIONS sip:91.200.14.36 SIP/2.0
+Via: SIP/2.0/UDP 139.59.24.219:5060;branch=z9hG4bK0284e09e;rport
+Max-Forwards: 70
+From: "asterisk" <sip:asterisk@139.59.24.219>;tag=as1382590c
+To: <sip:91.200.14.36>
+Contact: <sip:asterisk@139.59.24.219:5060>
+Call-ID: 148ca96a5def8d695847864632eda702@139.59.24.219:5060
+CSeq: 102 OPTIONS
+User-Agent: MagnusBilling
+Date: Fri, 06 Jun 2025 20:48:19 GMT
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Content-Length: 0
+
+
+[Jun  6 20:48:19] DEBUG[1188]: res_pjsip/pjsip_distributor.c:393 find_dialog: Could not find matching transaction for Request msg OPTIONS/cseq=102 (rdata0x7fcea0001fe8)
+[Jun  6 20:48:19] DEBUG[1188]: res_pjsip/pjsip_distributor.c:471 ast_sip_get_distributor_serializer: Calculated serializer pjsip/distributor-00000037 to use for Request msg OPTIONS/cseq=102 (rdata0x7fcea0001fe8)
+[Jun  6 20:48:19] DEBUG[2148]: netsock2.c:170 ast_sockaddr_split_hostport: Splitting '139.59.24.219' into...
+[Jun  6 20:48:19] DEBUG[2148]: netsock2.c:224 ast_sockaddr_split_hostport: ...host '139.59.24.219' and port ''.
+[Jun  6 20:48:19] DEBUG[2148]: res_pjsip_endpoint_identifier_ip.c:258 ip_identify_match_check: Source address 139.59.24.219:5060 does not match identify 'autodial-one-identify'
+[Jun  6 20:48:19] DEBUG[2148]: res_pjsip_endpoint_identifier_ip.c:253 ip_identify_match_check: Source address 139.59.24.219:5060 matches identify 'autodial-two-identify'
+[Jun  6 20:48:19] DEBUG[2148]: res_pjsip_endpoint_identifier_ip.c:287 common_identify: Identify 'autodial-two-identify' SIP message matched to endpoint autodial-two
+<--- Transmitting SIP response (847 bytes) to UDP:139.59.24.219:5060 --->
+SIP/2.0 200 OK
+Via: SIP/2.0/UDP 139.59.24.219:5060;rport=5060;received=139.59.24.219;branch=z9hG4bK0284e09e
+Call-ID: 148ca96a5def8d695847864632eda702@139.59.24.219:5060
+From: "asterisk" <sip:asterisk@139.59.24.219>;tag=as1382590c
+To: <sip:91.200.14.36>;tag=z9hG4bK0284e09e
+CSeq: 102 OPTIONS
+Accept: application/pidf+xml, application/xpidf+xml, application/cpim-pidf+xml, application/dialog-info+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, application/sdp, message/sipfrag;version=2.0
+Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
+Supported: 100rel, timer, replaces, norefersub
+Accept-Encoding: identity
+Accept-Language: en
+Server: Asterisk PBX certified-18.9-cert9
+Content-Length:  0
+
+
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip/pjsip_options.c:927 sip_options_qualify_aor: Qualifying all contacts on AOR 'autodial-one-aor'
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip/pjsip_options.c:856 sip_options_qualify_contact: Qualifying contact 'autodial-one-aor@@2232a781e94ac76517e0c738c8ad2235' on AOR 'autodial-one-aor'
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip.c:1568 endpt_send_request: 0x7fcf18046f60: Wrapper created
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip.c:1583 endpt_send_request: 0x7fcf18046f60: Set timer to 3000 msec
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip/pjsip_resolver.c:479 sip_resolve: Performing SIP DNS resolution of target '139.59.76.222'
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip/pjsip_resolver.c:506 sip_resolve: Transport type for target '139.59.76.222' is 'UDP transport'
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip/pjsip_resolver.c:527 sip_resolve: Target '139.59.76.222' is an IP address, skipping resolution
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip/pjsip_message_filter.c:296 filter_on_tx_message: Re-wrote Contact URI host/port to 91.200.14.36:5060 (this may be re-written again later)
+<--- Transmitting SIP request (442 bytes) to UDP:139.59.76.222:5060 --->
+OPTIONS sip:139.59.76.222:5060 SIP/2.0
+Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPj6c574f7c-3528-405d-bd67-6bea4f3adc01
+From: <sip:autodial-one@91.200.14.36>;tag=a10c3bfc-10f2-4314-93d6-afa64bc9b4a6
+To: <sip:139.59.76.222>
+Contact: <sip:autodial-one@91.200.14.36:5060>
+Call-ID: 50146997-0f83-40c8-8813-2f33680d4124
+CSeq: 48642 OPTIONS
 Max-Forwards: 70
 User-Agent: Asterisk PBX certified-18.9-cert9
 Content-Length:  0
 
 
-<--- Received SIP response (522 bytes) from UDP:139.59.24.219:5060 --->
+<--- Received SIP response (522 bytes) from UDP:139.59.76.222:5060 --->
 SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjacf342b2-e4df-4ecd-b74c-b9a5ab6e9bbb;received=91.200.14.36;rport=5060
-From: <sip:autodial-two@91.200.14.36>;tag=90a64eb1-d908-4982-8190-78f5b074ee6a
-To: <sip:139.59.24.219>;tag=as272dc5d0
-Call-ID: 61efc932-3708-4a9e-8565-435ca1e8ffa1
-CSeq: 12763 OPTIONS
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj6c574f7c-3528-405d-bd67-6bea4f3adc01;received=91.200.14.36;rport=5060
+From: <sip:autodial-one@91.200.14.36>;tag=a10c3bfc-10f2-4314-93d6-afa64bc9b4a6
+To: <sip:139.59.76.222>;tag=as4204b11e
+Call-ID: 50146997-0f83-40c8-8813-2f33680d4124
+CSeq: 48642 OPTIONS
 Server: MagnusBilling
 Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
 Supported: replaces, timer
@@ -380,42 +1955,13 @@ Accept: application/sdp
 Content-Length: 0
 
 
-       > 0x7fcf18045340 -- Strict RTP learning complete - Locking on source address 139.59.76.222:14702
-    -- User entered nothing.
-    -- Executing [s@autodial-ivr:21] GotoIf("PJSIP/autodial-one-00000000", "0?notify_bot:hangup") in new stack
-    -- Goto (autodial-ivr,s,27)
-    -- Executing [s@autodial-ivr:27] NoOp("PJSIP/autodial-one-00000000", "No response or invalid digit from ") in new stack
-    -- Executing [s@autodial-ivr:28] UserEvent("PJSIP/autodial-one-00000000", "AutoDialResponse,") in new stack
-    -- Executing [s@autodial-ivr:29] Hangup("PJSIP/autodial-one-00000000", "") in new stack
-  == Spawn extension (autodial-ivr, s, 29) exited non-zero on 'PJSIP/autodial-one-00000000'
-    -- Executing [h@autodial-ivr:1] NoOp("PJSIP/autodial-one-00000000", "Call ended for , CallID: , TrackingID: ") in new stack
-    -- Executing [h@autodial-ivr:2] UserEvent("PJSIP/autodial-one-00000000", "CallEnded,") in new stack
-<--- Transmitting SIP request (467 bytes) to UDP:139.59.76.222:5060 --->
-BYE sip:+14802569373@139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPj4500253e-00d1-4090-b335-12ed38112004
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
-To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
-Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
-CSeq: 21401 BYE
-Reason: Q.850;cause=16
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
-
-
-<--- Received SIP response (514 bytes) from UDP:139.59.76.222:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj4500253e-00d1-4090-b335-12ed38112004;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
-To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
-Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
-CSeq: 21401 BYE
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Content-Length: 0
-
-
-[Jun  6 19:49:00] NOTICE[2190]: manager.c:3583 authenticate: 196.251.92.135 tried to authenticate with nonexistent user 'manager'
-[Jun  6 19:49:00] NOTICE[2190]: manager.c:3620 authenticate: 196.251.92.135 failed to authenticate as 'manager'
-  == Connect attempt from '196.251.92.135' unable to authenticate
+[Jun  6 20:48:20] DEBUG[1188]: res_pjsip/pjsip_distributor.c:519 distributor: No dialog serializer for Response msg 404/OPTIONS/cseq=48642 (rdata0x7fcea0001fe8).  Using request transaction as basis.
+[Jun  6 20:48:20] DEBUG[1188]: res_pjsip/pjsip_distributor.c:127 find_request_serializer: Found transaction tsx0x7fcf2000a2d8 for Response msg 404/OPTIONS/cseq=48642 (rdata0x7fcea0001fe8).
+[Jun  6 20:48:20] DEBUG[1188]: res_pjsip/pjsip_distributor.c:137 find_request_serializer: Found serializer pjsip/options/autodial-one-aor-0000003c on transaction tsx0x7fcf2000a2d8
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip.c:1446 endpt_send_request_cb: 0x7fcf18046f60: PJSIP tsx response received
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip.c:1459 endpt_send_request_cb: 0x7fcf18046f60: Cancelling timer
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip.c:1468 endpt_send_request_cb: 0x7fcf18046f60: Timer cancelled
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip.c:1489 endpt_send_request_cb: 0x7fcf18046f60: Callbacks executed
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip.c:1545 send_request_wrapper_destructor: 0x7fcf18046f60: wrapper destroyed
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip/pjsip_options.c:755 sip_options_contact_status_notify_task: Contact autodial-one-aor/sip:139.59.76.222:5060 status didn't change: Reachable, RTT: 135.662 msec
+[Jun  6 20:48:20] DEBUG[2148]: res_pjsip/pjsip_options.c:775 sip_options_contact_status_notify_task: AOR 'autodial-one-aor' now has 1 available contacts

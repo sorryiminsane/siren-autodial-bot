@@ -70,7 +70,7 @@ class Call(Base):
     target_number = Column(String(50))  # Number being called
     caller_id = Column(String(50))  # CallerID being used
     trunk = Column(String(50))  # Trunk being used
-    uniqueid = Column(String(150), nullable=True, index=True)  # Asterisk Uniqueid
+    uniqueid = Column(String(150), nullable=True, unique=True, index=True)  # Asterisk Uniqueid
     channel = Column(String(150), nullable=True, index=True)  # Asterisk Channel
     action_id = Column(String(150), nullable=True)  # ActionID for originate
     status = Column(String(50), default='new')  # Call status
@@ -98,8 +98,9 @@ class Call(Base):
         logger = logging.getLogger(__name__)
         from sqlalchemy import select
         
-        # First try exact match
-        stmt = select(cls).where(cls.uniqueid == uniqueid)
+        # First try exact match - get most recent if multiple exist
+        from sqlalchemy import desc
+        stmt = select(cls).where(cls.uniqueid == uniqueid).order_by(desc(cls.start_time)).limit(1)
         result = await session.execute(stmt)
         call = result.scalar_one_or_none()
         if call:

@@ -250,8 +250,9 @@ async def execute_retry_call(campaign_id: int, retry_entry: dict):
             
             # Create new call record for retry
             timestamp = int(time.time())
-            microseconds = datetime.now().microsecond
-            new_call_id = f"retry_{campaign_id}_{timestamp}_{retry_count}_{microseconds}"
+            import uuid
+            unique_suffix = str(uuid.uuid4())[:8]
+            new_call_id = f"retry_{campaign_id}_{timestamp}_{retry_count}_{unique_suffix}"
             tracking_id = f"JKD1.R{retry_count}.{timestamp % 1000}"
             
             # Copy original call metadata and add retry info
@@ -3311,8 +3312,10 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                     phone_number = lead['phone']
                     # Generate a unique tracking ID and call ID
                     tracking_id = f"JKD1.{idx}"
-                    microseconds = datetime.now().microsecond
-                    call_id = f"campaign_{campaign_id}_{timestamp}_{idx}_{microseconds}"
+                    # Use nanoseconds and campaign_id to ensure uniqueness
+                    import uuid
+                    unique_suffix = str(uuid.uuid4())[:8]  # 8 char unique suffix
+                    call_id = f"campaign_{campaign_id}_{timestamp}_{idx}_{unique_suffix}"
                     
                     # Create the call record with lead data
                     new_call = Call(

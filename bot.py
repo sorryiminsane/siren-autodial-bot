@@ -501,9 +501,9 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, age
     
     # Auto-Dial button (only if authorized - auto-enable if authorized)
     if agent.is_authorized:
-    keyboard.append([
+        keyboard.append([
             InlineKeyboardButton("🤖 Auto-Dial Campaign", callback_data="auto_dial")
-    ])
+        ])
     
         # Campaign History button
         keyboard.append([
@@ -572,7 +572,7 @@ async def show_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
             await update.callback_query.message.edit_text(
                 settings_text,
                 reply_markup=reply_markup,
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
         except Exception as e:
              logger.error(f"Error editing message in show_settings_menu: {e}")
@@ -781,7 +781,7 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                     [InlineKeyboardButton("⚙️ Configure Settings", callback_data="settings")],
                     [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
                 ]),
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
         return MAIN_MENU
 
@@ -928,7 +928,7 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.message.edit_text(
                 f"🛑 **Campaign #{campaign_id} Stopped**\n\n"
                 "Campaign has been terminated and removed from memory.",
-                parse_mode='Markdown',
+        parse_mode='Markdown',
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_main")]])
             )
             await query.answer("🛑 Campaign stopped")
@@ -989,7 +989,7 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             
             await query.message.edit_text(
                 details_text,
-                parse_mode='Markdown',
+        parse_mode='Markdown',
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Campaign", callback_data=f"back_campaign_{campaign_id}")]])
             )
         return MAIN_MENU
@@ -1365,9 +1365,9 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
         agent = result.scalar_one_or_none()
         
         if not agent:
-            await update.message.reply_text(
+    await update.message.reply_text(
                 f"❌ Agent with ID `{agent_id}` not found. The agent must use the bot at least once.",
-                parse_mode='Markdown',
+        parse_mode='Markdown',
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")],
                     [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]
@@ -1389,10 +1389,10 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
             agent.is_authorized = True
             await session.commit()
             
-            await update.message.reply_text(
+    await update.message.reply_text(
                 f"✅ Agent @{agent.username or agent_id} has been successfully authorized!",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_authorize")]]),
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
             
         elif action == "deauthorize":
@@ -1417,31 +1417,14 @@ async def handle_agent_id_input(update: Update, context: ContextTypes.DEFAULT_TY
             agent.is_authorized = False
             await session.commit()
             
-            await update.message.reply_text(
+    await update.message.reply_text(
                 f"❌ Agent @{agent.username or agent_id} has been deauthorized.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="cancel_deauthorize")]]),
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
     
     return AGENT_MANAGEMENT
 
-async def set_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Phone number registration disabled for auto-dial only bot."""
-            await update.message.reply_text(
-        "📱 *Phone Registration Disabled*\n\n"
-        "Phone number registration is not required for auto-dial campaigns.\n\n"
-        "Use /autodial to start a campaign directly.",
-                parse_mode='Markdown'
-            )
-
-async def set_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Manual caller ID disabled - use auto-dial caller ID only."""
-            await update.message.reply_text(
-        "📲 *Manual Caller ID Disabled*\n\n"
-        "Manual caller ID is not used in auto-dial campaigns.\n\n"
-        "Use /setautodialcid to set the caller ID for campaigns.",
-                parse_mode='Markdown'
-            )
 
 async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's outbound caller ID specifically for Auto-Dial campaigns."""
@@ -1460,20 +1443,20 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
         agent = result.scalar_one_or_none()
 
         if not agent:
-            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
-             return
+    await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+            return
 
         # Argument parsing (no DB change)
         if not context.args:
             current_cid = agent.autodial_caller_id or "Not set"
-            await update.message.reply_text(
+    await update.message.reply_text(
                 f"🤖 *Set Auto-Dial CallerID*\n\n"
                 f"Current Auto-Dial CID: `{current_cid}`\n\n"
                 "Please provide the phone number to use for Auto-Dial campaigns:\n"
                 "`/setautodialcid +1234567890`\n\n"
                 "• Must be E.164 format\n"
                 "• If not set, Auto-Dial may fail or use a default.", # Add clarification
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
             return
 
@@ -1481,11 +1464,11 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
         
         # Validation (no DB change)
         if not validate_phone_number(autodial_caller_id):
-            await update.message.reply_text(
+    await update.message.reply_text(
                 "❌ Invalid phone number format.\n\n"
                 "Please use E.164 format:\n"
                 "Example: `/setautodialcid +1234567890`",
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
             return
 
@@ -1496,16 +1479,16 @@ async def set_autodial_caller_id(update: Update, context: ContextTypes.DEFAULT_T
             session.add(agent) # Add for update tracking
             # await session.commit() # Commit handled by context manager
             
-            await update.message.reply_text(
+    await update.message.reply_text(
                 "✅ Auto-Dial CallerID updated successfully!\n\n"
                 f"🤖 New Auto-Dial CID: `{autodial_caller_id}`",
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
             
         except SQLAlchemyError as e:
             logger.error(f"Database error in set_autodial_caller_id: {str(e)}")
             # await session.rollback() # Rollback handled by context manager
-            await update.message.reply_text("❌ Error updating Auto-Dial caller ID. Please try again later.")
+    await update.message.reply_text("❌ Error updating Auto-Dial caller ID. Please try again later.")
 
 async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Set agent's route (one or two) for auto-dial campaigns."""
@@ -1522,12 +1505,12 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
         agent = result.scalar_one_or_none()
 
         if not agent:
-            await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
+    await update.message.reply_text("❌ Error: Agent not found. Please use /start first.")
             return
 
         if not context.args:
             current_route = agent.route or "Not set"
-            await update.message.reply_text(
+    await update.message.reply_text(
                 f"🌐 *Set Route*\n\n"
                 f"Current Route: `{current_route}`\n\n"
                 "Please specify which route to use:\n"
@@ -1535,17 +1518,17 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "`/route two` - Use Route Two\n\n"
                 "• Required for auto-dial campaigns\n"
                 "• Determines which trunk will be used",
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
             return
 
         route_arg = context.args[0].lower()
         
         if route_arg not in ['one', 'two']:
-            await update.message.reply_text(
+    await update.message.reply_text(
                 "❌ Invalid route. Please use:\n"
                 "`/route one` or `/route two`",
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
             return
 
@@ -1559,18 +1542,18 @@ async def set_route(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session.add(agent)
             await session.commit()
             
-            await update.message.reply_text(
+    await update.message.reply_text(
                 f"✅ Route updated successfully!\n\n"
                 f"🌐 Route: `{route_arg.title()}`\n"
                 f"🤖 Auto-Dial: `Enabled`\n"
                 f"📞 Trunk: `autodial-{route_arg}`\n\n"
                 "You can now start auto-dial campaigns!",
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
             
         except SQLAlchemyError as e:
             logger.error(f"Database error in set_route: {str(e)}")
-            await update.message.reply_text("❌ Error updating route. Please try again later.")
+    await update.message.reply_text("❌ Error updating route. Please try again later.")
 
 async def check_ami_status(context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Check if AMI is connected and working."""
@@ -1703,13 +1686,13 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Manual calling functionality removed - auto-dial only bot
 
 async def call(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Manual calling disabled - use auto-dial campaigns only."""
-            await update.message.reply_text(
+        """Manual calling disabled - use auto-dial campaigns only."""
+    await update.message.reply_text(
         "📞 *Manual Calling Disabled*\n\n"
         "This bot now focuses exclusively on auto-dial campaigns.\n\n"
         "Use /autodial to start a campaign instead.",
-                parse_mode='Markdown'
-            )
+        parse_mode='Markdown'
+    )
 
 async def post_init(application: Application) -> None:
     global global_application_instance
@@ -1734,7 +1717,7 @@ async def post_init(application: Application) -> None:
             await application.bot.send_message(
                 chat_id=test_user_id,
                 text=test_message,
-                parse_mode='Markdown'
+        parse_mode='Markdown'
             )
             logger.info(f"Test notification sent to user {test_user_id}")
         except Exception as e:
@@ -3183,7 +3166,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
             if update.message: 
                 await update.message.reply_text(
                     "❌ No route configured. Please set your route first:\n\n"
-                    "`/route one` or `/route two`"
+                                        "`/route one` or `/route two`"
                 )
             try:
                 await show_main_menu(update, context, agent)
@@ -3271,7 +3254,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
                     # Extract address (anything after phone number that contains digits/address-like content)
                     elif phone_found and not lead_data.get('address') and (any(char.isdigit() for char in part) or any(word in part.lower() for word in ['st', 'ave', 'rd', 'dr', 'blvd', 'lane', 'way', 'court', 'place'])):
                         lead_data['address'] = part
-            else:
+                        else:
                 # Simple phone number format
                 normalized = re.sub(r'[^0-9+]', '', original_line)
             if not normalized.startswith('+'):
@@ -3370,7 +3353,7 @@ async def handle_auto_dial_file(update: Update, context: ContextTypes.DEFAULT_TY
         
         except Exception as e:
             logger.error(f"Error pre-creating call records: {e}")
-            await update.message.reply_text(
+    await update.message.reply_text(
                 "⚠️ There was an error preparing the campaign. Please try again.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_main")]])
             )

@@ -1,306 +1,112 @@
-
-
-    -- Called +14802569373@autodial-one
-    -- Called +14804855848@autodial-one
-<--- Transmitting SIP request (1077 bytes) to UDP:139.59.76.222:5060 --->
-INVITE sip:+14802569373@139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPj8627764a-8fe5-4bda-934c-22da0bd3fb3c
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-To: <sip:+14802569373@139.59.76.222>
-Contact: <sip:asterisk@91.200.14.36:5060>
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-CSeq: 14703 INVITE
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub, histinfo
-Session-Expires: 1800
-Min-SE: 90
-Remote-Party-ID: "+18888641321" <sip:+18888641321@91.200.14.36>;party=calling;privacy=off;screen=no
+142977*CLI> pjsip set logger on
+PJSIP Logging enabled
+<--- Received SIP request (692 bytes) from UDP:77.221.140.149:63186 --->
+INVITE sip:00948875658600@91.200.14.36 SIP/2.0
+Via: SIP/2.0/UDP 77.221.140.149:63186;branch=z9hG4bK111296725
 Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert9
+From: <sip:8005@91.200.14.36>;tag=1676029351
+To: <sip:00948875658600@91.200.14.36>
+Call-ID: 1509032684-214565169-216257015
+CSeq: 1 INVITE
+Contact: <sip:8005@77.221.140.149:63186>
 Content-Type: application/sdp
-Content-Length:   261
+Content-Length: 208
+Allow: ACK, BYE, CANCEL, INFO, INVITE, MESSAGE, NOTIFY, OPTIONS, PRACK, REFER, REGISTER, SUBSCRIBE, UPDATE, PUBLISH
 
 v=0
-o=- 1002183747 1002183747 IN IP4 91.200.14.36
-s=Asterisk
-c=IN IP4 91.200.14.36
+o=8005 16264 18299 IN IP4 192.168.1.83
+s=call
+c=IN IP4 192.168.1.83
 t=0 0
-m=audio 15226 RTP/AVP 0 8 101
-a=rtpmap:0 PCMU/8000
-a=rtpmap:8 PCMA/8000
+m=audio 25282 RTP/AVP 0 101
+a=rtpmap:0 pcmu/8000
+a=rtpmap:8 pcma/8000
 a=rtpmap:101 telephone-event/8000
-a=fmtp:101 0-16
-a=ptime:20
-a=maxptime:150
-a=sendrecv
+a=fmtp:101 0-11
 
-<--- Transmitting SIP request (1077 bytes) to UDP:139.59.76.222:5060 --->
-INVITE sip:+14804855848@139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjffa7b29c-14e2-47e3-ace8-9be12b455d1a
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=3315607e-a8ca-4256-98ce-2b682570600b
-To: <sip:+14804855848@139.59.76.222>
-Contact: <sip:asterisk@91.200.14.36:5060>
-Call-ID: 521c146a-4afc-447e-a8b7-713972fc7933
-CSeq: 31476 INVITE
-Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
-Supported: 100rel, timer, replaces, norefersub, histinfo
-Session-Expires: 1800
-Min-SE: 90
-Remote-Party-ID: "+18888641321" <sip:+18888641321@91.200.14.36>;party=calling;privacy=off;screen=no
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert9
-Content-Type: application/sdp
-Content-Length:   261
-
-v=0
-o=- 1060861464 1060861464 IN IP4 91.200.14.36
-s=Asterisk
-c=IN IP4 91.200.14.36
-t=0 0
-m=audio 16752 RTP/AVP 0 8 101
-a=rtpmap:0 PCMU/8000
-a=rtpmap:8 PCMA/8000
-a=rtpmap:101 telephone-event/8000
-a=fmtp:101 0-16
-a=ptime:20
-a=maxptime:150
-a=sendrecv
-
-<--- Received SIP response (591 bytes) from UDP:139.59.76.222:5060 --->
-SIP/2.0 100 Trying
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj8627764a-8fe5-4bda-934c-22da0bd3fb3c;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-To: <sip:+14802569373@139.59.76.222>
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-CSeq: 14703 INVITE
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Session-Expires: 1800;refresher=uas
-Contact: <sip:+14802569373@139.59.76.222:5060>
-Content-Length: 0
-
-
-<--- Received SIP response (591 bytes) from UDP:139.59.76.222:5060 --->
-SIP/2.0 100 Trying
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjffa7b29c-14e2-47e3-ace8-9be12b455d1a;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=3315607e-a8ca-4256-98ce-2b682570600b
-To: <sip:+14804855848@139.59.76.222>
-Call-ID: 521c146a-4afc-447e-a8b7-713972fc7933
-CSeq: 31476 INVITE
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Session-Expires: 1800;refresher=uas
-Contact: <sip:+14804855848@139.59.76.222:5060>
-Content-Length: 0
-
-
-<--- Received SIP response (929 bytes) from UDP:139.59.76.222:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjffa7b29c-14e2-47e3-ace8-9be12b455d1a;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=3315607e-a8ca-4256-98ce-2b682570600b
-To: <sip:+14804855848@139.59.76.222>;tag=as19196765
-Call-ID: 521c146a-4afc-447e-a8b7-713972fc7933
-CSeq: 31476 INVITE
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Session-Expires: 1800;refresher=uas
-Contact: <sip:+14804855848@139.59.76.222:5060>
-Content-Type: application/sdp
-Require: timer
-Content-Length: 278
-
-v=0
-o=root 1005014454 1005014454 IN IP4 139.59.76.222
-s=Asterisk PBX 13.38.3
-c=IN IP4 139.59.76.222
-t=0 0
-m=audio 14814 RTP/AVP 8 0 101
-a=rtpmap:8 PCMA/8000
-a=rtpmap:0 PCMU/8000
-a=rtpmap:101 telephone-event/8000
-a=fmtp:101 0-16
-a=ptime:20
-a=maxptime:150
-a=sendrecv
-
-       > 0x7f8868004ab0 -- Strict RTP learning after remote address set to: 139.59.76.222:14814
-<--- Transmitting SIP request (443 bytes) to UDP:139.59.76.222:5060 --->
-ACK sip:+14804855848@139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjd927560f-e6c8-424f-a70e-28e5988796de
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=3315607e-a8ca-4256-98ce-2b682570600b
-To: <sip:+14804855848@139.59.76.222>;tag=as19196765
-Call-ID: 521c146a-4afc-447e-a8b7-713972fc7933
-CSeq: 31476 ACK
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
-
-
-    -- PJSIP/autodial-one-00000005 answered
-    -- Executing [s@autodial-ivr:1] NoOp("PJSIP/autodial-one-00000005", "Starting AutoDial IVR for , initiated by TGID: , CallID: , TrackingID: ") in new stack
-    -- Executing [s@autodial-ivr:2] Answer("PJSIP/autodial-one-00000005", "") in new stack
-    -- Executing [s@autodial-ivr:3] Set("PJSIP/autodial-one-00000005", "__CALLID=") in new stack
-    -- Executing [s@autodial-ivr:4] Set("PJSIP/autodial-one-00000005", "__AGENTID=") in new stack
-    -- Executing [s@autodial-ivr:5] Set("PJSIP/autodial-one-00000005", "__TARGET=") in new stack
-    -- Executing [s@autodial-ivr:6] Set("PJSIP/autodial-one-00000005", "__CAMPAIGN=") in new stack
-    -- Executing [s@autodial-ivr:7] Set("PJSIP/autodial-one-00000005", "__TRACKINGID=") in new stack
-    -- Executing [s@autodial-ivr:8] Set("PJSIP/autodial-one-00000005", "CHANNEL(callid)=") in new stack
-[Jun  5 18:32:40] WARNING[5008][C-00000004]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'callid'
-    -- Executing [s@autodial-ivr:9] Set("PJSIP/autodial-one-00000005", "CHANNEL(trackingid)=") in new stack
-[Jun  5 18:32:40] WARNING[5008][C-00000004]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'trackingid'
-    -- Executing [s@autodial-ivr:10] Set("PJSIP/autodial-one-00000005", "CHANNEL(agentid)=") in new stack
-[Jun  5 18:32:40] WARNING[5008][C-00000004]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'agentid'
-    -- Executing [s@autodial-ivr:11] Set("PJSIP/autodial-one-00000005", "CHANNEL(target)=") in new stack
-[Jun  5 18:32:40] WARNING[5008][C-00000004]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'target'
-    -- Executing [s@autodial-ivr:12] Set("PJSIP/autodial-one-00000005", "CHANNEL(campaignid)=") in new stack
-[Jun  5 18:32:40] WARNING[5008][C-00000004]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'campaignid'
-    -- Executing [s@autodial-ivr:13] Set("PJSIP/autodial-one-00000005", "CALLID=") in new stack
-    -- Executing [s@autodial-ivr:14] Set("PJSIP/autodial-one-00000005", "TRACKINGID=") in new stack
-    -- Executing [s@autodial-ivr:15] Set("PJSIP/autodial-one-00000005", "TARGET=") in new stack
-    -- Executing [s@autodial-ivr:16] Set("PJSIP/autodial-one-00000005", "CAMPAIGNID=") in new stack
-    -- Executing [s@autodial-ivr:17] Wait("PJSIP/autodial-one-00000005", "1") in new stack
-<--- Received SIP response (929 bytes) from UDP:139.59.76.222:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjffa7b29c-14e2-47e3-ace8-9be12b455d1a;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=3315607e-a8ca-4256-98ce-2b682570600b
-To: <sip:+14804855848@139.59.76.222>;tag=as19196765
-Call-ID: 521c146a-4afc-447e-a8b7-713972fc7933
-CSeq: 31476 INVITE
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Session-Expires: 1800;refresher=uas
-Contact: <sip:+14804855848@139.59.76.222:5060>
-Content-Type: application/sdp
-Require: timer
-Content-Length: 278
-
-v=0
-o=root 1005014454 1005014454 IN IP4 139.59.76.222
-s=Asterisk PBX 13.38.3
-c=IN IP4 139.59.76.222
-t=0 0
-m=audio 14814 RTP/AVP 8 0 101
-a=rtpmap:8 PCMA/8000
-a=rtpmap:0 PCMU/8000
-a=rtpmap:101 telephone-event/8000
-a=fmtp:101 0-16
-a=ptime:20
-a=maxptime:150
-a=sendrecv
-
-<--- Transmitting SIP request (443 bytes) to UDP:139.59.76.222:5060 --->
-ACK sip:+14804855848@139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjd927560f-e6c8-424f-a70e-28e5988796de
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=3315607e-a8ca-4256-98ce-2b682570600b
-To: <sip:+14804855848@139.59.76.222>;tag=as19196765
-Call-ID: 521c146a-4afc-447e-a8b7-713972fc7933
-CSeq: 31476 ACK
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
-
-
-<--- Received SIP response (941 bytes) from UDP:139.59.76.222:5060 --->
-SIP/2.0 183 Session Progress
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj8627764a-8fe5-4bda-934c-22da0bd3fb3c;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-To: <sip:+14802569373@139.59.76.222>;tag=as1917159d
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-CSeq: 14703 INVITE
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Session-Expires: 1800;refresher=uas
-Contact: <sip:+14802569373@139.59.76.222:5060>
-Content-Type: application/sdp
-Require: timer
-Content-Length: 276
-
-v=0
-o=root 589669690 589669690 IN IP4 139.59.76.222
-s=Asterisk PBX 13.38.3
-c=IN IP4 139.59.76.222
-t=0 0
-m=audio 11620 RTP/AVP 8 0 101
-a=rtpmap:8 PCMA/8000
-a=rtpmap:0 PCMU/8000
-a=rtpmap:101 telephone-event/8000
-a=fmtp:101 0-16
-a=ptime:20
-a=maxptime:150
-a=sendrecv
-
-       > 0x7f8878011830 -- Strict RTP learning after remote address set to: 139.59.76.222:11620
-    -- PJSIP/autodial-one-00000004 is making progress
-       > 0x7f8878011830 -- Strict RTP switching to RTP target address 139.59.76.222:11620 as source
-<--- Received SIP request (459 bytes) from UDP:139.59.76.222:5060 --->
-BYE sip:asterisk@91.200.14.36:5060 SIP/2.0
-Via: SIP/2.0/UDP 139.59.76.222:5060;branch=z9hG4bK71c7ae7b;rport
-Max-Forwards: 70
-From: <sip:+14804855848@139.59.76.222>;tag=as19196765
-To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=3315607e-a8ca-4256-98ce-2b682570600b
-Call-ID: 521c146a-4afc-447e-a8b7-713972fc7933
-CSeq: 102 BYE
-User-Agent: MagnusBilling
-X-Asterisk-HangupCause: Normal Clearing
-X-Asterisk-HangupCauseCode: 16
-Content-Length: 0
-
-
-<--- Transmitting SIP response (385 bytes) to UDP:139.59.76.222:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 139.59.76.222:5060;rport=5060;received=139.59.76.222;branch=z9hG4bK71c7ae7b
-Call-ID: 521c146a-4afc-447e-a8b7-713972fc7933
-From: <sip:+14804855848@139.59.76.222>;tag=as19196765
-To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=3315607e-a8ca-4256-98ce-2b682570600b
-CSeq: 102 BYE
+[Jun  6 19:47:37] NOTICE[2148]: res_pjsip/pjsip_distributor.c:676 log_failed_request: Request 'INVITE' from '<sip:8005@91.200.14.36>' failed for '77.221.140.149:63186' (callid: 1509032684-214565169-216257015) - No matching endpoint found
+<--- Transmitting SIP response (499 bytes) to UDP:77.221.140.149:63186 --->
+SIP/2.0 401 Unauthorized
+Via: SIP/2.0/UDP 77.221.140.149:63186;rport=63186;received=77.221.140.149;branch=z9hG4bK111296725
+Call-ID: 1509032684-214565169-216257015
+From: <sip:8005@91.200.14.36>;tag=1676029351
+To: <sip:00948875658600@91.200.14.36>;tag=z9hG4bK111296725
+CSeq: 1 INVITE
+WWW-Authenticate: Digest realm="asterisk",nonce="1749239257/b6bbbd5e28f53668ae329360c7ababc1",opaque="6566b09e5ac23c4b",algorithm=md5,qop="auth"
 Server: Asterisk PBX certified-18.9-cert9
 Content-Length:  0
 
 
-  == Spawn extension (autodial-ivr, s, 17) exited non-zero on 'PJSIP/autodial-one-00000005'
-    -- Executing [h@autodial-ivr:1] NoOp("PJSIP/autodial-one-00000005", "Call ended for , CallID: , TrackingID: ") in new stack
-    -- Executing [h@autodial-ivr:2] UserEvent("PJSIP/autodial-one-00000005", "CallEnded,") in new stack
-<--- Received SIP request (459 bytes) from UDP:139.59.76.222:5060 --->
-BYE sip:asterisk@91.200.14.36:5060 SIP/2.0
-Via: SIP/2.0/UDP 139.59.76.222:5060;branch=z9hG4bK71c7ae7b;rport
+142977*CLI> core set verbose 5
+Console verbose was 3 and is now 5.
+142977*CLI> core set debug 10
+Core debug was OFF and is now 10.
+<--- Received SIP request (695 bytes) from UDP:77.221.140.149:54205 --->
+INVITE sip:900148875658600@91.200.14.36 SIP/2.0
+Via: SIP/2.0/UDP 77.221.140.149:54205;branch=z9hG4bK1413441037
 Max-Forwards: 70
-From: <sip:+14804855848@139.59.76.222>;tag=as19196765
-To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=3315607e-a8ca-4256-98ce-2b682570600b
-Call-ID: 521c146a-4afc-447e-a8b7-713972fc7933
-CSeq: 102 BYE
-User-Agent: MagnusBilling
-X-Asterisk-HangupCause: Normal Clearing
-X-Asterisk-HangupCauseCode: 16
-Content-Length: 0
+From: <sip:8005@91.200.14.36>;tag=359909645
+To: <sip:900148875658600@91.200.14.36>
+Call-ID: 992703586-1297864522-1034967896
+CSeq: 1 INVITE
+Contact: <sip:8005@77.221.140.149:54205>
+Content-Type: application/sdp
+Content-Length: 208
+Allow: ACK, BYE, CANCEL, INFO, INVITE, MESSAGE, NOTIFY, OPTIONS, PRACK, REFER, REGISTER, SUBSCRIBE, UPDATE, PUBLISH
 
+v=0
+o=8005 16264 18299 IN IP4 192.168.1.83
+s=call
+c=IN IP4 192.168.1.83
+t=0 0
+m=audio 25282 RTP/AVP 0 101
+a=rtpmap:0 pcmu/8000
+a=rtpmap:8 pcma/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-11
 
-<--- Transmitting SIP response (385 bytes) to UDP:139.59.76.222:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 139.59.76.222:5060;rport=5060;received=139.59.76.222;branch=z9hG4bK71c7ae7b
-Call-ID: 521c146a-4afc-447e-a8b7-713972fc7933
-From: <sip:+14804855848@139.59.76.222>;tag=as19196765
-To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=3315607e-a8ca-4256-98ce-2b682570600b
-CSeq: 102 BYE
+[Jun  6 19:47:52] NOTICE[2148]: res_pjsip/pjsip_distributor.c:676 log_failed_request: Request 'INVITE' from '<sip:8005@91.200.14.36>' failed for '77.221.140.149:54205' (callid: 992703586-1297864522-1034967896) - No matching endpoint found
+<--- Transmitting SIP response (502 bytes) to UDP:77.221.140.149:54205 --->
+SIP/2.0 401 Unauthorized
+Via: SIP/2.0/UDP 77.221.140.149:54205;rport=54205;received=77.221.140.149;branch=z9hG4bK1413441037
+Call-ID: 992703586-1297864522-1034967896
+From: <sip:8005@91.200.14.36>;tag=359909645
+To: <sip:900148875658600@91.200.14.36>;tag=z9hG4bK1413441037
+CSeq: 1 INVITE
+WWW-Authenticate: Digest realm="asterisk",nonce="1749239272/e1d9eaee499829a407efbe0d6ac0568c",opaque="2b39e2616745c681",algorithm=md5,qop="auth"
 Server: Asterisk PBX certified-18.9-cert9
 Content-Length:  0
 
 
+142977*CLI>
+Disconnected from Asterisk server
+Asterisk cleanly ending (0).
+Executing last minute cleanups
+root@142977:~# sudo iptables -A INPUT -s 77.221.140.149 -j DROP
+root@142977:~# asterisk -rvvv
+Asterisk certified-18.9-cert9, Copyright (C) 1999 - 2021, Sangoma Technologies Corporation and others.
+Created by Mark Spencer <markster@digium.com>
+Asterisk comes with ABSOLUTELY NO WARRANTY; type 'core show warranty' for details.
+This is free software, with components licensed under the GNU General Public
+License version 2 and other licenses; you are welcome to redistribute it under
+certain conditions. Type 'core show license' for details.
+=========================================================================
+Connected to Asterisk certified-18.9-cert9 currently running on 142977 (pid = 1157)
+142977*CLI> core set debug 10
+Core debug is still 10.
+142977*CLI> core set verbose 5
+Console verbose was 3 and is now 5.
 <--- Received SIP request (534 bytes) from UDP:139.59.24.219:5060 --->
 OPTIONS sip:91.200.14.36 SIP/2.0
-Via: SIP/2.0/UDP 139.59.24.219:5060;branch=z9hG4bK4f3c4315;rport
+Via: SIP/2.0/UDP 139.59.24.219:5060;branch=z9hG4bK1804a3ce;rport
 Max-Forwards: 70
-From: "asterisk" <sip:asterisk@139.59.24.219>;tag=as71729a24
+From: "asterisk" <sip:asterisk@139.59.24.219>;tag=as18ba4ebb
 To: <sip:91.200.14.36>
 Contact: <sip:asterisk@139.59.24.219:5060>
-Call-ID: 5d4cb53e25d862f30657fcdf5d17ccf5@139.59.24.219:5060
+Call-ID: 318abad62331c9b2360d3ed36e22d57d@139.59.24.219:5060
 CSeq: 102 OPTIONS
 User-Agent: MagnusBilling
-Date: Thu, 05 Jun 2025 18:32:43 GMT
+Date: Fri, 06 Jun 2025 19:48:10 GMT
 Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
 Supported: replaces, timer
 Content-Length: 0
@@ -308,10 +114,10 @@ Content-Length: 0
 
 <--- Transmitting SIP response (847 bytes) to UDP:139.59.24.219:5060 --->
 SIP/2.0 200 OK
-Via: SIP/2.0/UDP 139.59.24.219:5060;rport=5060;received=139.59.24.219;branch=z9hG4bK4f3c4315
-Call-ID: 5d4cb53e25d862f30657fcdf5d17ccf5@139.59.24.219:5060
-From: "asterisk" <sip:asterisk@139.59.24.219>;tag=as71729a24
-To: <sip:91.200.14.36>;tag=z9hG4bK4f3c4315
+Via: SIP/2.0/UDP 139.59.24.219:5060;rport=5060;received=139.59.24.219;branch=z9hG4bK1804a3ce
+Call-ID: 318abad62331c9b2360d3ed36e22d57d@139.59.24.219:5060
+From: "asterisk" <sip:asterisk@139.59.24.219>;tag=as18ba4ebb
+To: <sip:91.200.14.36>;tag=z9hG4bK1804a3ce
 CSeq: 102 OPTIONS
 Accept: application/pidf+xml, application/xpidf+xml, application/cpim-pidf+xml, application/dialog-info+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, application/sdp, message/sipfrag;version=2.0
 Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
@@ -322,190 +128,48 @@ Server: Asterisk PBX certified-18.9-cert9
 Content-Length:  0
 
 
-<--- Received SIP response (927 bytes) from UDP:139.59.76.222:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj8627764a-8fe5-4bda-934c-22da0bd3fb3c;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-To: <sip:+14802569373@139.59.76.222>;tag=as1917159d
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-CSeq: 14703 INVITE
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Session-Expires: 1800;refresher=uas
-Contact: <sip:+14802569373@139.59.76.222:5060>
-Content-Type: application/sdp
-Require: timer
-Content-Length: 276
-
-v=0
-o=root 589669690 589669690 IN IP4 139.59.76.222
-s=Asterisk PBX 13.38.3
-c=IN IP4 139.59.76.222
-t=0 0
-m=audio 11620 RTP/AVP 8 0 101
-a=rtpmap:8 PCMA/8000
-a=rtpmap:0 PCMU/8000
-a=rtpmap:101 telephone-event/8000
-a=fmtp:101 0-16
-a=ptime:20
-a=maxptime:150
-a=sendrecv
-
-<--- Transmitting SIP request (443 bytes) to UDP:139.59.76.222:5060 --->
-ACK sip:+14802569373@139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjd27184ab-48c7-475e-981b-58b40245550f
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-To: <sip:+14802569373@139.59.76.222>;tag=as1917159d
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-CSeq: 14703 ACK
+142977*CLI> pjsip set logger on
+PJSIP Logging enabled
+<--- Received SIP request (534 bytes) from UDP:139.59.76.222:5060 --->
+OPTIONS sip:91.200.14.36 SIP/2.0
+Via: SIP/2.0/UDP 139.59.76.222:5060;branch=z9hG4bK2557615a;rport
 Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
-
-
-    -- PJSIP/autodial-one-00000004 answered
-    -- Executing [s@autodial-ivr:1] NoOp("PJSIP/autodial-one-00000004", "Starting AutoDial IVR for , initiated by TGID: , CallID: , TrackingID: ") in new stack
-    -- Executing [s@autodial-ivr:2] Answer("PJSIP/autodial-one-00000004", "") in new stack
-    -- Executing [s@autodial-ivr:3] Set("PJSIP/autodial-one-00000004", "__CALLID=") in new stack
-    -- Executing [s@autodial-ivr:4] Set("PJSIP/autodial-one-00000004", "__AGENTID=") in new stack
-    -- Executing [s@autodial-ivr:5] Set("PJSIP/autodial-one-00000004", "__TARGET=") in new stack
-    -- Executing [s@autodial-ivr:6] Set("PJSIP/autodial-one-00000004", "__CAMPAIGN=") in new stack
-    -- Executing [s@autodial-ivr:7] Set("PJSIP/autodial-one-00000004", "__TRACKINGID=") in new stack
-    -- Executing [s@autodial-ivr:8] Set("PJSIP/autodial-one-00000004", "CHANNEL(callid)=") in new stack
-[Jun  5 18:32:45] WARNING[5007][C-00000005]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'callid'
-    -- Executing [s@autodial-ivr:9] Set("PJSIP/autodial-one-00000004", "CHANNEL(trackingid)=") in new stack
-[Jun  5 18:32:45] WARNING[5007][C-00000005]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'trackingid'
-    -- Executing [s@autodial-ivr:10] Set("PJSIP/autodial-one-00000004", "CHANNEL(agentid)=") in new stack
-[Jun  5 18:32:45] WARNING[5007][C-00000005]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'agentid'
-    -- Executing [s@autodial-ivr:11] Set("PJSIP/autodial-one-00000004", "CHANNEL(target)=") in new stack
-[Jun  5 18:32:45] WARNING[5007][C-00000005]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'target'
-    -- Executing [s@autodial-ivr:12] Set("PJSIP/autodial-one-00000004", "CHANNEL(campaignid)=") in new stack
-[Jun  5 18:32:45] WARNING[5007][C-00000005]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'campaignid'
-    -- Executing [s@autodial-ivr:13] Set("PJSIP/autodial-one-00000004", "CALLID=") in new stack
-    -- Executing [s@autodial-ivr:14] Set("PJSIP/autodial-one-00000004", "TRACKINGID=") in new stack
-    -- Executing [s@autodial-ivr:15] Set("PJSIP/autodial-one-00000004", "TARGET=") in new stack
-    -- Executing [s@autodial-ivr:16] Set("PJSIP/autodial-one-00000004", "CAMPAIGNID=") in new stack
-    -- Executing [s@autodial-ivr:17] Wait("PJSIP/autodial-one-00000004", "1") in new stack
-<--- Received SIP response (927 bytes) from UDP:139.59.76.222:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj8627764a-8fe5-4bda-934c-22da0bd3fb3c;received=91.200.14.36;rport=5060
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-To: <sip:+14802569373@139.59.76.222>;tag=as1917159d
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-CSeq: 14703 INVITE
-Server: MagnusBilling
-Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
-Supported: replaces, timer
-Session-Expires: 1800;refresher=uas
-Contact: <sip:+14802569373@139.59.76.222:5060>
-Content-Type: application/sdp
-Require: timer
-Content-Length: 276
-
-v=0
-o=root 589669690 589669690 IN IP4 139.59.76.222
-s=Asterisk PBX 13.38.3
-c=IN IP4 139.59.76.222
-t=0 0
-m=audio 11620 RTP/AVP 8 0 101
-a=rtpmap:8 PCMA/8000
-a=rtpmap:0 PCMU/8000
-a=rtpmap:101 telephone-event/8000
-a=fmtp:101 0-16
-a=ptime:20
-a=maxptime:150
-a=sendrecv
-
-<--- Transmitting SIP request (443 bytes) to UDP:139.59.76.222:5060 --->
-ACK sip:+14802569373@139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjd27184ab-48c7-475e-981b-58b40245550f
-From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-To: <sip:+14802569373@139.59.76.222>;tag=as1917159d
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-CSeq: 14703 ACK
-Max-Forwards: 70
-User-Agent: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
-
-
-    -- Executing [s@autodial-ivr:18] Set("PJSIP/autodial-one-00000004", "TIMEOUT(digit)=3") in new stack
-    -- Digit timeout set to 3.000
-    -- Executing [s@autodial-ivr:19] Set("PJSIP/autodial-one-00000004", "TIMEOUT(response)=5") in new stack
-    -- Response timeout set to 5.000
-    -- Executing [s@autodial-ivr:20] Read("PJSIP/autodial-one-00000004", "DTMF_DIGIT,custom/autodial_prompt,1,,1,5") in new stack
-    -- Accepting a maximum of 1 digits.
-    -- <PJSIP/autodial-one-00000004> Playing 'custom/autodial_prompt.slin' (language 'en')
-       > 0x7f8878011830 -- Strict RTP learning complete - Locking on source address 139.59.76.222:11620
-    -- User entered '1'
-    -- Executing [s@autodial-ivr:21] GotoIf("PJSIP/autodial-one-00000004", "1?notify_bot:hangup") in new stack
-    -- Goto (autodial-ivr,s,22)
-    -- Executing [s@autodial-ivr:22] NoOp("PJSIP/autodial-one-00000004", "Received 1 from , notifying TGID: , Campaign: , CallID: , TrackingID: ") in new stack
-    -- Executing [s@autodial-ivr:23] UserEvent("PJSIP/autodial-one-00000004", "AutoDialResponse,") in new stack
-    -- Executing [s@autodial-ivr:24] Playback("PJSIP/autodial-one-00000004", "custom/thankyou") in new stack
-    -- <PJSIP/autodial-one-00000004> Playing 'custom/thankyou.slin' (language 'en')
-    -- Executing [s@autodial-ivr:25] Wait("PJSIP/autodial-one-00000004", "1") in new stack
-<--- Received SIP request (459 bytes) from UDP:139.59.76.222:5060 --->
-BYE sip:asterisk@91.200.14.36:5060 SIP/2.0
-Via: SIP/2.0/UDP 139.59.76.222:5060;branch=z9hG4bK7a402414;rport
-Max-Forwards: 70
-From: <sip:+14802569373@139.59.76.222>;tag=as1917159d
-To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-CSeq: 102 BYE
+From: "asterisk" <sip:asterisk@139.59.76.222>;tag=as36f481d8
+To: <sip:91.200.14.36>
+Contact: <sip:asterisk@139.59.76.222:5060>
+Call-ID: 479b2a6f6aedd37e654755c41fde2dd2@139.59.76.222:5060
+CSeq: 102 OPTIONS
 User-Agent: MagnusBilling
-X-Asterisk-HangupCause: Normal Clearing
-X-Asterisk-HangupCauseCode: 16
+Date: Fri, 06 Jun 2025 19:48:15 GMT
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
 Content-Length: 0
 
 
-<--- Transmitting SIP response (385 bytes) to UDP:139.59.76.222:5060 --->
+<--- Transmitting SIP response (847 bytes) to UDP:139.59.76.222:5060 --->
 SIP/2.0 200 OK
-Via: SIP/2.0/UDP 139.59.76.222:5060;rport=5060;received=139.59.76.222;branch=z9hG4bK7a402414
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-From: <sip:+14802569373@139.59.76.222>;tag=as1917159d
-To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-CSeq: 102 BYE
-Server: Asterisk PBX certified-18.9-cert9
-Content-Length:  0
-
-
-  == Spawn extension (autodial-ivr, s, 25) exited non-zero on 'PJSIP/autodial-one-00000004'
-    -- Executing [h@autodial-ivr:1] NoOp("PJSIP/autodial-one-00000004", "Call ended for , CallID: , TrackingID: ") in new stack
-    -- Executing [h@autodial-ivr:2] UserEvent("PJSIP/autodial-one-00000004", "CallEnded,") in new stack
-<--- Received SIP request (459 bytes) from UDP:139.59.76.222:5060 --->
-BYE sip:asterisk@91.200.14.36:5060 SIP/2.0
-Via: SIP/2.0/UDP 139.59.76.222:5060;branch=z9hG4bK7a402414;rport
-Max-Forwards: 70
-From: <sip:+14802569373@139.59.76.222>;tag=as1917159d
-To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-CSeq: 102 BYE
-User-Agent: MagnusBilling
-X-Asterisk-HangupCause: Normal Clearing
-X-Asterisk-HangupCauseCode: 16
-Content-Length: 0
-
-
-<--- Transmitting SIP response (385 bytes) to UDP:139.59.76.222:5060 --->
-SIP/2.0 200 OK
-Via: SIP/2.0/UDP 139.59.76.222:5060;rport=5060;received=139.59.76.222;branch=z9hG4bK7a402414
-Call-ID: 07c65c36-367a-43db-b80d-d3a3ad1080a2
-From: <sip:+14802569373@139.59.76.222>;tag=as1917159d
-To: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=fccab9e4-3afe-4c6f-b339-cbc6a03a002b
-CSeq: 102 BYE
+Via: SIP/2.0/UDP 139.59.76.222:5060;rport=5060;received=139.59.76.222;branch=z9hG4bK2557615a
+Call-ID: 479b2a6f6aedd37e654755c41fde2dd2@139.59.76.222:5060
+From: "asterisk" <sip:asterisk@139.59.76.222>;tag=as36f481d8
+To: <sip:91.200.14.36>;tag=z9hG4bK2557615a
+CSeq: 102 OPTIONS
+Accept: application/pidf+xml, application/xpidf+xml, application/cpim-pidf+xml, application/dialog-info+xml, application/simple-message-summary, application/simple-message-summary, application/pidf+xml, application/dialog-info+xml, application/sdp, message/sipfrag;version=2.0
+Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
+Supported: 100rel, timer, replaces, norefersub
+Accept-Encoding: identity
+Accept-Language: en
 Server: Asterisk PBX certified-18.9-cert9
 Content-Length:  0
 
 
 <--- Transmitting SIP request (442 bytes) to UDP:139.59.76.222:5060 --->
 OPTIONS sip:139.59.76.222:5060 SIP/2.0
-Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjd4c8dccf-f6cc-4e33-aa27-81b85b695db4
-From: <sip:autodial-one@91.200.14.36>;tag=8e78708a-1cd3-4121-afb6-c5574b8485e2
+Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjbbd10d6f-03e5-4a31-8e03-e86b6e0f4e43
+From: <sip:autodial-one@91.200.14.36>;tag=588f52d8-85a9-4f31-9428-932703bf6f4e
 To: <sip:139.59.76.222>
 Contact: <sip:autodial-one@91.200.14.36:5060>
-Call-ID: e4e40c2b-d28c-4a53-8e13-ca7b5886728b
-CSeq: 33472 OPTIONS
+Call-ID: b3946ae9-32c7-4df6-8eee-b7aff72e620a
+CSeq: 48558 OPTIONS
 Max-Forwards: 70
 User-Agent: Asterisk PBX certified-18.9-cert9
 Content-Length:  0
@@ -513,14 +177,245 @@ Content-Length:  0
 
 <--- Received SIP response (522 bytes) from UDP:139.59.76.222:5060 --->
 SIP/2.0 404 Not Found
-Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjd4c8dccf-f6cc-4e33-aa27-81b85b695db4;received=91.200.14.36;rport=5060
-From: <sip:autodial-one@91.200.14.36>;tag=8e78708a-1cd3-4121-afb6-c5574b8485e2
-To: <sip:139.59.76.222>;tag=as532b9810
-Call-ID: e4e40c2b-d28c-4a53-8e13-ca7b5886728b
-CSeq: 33472 OPTIONS
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjbbd10d6f-03e5-4a31-8e03-e86b6e0f4e43;received=91.200.14.36;rport=5060
+From: <sip:autodial-one@91.200.14.36>;tag=588f52d8-85a9-4f31-9428-932703bf6f4e
+To: <sip:139.59.76.222>;tag=as3eea0d1c
+Call-ID: b3946ae9-32c7-4df6-8eee-b7aff72e620a
+CSeq: 48558 OPTIONS
 Server: MagnusBilling
 Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
 Supported: replaces, timer
 Accept: application/sdp
 Content-Length: 0
 
+
+    -- Called +14802569373@autodial-one
+<--- Transmitting SIP request (1075 bytes) to UDP:139.59.76.222:5060 --->
+INVITE sip:+14802569373@139.59.76.222:5060 SIP/2.0
+Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjd0de059f-8809-4135-9372-6ef1b006afa1
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
+To: <sip:+14802569373@139.59.76.222>
+Contact: <sip:asterisk@91.200.14.36:5060>
+Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
+CSeq: 21400 INVITE
+Allow: OPTIONS, REGISTER, SUBSCRIBE, NOTIFY, PUBLISH, INVITE, ACK, BYE, CANCEL, UPDATE, PRACK, MESSAGE, REFER
+Supported: 100rel, timer, replaces, norefersub, histinfo
+Session-Expires: 1800
+Min-SE: 90
+Remote-Party-ID: "+18888641321" <sip:+18888641321@91.200.14.36>;party=calling;privacy=off;screen=no
+Max-Forwards: 70
+User-Agent: Asterisk PBX certified-18.9-cert9
+Content-Type: application/sdp
+Content-Length:   259
+
+v=0
+o=- 253792248 253792248 IN IP4 91.200.14.36
+s=Asterisk
+c=IN IP4 91.200.14.36
+t=0 0
+m=audio 13992 RTP/AVP 0 8 101
+a=rtpmap:0 PCMU/8000
+a=rtpmap:8 PCMA/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=ptime:20
+a=maxptime:150
+a=sendrecv
+
+<--- Received SIP response (591 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 100 Trying
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjd0de059f-8809-4135-9372-6ef1b006afa1;received=91.200.14.36;rport=5060
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
+To: <sip:+14802569373@139.59.76.222>
+Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
+CSeq: 21400 INVITE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Session-Expires: 1800;refresher=uas
+Contact: <sip:+14802569373@139.59.76.222:5060>
+Content-Length: 0
+
+
+<--- Received SIP response (927 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 200 OK
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjd0de059f-8809-4135-9372-6ef1b006afa1;received=91.200.14.36;rport=5060
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
+To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
+Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
+CSeq: 21400 INVITE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Session-Expires: 1800;refresher=uas
+Contact: <sip:+14802569373@139.59.76.222:5060>
+Content-Type: application/sdp
+Require: timer
+Content-Length: 276
+
+v=0
+o=root 183327431 183327431 IN IP4 139.59.76.222
+s=Asterisk PBX 13.38.3
+c=IN IP4 139.59.76.222
+t=0 0
+m=audio 14702 RTP/AVP 8 0 101
+a=rtpmap:8 PCMA/8000
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=ptime:20
+a=maxptime:150
+a=sendrecv
+
+       > 0x7fcf18045340 -- Strict RTP learning after remote address set to: 139.59.76.222:14702
+<--- Transmitting SIP request (443 bytes) to UDP:139.59.76.222:5060 --->
+ACK sip:+14802569373@139.59.76.222:5060 SIP/2.0
+Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPj7dd9d799-d2e3-40a5-9f22-cdbf97e98255
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
+To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
+Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
+CSeq: 21400 ACK
+Max-Forwards: 70
+User-Agent: Asterisk PBX certified-18.9-cert9
+Content-Length:  0
+
+
+    -- PJSIP/autodial-one-00000000 answered
+    -- Executing [s@autodial-ivr:1] NoOp("PJSIP/autodial-one-00000000", "Starting AutoDial IVR for , initiated by TGID: , CallID: , TrackingID: ") in new stack
+    -- Executing [s@autodial-ivr:2] Answer("PJSIP/autodial-one-00000000", "") in new stack
+    -- Executing [s@autodial-ivr:3] Set("PJSIP/autodial-one-00000000", "__CALLID=") in new stack
+    -- Executing [s@autodial-ivr:4] Set("PJSIP/autodial-one-00000000", "__AGENTID=") in new stack
+    -- Executing [s@autodial-ivr:5] Set("PJSIP/autodial-one-00000000", "__TARGET=") in new stack
+    -- Executing [s@autodial-ivr:6] Set("PJSIP/autodial-one-00000000", "__CAMPAIGN=") in new stack
+    -- Executing [s@autodial-ivr:7] Set("PJSIP/autodial-one-00000000", "__TRACKINGID=") in new stack
+    -- Executing [s@autodial-ivr:8] Set("PJSIP/autodial-one-00000000", "CHANNEL(callid)=") in new stack
+[Jun  6 19:48:33] WARNING[2185][C-00000001]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'callid'
+    -- Executing [s@autodial-ivr:9] Set("PJSIP/autodial-one-00000000", "CHANNEL(trackingid)=") in new stack
+[Jun  6 19:48:33] WARNING[2185][C-00000001]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'trackingid'
+    -- Executing [s@autodial-ivr:10] Set("PJSIP/autodial-one-00000000", "CHANNEL(agentid)=") in new stack
+[Jun  6 19:48:33] WARNING[2185][C-00000001]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'agentid'
+    -- Executing [s@autodial-ivr:11] Set("PJSIP/autodial-one-00000000", "CHANNEL(target)=") in new stack
+[Jun  6 19:48:33] WARNING[2185][C-00000001]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'target'
+    -- Executing [s@autodial-ivr:12] Set("PJSIP/autodial-one-00000000", "CHANNEL(campaignid)=") in new stack
+[Jun  6 19:48:33] WARNING[2185][C-00000001]: func_channel.c:633 func_channel_write_real: Unknown or unavailable item requested: 'campaignid'
+    -- Executing [s@autodial-ivr:13] Set("PJSIP/autodial-one-00000000", "CALLID=") in new stack
+    -- Executing [s@autodial-ivr:14] Set("PJSIP/autodial-one-00000000", "TRACKINGID=") in new stack
+    -- Executing [s@autodial-ivr:15] Set("PJSIP/autodial-one-00000000", "TARGET=") in new stack
+    -- Executing [s@autodial-ivr:16] Set("PJSIP/autodial-one-00000000", "CAMPAIGNID=") in new stack
+    -- Executing [s@autodial-ivr:17] Wait("PJSIP/autodial-one-00000000", "1") in new stack
+<--- Received SIP response (927 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 200 OK
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjd0de059f-8809-4135-9372-6ef1b006afa1;received=91.200.14.36;rport=5060
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
+To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
+Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
+CSeq: 21400 INVITE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Session-Expires: 1800;refresher=uas
+Contact: <sip:+14802569373@139.59.76.222:5060>
+Content-Type: application/sdp
+Require: timer
+Content-Length: 276
+
+v=0
+o=root 183327431 183327431 IN IP4 139.59.76.222
+s=Asterisk PBX 13.38.3
+c=IN IP4 139.59.76.222
+t=0 0
+m=audio 14702 RTP/AVP 8 0 101
+a=rtpmap:8 PCMA/8000
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=ptime:20
+a=maxptime:150
+a=sendrecv
+
+<--- Transmitting SIP request (443 bytes) to UDP:139.59.76.222:5060 --->
+ACK sip:+14802569373@139.59.76.222:5060 SIP/2.0
+Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPj7dd9d799-d2e3-40a5-9f22-cdbf97e98255
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
+To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
+Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
+CSeq: 21400 ACK
+Max-Forwards: 70
+User-Agent: Asterisk PBX certified-18.9-cert9
+Content-Length:  0
+
+
+    -- Executing [s@autodial-ivr:18] Set("PJSIP/autodial-one-00000000", "TIMEOUT(digit)=3") in new stack
+    -- Digit timeout set to 3.000
+    -- Executing [s@autodial-ivr:19] Set("PJSIP/autodial-one-00000000", "TIMEOUT(response)=5") in new stack
+    -- Response timeout set to 5.000
+    -- Executing [s@autodial-ivr:20] Read("PJSIP/autodial-one-00000000", "DTMF_DIGIT,custom/autodial_prompt,1,,1,5") in new stack
+    -- Accepting a maximum of 1 digits.
+    -- <PJSIP/autodial-one-00000000> Playing 'custom/autodial_prompt.slin' (language 'en')
+       > 0x7fcf18045340 -- Strict RTP switching to RTP target address 139.59.76.222:14702 as source
+<--- Transmitting SIP request (442 bytes) to UDP:139.59.24.219:5060 --->
+OPTIONS sip:139.59.24.219:5060 SIP/2.0
+Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPjacf342b2-e4df-4ecd-b74c-b9a5ab6e9bbb
+From: <sip:autodial-two@91.200.14.36>;tag=90a64eb1-d908-4982-8190-78f5b074ee6a
+To: <sip:139.59.24.219>
+Contact: <sip:autodial-two@91.200.14.36:5060>
+Call-ID: 61efc932-3708-4a9e-8565-435ca1e8ffa1
+CSeq: 12763 OPTIONS
+Max-Forwards: 70
+User-Agent: Asterisk PBX certified-18.9-cert9
+Content-Length:  0
+
+
+<--- Received SIP response (522 bytes) from UDP:139.59.24.219:5060 --->
+SIP/2.0 404 Not Found
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPjacf342b2-e4df-4ecd-b74c-b9a5ab6e9bbb;received=91.200.14.36;rport=5060
+From: <sip:autodial-two@91.200.14.36>;tag=90a64eb1-d908-4982-8190-78f5b074ee6a
+To: <sip:139.59.24.219>;tag=as272dc5d0
+Call-ID: 61efc932-3708-4a9e-8565-435ca1e8ffa1
+CSeq: 12763 OPTIONS
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Accept: application/sdp
+Content-Length: 0
+
+
+       > 0x7fcf18045340 -- Strict RTP learning complete - Locking on source address 139.59.76.222:14702
+    -- User entered nothing.
+    -- Executing [s@autodial-ivr:21] GotoIf("PJSIP/autodial-one-00000000", "0?notify_bot:hangup") in new stack
+    -- Goto (autodial-ivr,s,27)
+    -- Executing [s@autodial-ivr:27] NoOp("PJSIP/autodial-one-00000000", "No response or invalid digit from ") in new stack
+    -- Executing [s@autodial-ivr:28] UserEvent("PJSIP/autodial-one-00000000", "AutoDialResponse,") in new stack
+    -- Executing [s@autodial-ivr:29] Hangup("PJSIP/autodial-one-00000000", "") in new stack
+  == Spawn extension (autodial-ivr, s, 29) exited non-zero on 'PJSIP/autodial-one-00000000'
+    -- Executing [h@autodial-ivr:1] NoOp("PJSIP/autodial-one-00000000", "Call ended for , CallID: , TrackingID: ") in new stack
+    -- Executing [h@autodial-ivr:2] UserEvent("PJSIP/autodial-one-00000000", "CallEnded,") in new stack
+<--- Transmitting SIP request (467 bytes) to UDP:139.59.76.222:5060 --->
+BYE sip:+14802569373@139.59.76.222:5060 SIP/2.0
+Via: SIP/2.0/UDP 91.200.14.36:5060;rport;branch=z9hG4bKPj4500253e-00d1-4090-b335-12ed38112004
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
+To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
+Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
+CSeq: 21401 BYE
+Reason: Q.850;cause=16
+Max-Forwards: 70
+User-Agent: Asterisk PBX certified-18.9-cert9
+Content-Length:  0
+
+
+<--- Received SIP response (514 bytes) from UDP:139.59.76.222:5060 --->
+SIP/2.0 200 OK
+Via: SIP/2.0/UDP 91.200.14.36:5060;branch=z9hG4bKPj4500253e-00d1-4090-b335-12ed38112004;received=91.200.14.36;rport=5060
+From: "+18888641321" <sip:+18888641321@91.200.14.36>;tag=0378f9f6-9d13-4afc-b821-97b17f2e402e
+To: <sip:+14802569373@139.59.76.222>;tag=as67485aff
+Call-ID: 055ce42a-1284-4143-986e-bbeadaac315d
+CSeq: 21401 BYE
+Server: MagnusBilling
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE
+Supported: replaces, timer
+Content-Length: 0
+
+
+[Jun  6 19:49:00] NOTICE[2190]: manager.c:3583 authenticate: 196.251.92.135 tried to authenticate with nonexistent user 'manager'
+[Jun  6 19:49:00] NOTICE[2190]: manager.c:3620 authenticate: 196.251.92.135 failed to authenticate as 'manager'
+  == Connect attempt from '196.251.92.135' unable to authenticate

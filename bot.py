@@ -67,6 +67,7 @@ class CampaignState:
         self.completed_calls = 0
         self.active_calls = 0
         self.failed_calls = 0
+        self.blocked_calls = 0  # NEW: Track blocked/fake calls separately
         self.dtmf_responses = 0
         self.is_paused = False
         self.individual_notifications = False  # Toggleable setting
@@ -85,7 +86,7 @@ class CampaignState:
         """Get completion percentage."""
         if self.total_calls == 0:
             return 0
-        return int(((self.completed_calls + self.failed_calls) / self.total_calls) * 100)
+        return int(((self.completed_calls + self.failed_calls + self.blocked_calls) / self.total_calls) * 100)
 
 global_application_instance = None # Declare global variable for application instance
 
@@ -101,19 +102,20 @@ async def update_campaign_message(campaign_id: int):
     duration = datetime.now() - campaign.start_time
     duration_str = f"{int(duration.total_seconds() // 60)}m {int(duration.total_seconds() % 60)}s"
     
-    # Build status message
-    status_text = (
-        f"🤖 **P1 Campaign #{campaign_id}**\n\n"
-        f"📊 **Progress** {campaign.get_completion_percentage()}%\n"
-        f"{campaign.get_progress_bar()} ({campaign.completed_calls + campaign.failed_calls}/{campaign.total_calls})\n\n"
-        f"📞 **Call Stats**\n"
-        f"├─ ✅ Completed: {campaign.completed_calls}\n"
-        f"├─ 🔄 Active: {campaign.active_calls}\n"
-        f"├─ ❌ Failed: {campaign.failed_calls}\n"
-        f"└─ 🔔 DTMF Responses: {campaign.dtmf_responses}\n\n"
-        f"⏱ **Duration:** {duration_str}\n"
-        f"⚡ **Status:** {'⏸ Paused' if campaign.is_paused else '🚀 Running'}"
-    )
+            # Build status message
+        status_text = (
+            f"🤖 **P1 Campaign #{campaign_id}**\n\n"
+            f"📊 **Progress** {campaign.get_completion_percentage()}%\n"
+            f"{campaign.get_progress_bar()} ({campaign.completed_calls + campaign.failed_calls + campaign.blocked_calls}/{campaign.total_calls})\n\n"
+            f"📞 **Call Stats**\n"
+            f"├─ ✅ Completed: {campaign.completed_calls}\n"
+            f"├─ 🔄 Active: {campaign.active_calls}\n"
+            f"├─ ❌ Failed: {campaign.failed_calls}\n"
+            f"├─ 🚫 Blocked: {campaign.blocked_calls}\n"
+            f"└─ 🔔 DTMF Responses: {campaign.dtmf_responses}\n\n"
+            f"⏱ **Duration:** {duration_str}\n"
+            f"⚡ **Status:** {'⏸ Paused' if campaign.is_paused else '🚀 Running'}"
+        )
     
     # Campaign control buttons
     keyboard = []
@@ -172,6 +174,15 @@ async def send_individual_notification(campaign_id: int, notification_type: str,
             f"<b>Campaign #{campaign_id}</b>\n"
             f"📱 {data.get('target_number', 'Unknown')}\n"
             f"⏱ Duration: {data.get('duration', 'Unknown')}\n"
+            f"⏰ {datetime.now().strftime('%H:%M:%S')}"
+        )
+    elif notification_type == "call_blocked":
+        message = (
+            f"🚫 <b>Call Blocked</b>\n\n"
+            f"<b>Campaign #{campaign_id}</b>\n"
+            f"📱 {data.get('target_number', 'Unknown')}\n"
+            f"⏱ Duration: {data.get('duration', 'Unknown')}\n"
+            f"🛡️ Cause: {data.get('cause', 'Carrier blocked')}\n"
             f"⏰ {datetime.now().strftime('%H:%M:%S')}"
         )
     else:
@@ -1519,9 +1530,31 @@ async def post_init(application: Application) -> None:
                 if call_id and call_id in active_calls:
                     update_call_status(call_id, 'dtmf_received')
             
-            # UserEvent handling removed - DTMF events now handled by dedicated dtmf_event_listener
+            # Handle UserEvent for IVR timeout detection
             elif getattr(event, 'name', '') == 'UserEvent':
-                logger.debug(f"UserEvent received but ignored - using dedicated DTMF listeners instead")
+                user_event_type = event.get('UserEvent')
+                if user_event_type == 'AutoDialResponse':
+                    # This indicates IVR timeout with no DTMF response
+                    logger.info(f"IVR timeout detected - marking call as potentially blocked")
+                    # Mark this call for blocked classification in hangup event
+                    uniqueid = event.get('Uniqueid')
+                    if uniqueid:
+                        # Store IVR timeout flag for hangup processing
+                        try:
+                            async with get_async_db_session() as session:
+                                call = await Call.find_by_uniqueid(session, uniqueid)
+                                if call:
+                                    call.call_metadata = {
+                                        **(call.call_metadata or {}),
+                                        "ivr_timeout": True,
+                                        "ivr_timeout_time": datetime.now().isoformat()
+                                    }
+                                    await session.commit()
+                                    logger.info(f"Marked call {call.call_id} with IVR timeout flag")
+                        except Exception as e:
+                            logger.error(f"Error marking IVR timeout: {e}")
+                else:
+                    logger.debug(f"UserEvent received: {user_event_type}")
         
         # Newchannel event listener to map Uniqueid to call_id using database
         async def new_channel_event_listener(manager, event):
@@ -2510,38 +2543,65 @@ async def hangup_event_listener(manager, event):
                     await session.commit()
                     logger.info(f"Call {call.call_id} (Uniqueid: {uniqueid}) marked as completed in database")
                     
-                    # P1 Campaign Integration: Update campaign stats with proper call classification
+                    # P1 Campaign Integration: Enhanced call classification with blocked call detection
                     campaign_id = call.campaign_id
                     if campaign_id and isinstance(campaign_id, int) and campaign_id in campaign_states:
-                        # Determine if this was a failed or completed call based on duration and status
+                        # Get call duration and metadata
                         call_duration = (call.end_time - call.start_time).total_seconds()
-                        was_answered = call.status in ['bridged', 'dtmf_processed', 'dtmf_started'] or call_duration > 10
+                        call_metadata = call.call_metadata or {}
+                        
+                        # Check for IVR timeout pattern (blocked call indicator)
+                        ivr_timeout = call_metadata.get('ivr_timeout', False)
+                        had_dtmf = call.status in ['dtmf_processed', 'dtmf_started']
                         
                         # Decrement active calls first
                         if campaign_states[campaign_id].active_calls > 0:
                             campaign_states[campaign_id].active_calls -= 1
                         
-                        # Classify the call outcome
-                        if was_answered:
-                            # Call was actually connected/answered
-                            campaign_states[campaign_id].completed_calls += 1
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED (duration: {call_duration}s)")
-                        else:
-                            # Call failed to connect (immediate hangup, busy, no answer, carrier block)
+                        # Enhanced call classification logic
+                        if call_duration < 3:
+                            # Immediate failure (carrier reject, busy, etc.)
                             campaign_states[campaign_id].failed_calls += 1
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED (duration: {call_duration}s, cause: {cause_txt})")
+                            classification = "FAILED"
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - immediate disconnect (duration: {call_duration}s)")
+                        elif ivr_timeout and not had_dtmf and 5 <= call_duration <= 8:
+                            # IVR timeout with no DTMF = blocked/fake call
+                            campaign_states[campaign_id].blocked_calls += 1
+                            classification = "BLOCKED"
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as BLOCKED - IVR timeout, no DTMF (duration: {call_duration}s)")
+                        elif had_dtmf:
+                            # Real human interaction with DTMF response
+                            campaign_states[campaign_id].completed_calls += 1
+                            classification = "COMPLETED"
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED - DTMF received (duration: {call_duration}s)")
+                        elif call_duration > 10:
+                            # Long duration without DTMF - likely real but no response
+                            campaign_states[campaign_id].completed_calls += 1
+                            classification = "COMPLETED"
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED - long duration, no DTMF (duration: {call_duration}s)")
+                        else:
+                            # Default to failed for unclear cases
+                            campaign_states[campaign_id].failed_calls += 1
+                            classification = "FAILED"
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - unclear outcome (duration: {call_duration}s)")
                         
-                        logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}, failed={campaign_states[campaign_id].failed_calls}")
+                        logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}, failed={campaign_states[campaign_id].failed_calls}, blocked={campaign_states[campaign_id].blocked_calls}")
                         
                         # Update campaign message in real-time
                         await update_campaign_message(campaign_id)
                         
-                        # Send individual notification if enabled (only for completed calls)
-                        if was_answered:
+                        # Send individual notification if enabled (based on classification)
+                        if classification == "COMPLETED":
                             await send_individual_notification(campaign_id, "call_completed", {
                                 "target_number": call.target_number,
                                 "duration": f"{call_duration:.0f} seconds",
                                 "cause": cause_txt or 'Unknown'
+                            })
+                        elif classification == "BLOCKED":
+                            await send_individual_notification(campaign_id, "call_blocked", {
+                                "target_number": call.target_number,
+                                "duration": f"{call_duration:.0f} seconds",
+                                "cause": "Carrier blocked/fake response"
                             })
                     # Legacy "Call Ended" notifications removed - campaign system handles all notifications now
                 else:

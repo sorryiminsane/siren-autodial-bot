@@ -2701,53 +2701,41 @@ async def hangup_event_listener(manager, event):
                         current_retry_count = call.call_metadata.get('retry_count', 0) if call.call_metadata else 0
                         call_duration = (call.end_time - call.start_time).total_seconds()
                         
-                        # NEW AMI EVENT-BASED CLASSIFICATION WITH RETRY LOGIC
-                        if dial_status in ['NOANSWER', 'BUSY', 'CONGESTION', 'CHANUNAVAIL']:
-                            # Legitimate carrier rejection - queue for retry
-                            classification = "FAILED"
-                            call.status = 'failed'
-                            campaign_states[campaign_id].failed_calls += 1
-                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - {dial_status}")
-                            
-                            # Retry logic disabled
-                            logger.info(f"Retry disabled - call {call.target_number} marked as failed but will not retry")
-                            
-                        elif dial_status == 'ANSWER' and had_dtmf:
-                            # Real human answered and pressed buttons - SUCCESS!
+                        # CORRECTED CLASSIFICATION LOGIC
+                        if had_dtmf:
+                            # DTMF received = SUCCESS - ONLY increment completed, NOT failed
                             campaign_states[campaign_id].completed_calls += 1
                             classification = "COMPLETED"
                             call.status = 'completed'
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as COMPLETED - DTMF received")
                             
+                        elif dial_status in ['NOANSWER', 'BUSY', 'CONGESTION', 'CHANUNAVAIL']:
+                            # Legitimate carrier rejection
+                            classification = "FAILED"
+                            call.status = 'failed'
+                            campaign_states[campaign_id].failed_calls += 1
+                            logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - {dial_status}")
+                            
                         elif dial_status == 'ANSWER' and hangup_cause == "Unallocated (unassigned) number":
-                            # Carrier fake response - queue for retry
+                            # Carrier fake response
                             classification = "BLOCKED"
                             call.status = 'blocked'
                             campaign_states[campaign_id].blocked_calls += 1
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as BLOCKED - carrier fake response")
                             
-                            # Retry logic disabled
-                            logger.info(f"Retry disabled - call {call.target_number} marked as blocked but will not retry")
-                            
                         elif dial_status == 'ANSWER' and not had_dtmf:
-                            # Call answered but no DTMF - queue for retry
+                            # Call answered but no DTMF
                             classification = "FAILED"
                             call.status = 'failed'
                             campaign_states[campaign_id].failed_calls += 1
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - answered but no DTMF")
                             
-                            # Retry logic disabled
-                            logger.info(f"Retry disabled - call {call.target_number} marked as failed (no DTMF) but will not retry")
-                            
                         else:
-                            # Fallback case - queue for retry
+                            # Fallback case
                             classification = "FAILED"
                             call.status = 'failed'
                             campaign_states[campaign_id].failed_calls += 1
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - unknown case")
-                            
-                            # Retry logic disabled
-                            logger.info(f"Retry disabled - call {call.target_number} marked as failed (unknown case) but will not retry")
                         
                         logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}")
                         

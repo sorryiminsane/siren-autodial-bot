@@ -2709,14 +2709,8 @@ async def hangup_event_listener(manager, event):
                             campaign_states[campaign_id].failed_calls += 1
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - {dial_status}")
                             
-                            # Queue for retry if under max attempts
-                            if current_retry_count < MAX_RETRY_ATTEMPTS:
-                                await queue_call_for_retry(campaign_id, call, current_retry_count + 1, "failed", dial_status)
-                            else:
-                                await send_admin_failure_log(campaign_id, "max_retries", {
-                                    "target_number": call.target_number,
-                                    "retry_count": current_retry_count
-                                })
+                            # Retry logic disabled
+                            logger.info(f"Retry disabled - call {call.target_number} marked as failed but will not retry")
                             
                         elif dial_status == 'ANSWER' and had_dtmf:
                             # Real human answered and pressed buttons - SUCCESS!
@@ -2732,14 +2726,8 @@ async def hangup_event_listener(manager, event):
                             campaign_states[campaign_id].blocked_calls += 1
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as BLOCKED - carrier fake response")
                             
-                            # Queue for retry if under max attempts
-                            if current_retry_count < MAX_RETRY_ATTEMPTS:
-                                await queue_call_for_retry(campaign_id, call, current_retry_count + 1, "blocked", "carrier fake response")
-                            else:
-                                await send_admin_failure_log(campaign_id, "max_retries", {
-                                    "target_number": call.target_number,
-                                    "retry_count": current_retry_count
-                                })
+                            # Retry logic disabled
+                            logger.info(f"Retry disabled - call {call.target_number} marked as blocked but will not retry")
                             
                         elif dial_status == 'ANSWER' and not had_dtmf:
                             # Call answered but no DTMF - queue for retry
@@ -2748,14 +2736,8 @@ async def hangup_event_listener(manager, event):
                             campaign_states[campaign_id].failed_calls += 1
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - answered but no DTMF")
                             
-                            # Queue for retry if under max attempts
-                            if current_retry_count < MAX_RETRY_ATTEMPTS:
-                                await queue_call_for_retry(campaign_id, call, current_retry_count + 1, "failed", "no DTMF response")
-                            else:
-                                await send_admin_failure_log(campaign_id, "max_retries", {
-                                    "target_number": call.target_number,
-                                    "retry_count": current_retry_count
-                                })
+                            # Retry logic disabled
+                            logger.info(f"Retry disabled - call {call.target_number} marked as failed (no DTMF) but will not retry")
                             
                         else:
                             # Fallback case - queue for retry
@@ -2764,14 +2746,8 @@ async def hangup_event_listener(manager, event):
                             campaign_states[campaign_id].failed_calls += 1
                             logger.info(f"Campaign {campaign_id}: Call to {call.target_number} marked as FAILED - unknown case")
                             
-                            # Queue for retry if under max attempts
-                            if current_retry_count < MAX_RETRY_ATTEMPTS:
-                                await queue_call_for_retry(campaign_id, call, current_retry_count + 1, "failed", f"unknown case (DialStatus: {dial_status})")
-                            else:
-                                await send_admin_failure_log(campaign_id, "max_retries", {
-                                    "target_number": call.target_number,
-                                    "retry_count": current_retry_count
-                                })
+                            # Retry logic disabled
+                            logger.info(f"Retry disabled - call {call.target_number} marked as failed (unknown case) but will not retry")
                         
                         logger.info(f"Updated campaign {campaign_id} stats: completed={campaign_states[campaign_id].completed_calls}, active={campaign_states[campaign_id].active_calls}")
                         

